@@ -4,3 +4,7 @@ RewriteEngine On
 # Force HTTPS Redirection
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Reverse Proxy all traffic to Node.js / Nitro on Port 3000
+RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+
