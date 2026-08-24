@@ -74,6 +74,8 @@ For guidelines on fast start rules, search budgets, minimal file reading, target
   - All images across database, server functions, and client UI components must use standard authoritative CDN/HTTP/HTTPS or data URLs directly without local blob URL conversions. Never store ephemeral `blob:` URLs in the database to guarantee cross-device, mobile, and LAN network reliability.
 - **Optional Object Property String Method Safety Rule**:
   - When querying or filtering items with optional metadata properties (e.g. `address`, `manager`, `phone` on `Branch`), always use safe fallbacks `(b.prop || "").toLowerCase().includes(...)` before executing string prototype methods to prevent TypeScript `TS2532: Object is possibly undefined` errors.
+- **Valid ESLint Directives & Prettier Code Cleanliness Standard**:
+  - Do not use non-existent or obsolete ESLint rule directives (e.g. `@typescript-eslint/no-require-imports`) in Node.js helper scripts. Run `npx prettier --write` and `npx eslint --fix` to ensure zero linter errors and uniform LF formatting across utility scripts.
 
 ---
 
