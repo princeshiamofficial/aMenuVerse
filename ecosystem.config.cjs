@@ -5,8 +5,8 @@ module.exports = {
     {
       name: "amenuverse",
       script: ".output/server/index.mjs",
-      instances: "max",
-      exec_mode: "cluster",
+      instances: 1,
+      exec_mode: "fork",
       watch: false,
       autorestart: true,
       max_memory_restart: "512M",
