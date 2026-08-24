@@ -8,11 +8,16 @@ conn
     // Script to run on the server
     const commands = [
       "cd /home/menuversebd.com/public_html",
-      'if [ ! -d ".git" ]; then echo "Initializing git repo..."; git init && (git remote add origin https://github.com/princeshiamofficial/aMenuVerse.git || git remote set-url origin https://github.com/princeshiamofficial/aMenuVerse.git) && git fetch origin main && git reset --hard origin/main && (git branch --set-upstream-to=origin/main main || git checkout -b main origin/main); else echo "Repository exists. Fetching latest..."; git remote set-url origin https://github.com/princeshiamofficial/aMenuVerse.git && git fetch origin main && git reset --hard origin/main; fi',
-      "npm install",
-      "npm run build",
-      'PORT=3008 pm2 restart menuverse || PORT=3008 pm2 start .output/server/index.mjs --name "menuverse"',
-      "pm2 save",
+      "echo '=== PM2 STATUS ==='",
+      "pm2 status",
+      "echo '=== NETSTAT/SS NODE PORTS ==='",
+      "netstat -tulpn | grep node || ss -tulpn | grep node || true",
+      "echo '=== CURL 127.0.0.1:3008 ==='",
+      "curl -I http://127.0.0.1:3008 || true",
+      "echo '=== CURL LOCALHOST:3008 ==='",
+      "curl -I http://localhost:3008 || true",
+      "echo '=== PM2 RECENT LOGS ==='",
+      "pm2 logs menuverse --lines 30 --raw || true",
     ].join(" && ");
 
     console.log("Running deployment commands on remote server...");
