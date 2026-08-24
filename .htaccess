@@ -1,9 +1,6 @@
-# OpenLiteSpeed / CyberPanel Reverse Proxy Rewrite Rules
+# OpenLiteSpeed / CyberPanel Rewrite Rules
 RewriteEngine On
 
-# 1. Force HTTPS Redirection
+# Force HTTPS Redirection
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-
-# 2. Reverse Proxy all incoming requests to PM2 Node.js app on port 3008
-RewriteRule ^(.*)$ http://127.0.0.1:3008/$1 [P]
