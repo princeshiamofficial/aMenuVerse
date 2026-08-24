@@ -8,6 +8,9 @@ echo "======================================================"
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# Mark working directory as safe for git when running under root
+git config --global --add safe.directory '*' 2>/dev/null || true
+
 # 1. Pull latest code from GitHub
 echo "📥 [1/5] Pulling latest code from GitHub..."
 git pull origin main || git pull
