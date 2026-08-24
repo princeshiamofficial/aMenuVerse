@@ -29,8 +29,10 @@ echo "🛠️ [4/5] Building TanStack Start / Nitro application..."
 npm run build
 
 # 5. Restart application via PM2
-echo "🔄 [5/5] Restarting PM2 process (amenuverse)..."
-pm2 restart ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
+echo "🔄 [5/5] Starting PM2 process (amenuverse)..."
+pm2 delete amenuverse 2>/dev/null || true
+pm2 start ecosystem.config.cjs --update-env
+pm2 save
 
 echo "======================================================"
 echo "✅ aMenuVerse Deployment Completed Successfully!"
