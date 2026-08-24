@@ -1,22 +1,29 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const mysql = require('mysql2/promise');
-const fs = require('fs');
-const path = require('path');
+import { createRequire } from "module";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const mysql = require("mysql2/promise");
+const fs = require("fs");
+const path = require("path");
 
 // Helper to manually parse .env and .env.local files
 function loadEnv() {
-  const envFiles = ['.env', '.env.local'];
+  const envFiles = [".env", ".env.local"];
   let loaded = false;
-  envFiles.forEach(file => {
-    const envPath = path.join(__dirname, '..', file);
+  envFiles.forEach((file) => {
+    const envPath = path.join(__dirname, "..", file);
     if (fs.existsSync(envPath)) {
-      const content = fs.readFileSync(envPath, 'utf8');
-      content.split('\n').forEach(line => {
+      const content = fs.readFileSync(envPath, "utf8");
+      content.split("\n").forEach((line) => {
         const cleanLine = line.trim();
         const match = cleanLine.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
         if (match) {
           const key = match[1];
-          let value = (match[2] || '').trim();
+          let value = (match[2] || "").trim();
           // Remove quotes if present
           if (value.startsWith('"') && value.endsWith('"')) {
             value = value.slice(1, -1);
@@ -31,34 +38,34 @@ function loadEnv() {
     }
   });
   if (!loaded) {
-    console.warn('.env or .env.local not found. Using system environment variables.');
+    console.warn(".env or .env.local not found. Using system environment variables.");
   }
 }
 
 loadEnv();
 
-const MYSQL_HOST = process.env.MYSQL_HOST || 'localhost';
-const MYSQL_PORT = parseInt(process.env.MYSQL_PORT || '3306', 10);
-const MYSQL_USER = process.env.MYSQL_USER || 'root';
-const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || '';
-const MYSQL_DATABASE = process.env.MYSQL_DATABASE || 'digital_food_menu';
+const MYSQL_HOST = process.env.MYSQL_HOST || "localhost";
+const MYSQL_PORT = parseInt(process.env.MYSQL_PORT || "3306", 10);
+const MYSQL_USER = process.env.MYSQL_USER || "root";
+const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || "";
+const MYSQL_DATABASE = process.env.MYSQL_DATABASE || "digital_food_menu";
 
 async function main() {
   console.log(`Connecting to database: ${MYSQL_DATABASE} on ${MYSQL_HOST}:${MYSQL_PORT}...`);
-  
+
   const connection = await mysql.createConnection({
     host: MYSQL_HOST,
     port: MYSQL_PORT,
     user: MYSQL_USER,
     password: MYSQL_PASSWORD,
-    database: MYSQL_DATABASE
+    database: MYSQL_DATABASE,
   });
 
   try {
-    console.log('Creating database tables if they do not exist (without seed)...');
-    
+    console.log("Creating database tables if they do not exist (without seed)...");
+
     // Disable Foreign Key checks temporarily
-    await connection.query('SET FOREIGN_KEY_CHECKS = 0');
+    await connection.query("SET FOREIGN_KEY_CHECKS = 0");
 
     // 1. Restaurants Table
     await connection.query(`
@@ -88,7 +95,7 @@ async function main() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('- Verified/Created table: restaurants');
+    console.log("- Verified/Created table: restaurants");
 
     // 2. Branches Table
     await connection.query(`
@@ -102,7 +109,7 @@ async function main() {
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
       )
     `);
-    console.log('- Verified/Created table: branches');
+    console.log("- Verified/Created table: branches");
 
     // 3. Branch Tables
     await connection.query(`
@@ -115,7 +122,7 @@ async function main() {
         FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
       )
     `);
-    console.log('- Verified/Created table: branch_tables');
+    console.log("- Verified/Created table: branch_tables");
 
     // 4. Categories Table
     await connection.query(`
@@ -130,7 +137,7 @@ async function main() {
         UNIQUE KEY unique_restaurant_category (restaurant_id, name)
       )
     `);
-    console.log('- Verified/Created table: categories');
+    console.log("- Verified/Created table: categories");
 
     // 5. Menu Items Table
     await connection.query(`
@@ -146,7 +153,7 @@ async function main() {
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
       )
     `);
-    console.log('- Verified/Created table: menu_items');
+    console.log("- Verified/Created table: menu_items");
 
     // 6. Users Table
     await connection.query(`
@@ -165,7 +172,7 @@ async function main() {
         FOREIGN KEY (assigned_branch_id) REFERENCES branches(id) ON DELETE SET NULL
       )
     `);
-    console.log('- Verified/Created table: users');
+    console.log("- Verified/Created table: users");
 
     // 7. Orders Table
     await connection.query(`
@@ -182,14 +189,14 @@ async function main() {
         FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
       )
     `);
-    console.log('- Verified/Created table: orders');
+    console.log("- Verified/Created table: orders");
 
     // Enable Foreign Key checks again
-    await connection.query('SET FOREIGN_KEY_CHECKS = 1');
+    await connection.query("SET FOREIGN_KEY_CHECKS = 1");
 
-    console.log('\n[DB] ✅ All tables initialized successfully without seed data!');
+    console.log("\n[DB] ✅ All tables initialized successfully without seed data!");
   } catch (err) {
-    console.error('[DB] ❌ Initialization failed:', err);
+    console.error("[DB] ❌ Initialization failed:", err);
   } finally {
     await connection.end();
   }
