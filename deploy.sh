@@ -20,7 +20,8 @@ echo "📦 [2/5] Installing dependencies..."
 npm ci || npm install
 
 # 3. Initialize database / ensure admin accounts exist
-echo "🗄️ [3/5] Checking database seeding..."
+echo "🗄️ [3/5] Initializing database tables & admin accounts..."
+node scripts/init-db.js || true
 node scripts/create-admin.js || true
 
 # 4. Build application (Nitro server target: .output/server/index.mjs)
