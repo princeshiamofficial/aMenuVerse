@@ -9,7 +9,7 @@ conn.on('ready', () => {
   const commands = [
     'cd /home/menuversebd.com/public_html',
     // Check if .git exists, if not clone the repo
-    'if [ ! -d ".git" ]; then echo "Cloning repository..."; git clone https://github.com/princeshiamofficial/MenuVerse.git .; else echo "Repository already exists. Pulling latest..."; git checkout package.json package-lock.json; git pull origin main; fi',
+    'if [ ! -d ".git" ]; then echo "Cloning repository..."; git clone https://github.com/princeshiamofficial/aMenuVerse.git .; else echo "Repository already exists. Pulling latest..."; git checkout package.json package-lock.json; git pull origin main; fi',
     // Install dependencies
     'npm install',
     // Build Next.js app
