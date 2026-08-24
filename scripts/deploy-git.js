@@ -1,4 +1,4 @@
-const { Client } = require("ssh2");
+import { Client } from "ssh2";
 
 const conn = new Client();
 conn
@@ -8,14 +8,10 @@ conn
     // Script to run on the server
     const commands = [
       "cd /home/menuversebd.com/public_html",
-      // Check if .git exists, if not clone the repo
-      'if [ ! -d ".git" ]; then echo "Cloning repository..."; git clone https://github.com/princeshiamofficial/aMenuVerse.git .; else echo "Repository already exists. Pulling latest..."; git checkout package.json package-lock.json; git pull origin main; fi',
-      // Install dependencies
+      'if [ ! -d ".git" ]; then echo "Initializing git repo..."; git init && (git remote add origin https://github.com/princeshiamofficial/aMenuVerse.git || git remote set-url origin https://github.com/princeshiamofficial/aMenuVerse.git) && git fetch origin main && git reset --hard origin/main && (git branch --set-upstream-to=origin/main main || git checkout -b main origin/main); else echo "Repository exists. Fetching latest..."; git remote set-url origin https://github.com/princeshiamofficial/aMenuVerse.git && git fetch origin main && git reset --hard origin/main; fi',
       "npm install",
-      // Build Next.js app
       "npm run build",
-      // Start or restart PM2 app
-      'pm2 restart menuverse || pm2 start "npm start -- -p 3008" --name "menuverse"',
+      'PORT=3008 pm2 restart menuverse || PORT=3008 pm2 start .output/server/index.mjs --name "menuverse"',
       "pm2 save",
     ].join(" && ");
 
