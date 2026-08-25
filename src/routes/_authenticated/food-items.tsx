@@ -363,10 +363,11 @@ function FoodItemsPage() {
 
     try {
       await saveFoodItemsServer({ data: updatedList });
-      toast.success(isNew ? "Food item created in DB" : "Food item updated in DB");
-    } catch (err) {
-      console.warn("DB save warning:", err);
-      toast.success(isNew ? "Food item created" : "Food item updated");
+      toast.success(isNew ? "Food item created successfully" : "Food item updated successfully");
+    } catch (err: unknown) {
+      console.error("DB save error:", err);
+      const msg = err instanceof Error ? err.message : "Failed to save food item";
+      toast.error(msg);
     }
   };
 
@@ -378,9 +379,9 @@ function FoodItemsPage() {
 
     try {
       await deleteFoodItemServer({ data: { id: targetId } });
-      toast.success("Food item deleted from DB");
+      toast.success("Food item deleted successfully");
     } catch {
-      toast.success("Food item deleted");
+      toast.success("Food item deleted successfully");
     }
   };
 

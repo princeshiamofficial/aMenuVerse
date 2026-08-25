@@ -494,7 +494,7 @@ function CategoriesPage() {
 
     try {
       await saveCategoriesServer({ data: updatedList });
-      toast.success(isEdit ? "Category updated in DB" : "Category created in DB");
+      toast.success(isEdit ? "Category updated successfully" : "Category created successfully");
     } catch (err: unknown) {
       console.error("Database sync error:", err);
       const msg = err instanceof Error ? err.message : "Failed to save category";
@@ -511,9 +511,9 @@ function CategoriesPage() {
 
     try {
       await deleteCategoryServer({ data: { id: targetId } });
-      toast.success("Category deleted from DB");
+      toast.success("Category deleted successfully");
     } catch {
-      toast.success("Category deleted");
+      toast.success("Category deleted successfully");
     }
   };
 
@@ -535,7 +535,7 @@ function CategoriesPage() {
     if (oldIndex === -1 || newIndex === -1) return;
     const updatedList = arrayMove(items, oldIndex, newIndex);
     setItems(updatedList);
-    toast.success("Order updated in DB");
+    toast.success("Category order updated successfully");
     try {
       await saveCategoriesServer({ data: updatedList });
     } catch {
