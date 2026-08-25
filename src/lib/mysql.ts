@@ -1,12 +1,5 @@
 import mysql from "mysql2/promise";
 
-// Set up database credentials from environment variables
-const MYSQL_HOST = process.env.MYSQL_HOST || "localhost";
-const MYSQL_PORT = process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT) : 3306;
-const MYSQL_USER = process.env.MYSQL_USER || "menuverse_app";
-const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || "";
-const MYSQL_DATABASE = process.env.MYSQL_DATABASE || "amenuverse";
-
 // Singleton connection pool across Vite HMR reloads
 const globalForMysql = globalThis as unknown as {
   __mysql_pool__?: mysql.Pool;
@@ -28,15 +21,21 @@ export async function ensureAllTablesExist(): Promise<void> {
 
 export function getPool(): mysql.Pool {
   if (!globalForMysql.__mysql_pool__) {
+    const host = process.env.MYSQL_HOST || "localhost";
+    const port = process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT) : 3306;
+    const user = process.env.MYSQL_USER || "menuverse_app";
+    const password = process.env.MYSQL_PASSWORD || "";
+    const database = process.env.MYSQL_DATABASE || "amenuverse";
+
     console.log(
-      `[MySQL] Initializing connection pool to ${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}`,
+      `[MySQL] Initializing connection pool to ${host}:${port}/${database} as user ${user}`,
     );
     globalForMysql.__mysql_pool__ = mysql.createPool({
-      host: MYSQL_HOST,
-      port: MYSQL_PORT,
-      user: MYSQL_USER,
-      password: MYSQL_PASSWORD,
-      database: MYSQL_DATABASE,
+      host,
+      port,
+      user,
+      password,
+      database,
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
