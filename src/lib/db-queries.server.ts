@@ -3317,6 +3317,60 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
     }
   });
 
+export const validateTableQrServer = createServerFn({ method: "POST" })
+  .validator(
+    (data: { restaurantSlug: string; branchId?: string; tableNo: string; tableId?: string }) =>
+      data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const tenant = await resolvePublicRestaurant(data.restaurantSlug);
+      if (!tenant || tenant.restaurantId === 0) {
+        return { valid: false, reason: "Restaurant not found in database" };
+      }
+
+      let rows: Record<string, unknown>[] = [];
+      if (data.tableId) {
+        rows = await query<Record<string, unknown>[]>(
+          "SELECT id, table_no, zone, status FROM branch_tables WHERE id = ? AND restaurant_id = ? LIMIT 1",
+          [data.tableId, tenant.restaurantId],
+        );
+      }
+
+      if (!rows || rows.length === 0) {
+        rows = await query<Record<string, unknown>[]>(
+          "SELECT id, table_no, zone, status FROM branch_tables WHERE (branch_id = ? OR branch_id = ?) AND table_no = ? AND restaurant_id = ? LIMIT 1",
+          [
+            data.branchId || "",
+            (data.branchId || "").replace("branch-", ""),
+            data.tableNo,
+            tenant.restaurantId,
+          ],
+        );
+      }
+
+      if (!rows || rows.length === 0) {
+        return {
+          valid: false,
+          reason:
+            "This dining table QR code has been removed or is not registered in the database.",
+        };
+      }
+
+      const row = rows[0];
+      return {
+        valid: true,
+        tableId: String(row.id),
+        tableNo: String(row.table_no),
+        zone: String(row.zone || "MAIN ROOM"),
+        status: String(row.status || "available"),
+      };
+    } catch (err) {
+      console.warn("[validateTableQrServer Warning]", err);
+      return { valid: true };
+    }
+  });
+
 // =========================================================
 // ORDERS MYSQL SERVER FUNCTIONS
 // =========================================================

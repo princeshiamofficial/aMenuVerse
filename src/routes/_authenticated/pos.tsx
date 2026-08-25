@@ -275,12 +275,7 @@ function POSPage() {
       } catch {
         /* ignore */
       }
-      setBranchTables([
-        { value: "01", label: "Table 01 — WINDOW SIDE" },
-        { value: "02", label: "Table 02 — TERRACE" },
-        { value: "03", label: "Table 03 — MAIN ROOM" },
-        { value: "04", label: "Table 04 — MAIN ROOM" },
-      ]);
+      setBranchTables([]);
     }
     loadTables();
   }, [selectedBranchId]);

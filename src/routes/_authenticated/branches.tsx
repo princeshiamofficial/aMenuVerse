@@ -877,13 +877,6 @@ type TableItem = {
   zone: string;
 };
 
-const getDefaultTablesForBranch = (branchId: string): TableItem[] => [
-  { id: `${branchId}-t1`, tableNo: "01", zone: "WINDOW SIDE" },
-  { id: `${branchId}-t2`, tableNo: "02", zone: "TERRACE" },
-  { id: `${branchId}-t3`, tableNo: "03", zone: "MAIN ROOM" },
-  { id: `${branchId}-t4`, tableNo: "04", zone: "MAIN ROOM" },
-];
-
 function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: () => void }) {
   const [tables, setTables] = useState<TableItem[]>([]);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -896,14 +889,14 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     async function loadTables() {
       try {
         const dbTables = await getBranchTablesServer({ data: currentBranchId });
-        if (dbTables && dbTables.length > 0) {
+        if (dbTables && Array.isArray(dbTables)) {
           setTables(dbTables);
           return;
         }
       } catch {
         /* ignore */
       }
-      setTables(getDefaultTablesForBranch(currentBranchId));
+      setTables([]);
     }
     loadTables();
   }, [branch]);
@@ -1013,72 +1006,89 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
 
         {/* Table Cards Grid wrapped in ScrollArea */}
         <ScrollArea className="max-h-[60vh] pr-3 my-2">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 p-1">
-            {tables.map((t) => {
-              const url = getTableUrl(t.tableNo);
-              const canvasId = `qr-card-canvas-${t.id}`;
+          {tables.length === 0 ? (
+            <div className="py-12 text-center border-2 border-dashed border-gray-200 rounded-2xl p-8 bg-gray-50/50">
+              <QrCode className="mx-auto h-10 w-10 text-gray-400/80 mb-3" />
+              <h4 className="text-sm font-bold text-gray-900">No Dining Tables Created</h4>
+              <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto mb-4">
+                No default QR codes exist for this branch. Click "Add Table" to create dedicated QR
+                codes for your dining tables.
+              </p>
+              <Button
+                onClick={() => setAddDialogOpen(true)}
+                className="gradient-warm text-white font-bold px-4 py-2 rounded-full shadow-sm text-xs cursor-pointer"
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add Table
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 p-1">
+              {tables.map((t) => {
+                const url = getTableUrl(t.tableNo);
+                const canvasId = `qr-card-canvas-${t.id}`;
 
-              return (
-                <div
-                  key={t.id}
-                  className="group relative bg-white border border-blue-100/70 rounded-xl p-2 shadow-2xs flex flex-col items-center justify-between gap-1.5 hover:border-amber-400 hover:shadow-md transition"
-                >
-                  {/* Top right edit/delete controls */}
-                  <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition z-10">
-                    <button
-                      type="button"
-                      onClick={() => copyUrl(url, t.tableNo)}
-                      title="Copy Link"
-                      className="p-1 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 cursor-pointer"
-                    >
-                      <Copy className="h-2.5 w-2.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadTableQr(t.tableNo, canvasId)}
-                      title="Download PNG"
-                      className="p-1 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 cursor-pointer"
-                    >
-                      <Download className="h-2.5 w-2.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteTable(t.id, t.tableNo)}
-                      title="Delete Table"
-                      className="p-1 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 cursor-pointer"
-                    >
-                      <Trash2 className="h-2.5 w-2.5" />
-                    </button>
-                  </div>
+                return (
+                  <div
+                    key={t.id}
+                    className="group relative bg-white border border-blue-100/70 rounded-xl p-2 shadow-2xs flex flex-col items-center justify-between gap-1.5 hover:border-amber-400 hover:shadow-md transition"
+                  >
+                    {/* Top right edit/delete controls */}
+                    <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition z-10">
+                      <button
+                        type="button"
+                        onClick={() => copyUrl(url, t.tableNo)}
+                        title="Copy Link"
+                        className="p-1 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 cursor-pointer"
+                      >
+                        <Copy className="h-2.5 w-2.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => downloadTableQr(t.tableNo, canvasId)}
+                        title="Download PNG"
+                        className="p-1 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 cursor-pointer"
+                      >
+                        <Download className="h-2.5 w-2.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteTable(t.id, t.tableNo)}
+                        title="Delete Table"
+                        className="p-1 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                      >
+                        <Trash2 className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
 
-                  {/* QR Box */}
-                  <div className="bg-gray-50/60 border border-gray-100/80 rounded-lg p-1.5 w-full flex items-center justify-center relative">
-                    <div
-                      id={canvasId}
-                      className="bg-white p-1 rounded-md border border-gray-100 shadow-2xs relative"
-                    >
-                      <QRCodeCanvas value={url} size={85} level="H" includeMargin={false} />
+                    {/* QR Box */}
+                    <div className="bg-gray-50/60 border border-gray-100/80 rounded-lg p-1.5 w-full flex items-center justify-center relative">
+                      <div
+                        id={canvasId}
+                        className="bg-white p-1 rounded-md border border-gray-100 shadow-2xs relative"
+                      >
+                        <QRCodeCanvas value={url} size={85} level="H" includeMargin={false} />
+                      </div>
+                    </div>
+
+                    {/* Table Label & Zone Subtitle */}
+                    <div className="text-center w-full">
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-0.5 font-display text-[11px] font-bold text-gray-900 hover:text-amber-600 transition"
+                      >
+                        Table {t.tableNo} <ExternalLink className="h-2 w-2 text-gray-400" />
+                      </a>
+                      <div className="text-[9px] font-extrabold tracking-wider text-orange-500 uppercase mt-0.5 truncate">
+                        {t.zone}
+                      </div>
                     </div>
                   </div>
-
-                  {/* Table Label & Zone Subtitle */}
-                  <div className="text-center w-full">
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 font-display text-[11px] font-bold text-gray-900 hover:text-amber-600 transition"
-                    >
-                      Table {t.tableNo} <ExternalLink className="h-2 w-2 text-gray-400" />
-                    </a>
-                    <div className="text-[9px] font-extrabold tracking-wider text-orange-500 uppercase mt-0.5 truncate">
-                      {t.zone}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </ScrollArea>
 
         {/* Footer */}
