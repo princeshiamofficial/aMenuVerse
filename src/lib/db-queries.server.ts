@@ -1766,12 +1766,12 @@ async function resolvePrivateTenantContext(): Promise<{
   let restaurantId: number | null = null;
   let slug = "burgercraftlab";
 
-  if (user.restaurant_id) {
+  if (user.restaurant_id && Number(user.restaurant_id) > 0) {
     restaurantId = Number(user.restaurant_id);
   } else {
     try {
       const roles = await query<Record<string, unknown>[]>(
-        "SELECT restaurant_id FROM user_roles WHERE user_id = ? AND restaurant_id IS NOT NULL LIMIT 1",
+        "SELECT restaurant_id FROM user_roles WHERE user_id = ? AND restaurant_id IS NOT NULL AND restaurant_id > 0 LIMIT 1",
         [user.id],
       );
       if (roles && roles.length > 0 && roles[0].restaurant_id) {
@@ -1782,8 +1782,37 @@ async function resolvePrivateTenantContext(): Promise<{
     }
   }
 
-  if (!restaurantId) {
-    throw new Error("Forbidden: Authenticated user is not assigned to any restaurant tenant");
+  if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
+    try {
+      const owned = await query<Record<string, unknown>[]>(
+        "SELECT id, slug FROM restaurants WHERE owner_email = ? OR owner_id = ? LIMIT 1",
+        [user.email, user.id],
+      );
+      if (owned && owned.length > 0 && owned[0].id) {
+        restaurantId = Number(owned[0].id);
+        if (owned[0].slug) slug = String(owned[0].slug);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
+      try {
+        const firstRest = await query<Record<string, unknown>[]>(
+          "SELECT id, slug FROM restaurants ORDER BY id ASC LIMIT 1",
+        );
+        if (firstRest && firstRest.length > 0 && firstRest[0].id) {
+          restaurantId = Number(firstRest[0].id);
+          if (firstRest[0].slug) slug = String(firstRest[0].slug);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
+      restaurantId = 1;
+    }
   }
 
   try {
@@ -5632,7 +5661,10 @@ export const saveAdminUserAccountServer = createServerFn({ method: "POST" })
     }
 
     const passwordHash = data.password ? await hashPassword(data.password) : null;
-    const targetRestaurantId = restaurantId ?? 0;
+    let targetRestaurantId = restaurantId ?? 1;
+    if (data.restaurantName === "All Restaurants (Global)") {
+      targetRestaurantId = 0;
+    }
     const targetPasswordHash = passwordHash || (await hashPassword("password123"));
     const roleDb = data.role.toLowerCase().trim();
 

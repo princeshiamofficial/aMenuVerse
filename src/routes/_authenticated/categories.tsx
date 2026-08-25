@@ -411,17 +411,20 @@ function CategoriesPage() {
           getCategoriesServer(),
           getTenantSubscriptionServer(),
         ]);
-        setItems(dbCategories || []);
+        if (dbCategories && Array.isArray(dbCategories)) {
+          setItems(dbCategories as unknown as Category[]);
+        }
         if (subData) {
           setSubInfo({
             plan: subData.plan,
             limit: subData.limits?.maxCategories ?? 5,
           });
         }
-      } catch {
-        setItems([]);
+      } catch (err) {
+        console.error("[Categories] loadFromDb error:", err);
+      } finally {
+        setHydrated(true);
       }
-      setHydrated(true);
     }
     loadFromDb();
   }, []);
@@ -492,9 +495,10 @@ function CategoriesPage() {
     try {
       await saveCategoriesServer({ data: updatedList });
       toast.success(isEdit ? "Category updated in DB" : "Category created in DB");
-    } catch (err) {
-      console.warn("Database sync error:", err);
-      toast.success(isEdit ? "Category updated" : "Category created");
+    } catch (err: unknown) {
+      console.error("Database sync error:", err);
+      const msg = err instanceof Error ? err.message : "Failed to save category";
+      toast.error(msg);
     }
     setDialogOpen(false);
   };
