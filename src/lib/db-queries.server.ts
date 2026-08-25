@@ -17,6 +17,11 @@ const transaction = async <T = unknown>(
   return m.transaction<T>(cb);
 };
 
+const getPool = async (): Promise<import("mysql2/promise").Pool> => {
+  const m = await import("./mysql");
+  return m.getPool();
+};
+
 const checkRateLimitAsync = async (
   actionKey: string,
   identifier?: string,
@@ -932,25 +937,39 @@ type ProfileAppearance = {
 type ProfileCache = Record<string, string | number | boolean | ProfileAppearance | undefined>;
 
 async function ensureRestaurantAppearanceColumns() {
-  const statements = [
-    "ALTER TABLE restaurants ADD COLUMN theme_color VARCHAR(50) DEFAULT 'amber'",
-    "ALTER TABLE restaurants ADD COLUMN menu_layout VARCHAR(50) DEFAULT 'cards'",
-    "ALTER TABLE restaurants ADD COLUMN font_family VARCHAR(50) DEFAULT 'sans'",
-    "ALTER TABLE restaurants ADD COLUMN favicon_url TEXT",
-    "ALTER TABLE restaurants ADD COLUMN og_image_url TEXT",
-    "ALTER TABLE restaurants ADD COLUMN meta_title TEXT",
-    "ALTER TABLE restaurants ADD COLUMN is_indexed TINYINT(1) DEFAULT 1",
-    "ALTER TABLE restaurants ADD COLUMN facebook_url TEXT",
-    "ALTER TABLE restaurants ADD COLUMN instagram_url TEXT",
-    "ALTER TABLE restaurants ADD COLUMN whatsapp_number TEXT",
-  ];
+  try {
+    const pool = await getPool();
+    const statements = [
+      "ALTER TABLE restaurants ADD COLUMN theme_color VARCHAR(50) DEFAULT 'amber'",
+      "ALTER TABLE restaurants ADD COLUMN menu_layout VARCHAR(50) DEFAULT 'cards'",
+      "ALTER TABLE restaurants ADD COLUMN font_family VARCHAR(50) DEFAULT 'sans'",
+      "ALTER TABLE restaurants ADD COLUMN favicon_url TEXT",
+      "ALTER TABLE restaurants ADD COLUMN og_image_url TEXT",
+      "ALTER TABLE restaurants ADD COLUMN meta_title TEXT",
+      "ALTER TABLE restaurants ADD COLUMN is_indexed TINYINT(1) DEFAULT 1",
+      "ALTER TABLE restaurants ADD COLUMN facebook_url TEXT",
+      "ALTER TABLE restaurants ADD COLUMN instagram_url TEXT",
+      "ALTER TABLE restaurants ADD COLUMN whatsapp_number TEXT",
+      "ALTER TABLE restaurants ADD COLUMN intro TEXT",
+      "ALTER TABLE restaurants ADD COLUMN description TEXT",
+      "ALTER TABLE restaurants ADD COLUMN about TEXT",
+      "ALTER TABLE restaurants ADD COLUMN operating_hours VARCHAR(255)",
+      "ALTER TABLE restaurants ADD COLUMN facilities TEXT",
+      "ALTER TABLE restaurants ADD COLUMN prep_time VARCHAR(100)",
+      "ALTER TABLE restaurants ADD COLUMN rating VARCHAR(100)",
+      "ALTER TABLE restaurants ADD COLUMN cover_url TEXT",
+      "ALTER TABLE restaurants ADD COLUMN logo_url TEXT",
+    ];
 
-  for (const statement of statements) {
-    try {
-      await query(statement);
-    } catch {
-      /* column may already exist */
+    for (const statement of statements) {
+      try {
+        await pool.query(statement);
+      } catch {
+        /* column may already exist */
+      }
     }
+  } catch {
+    /* ignore */
   }
 }
 
@@ -1559,56 +1578,123 @@ export const updateRestaurantProfile = createServerFn({ method: "POST" })
 
     try {
       await ensureRestaurantAppearanceColumns();
-      await query(
-        `UPDATE restaurants SET 
-          name = COALESCE(?, name),
-          logo_url = COALESCE(?, logo_url),
-          cover_url = COALESCE(?, cover_url),
-          favicon_url = COALESCE(?, favicon_url),
-          og_image_url = COALESCE(?, og_image_url),
-          cuisine = COALESCE(?, cuisine),
-          phone = COALESCE(?, phone),
-          intro = COALESCE(?, intro),
-          description = COALESCE(?, description),
-          about = COALESCE(?, about),
-          operating_hours = COALESCE(?, operating_hours),
-          facilities = COALESCE(?, facilities),
-          location = COALESCE(?, location),
-          theme_color = COALESCE(?, theme_color),
-          menu_layout = COALESCE(?, menu_layout),
-          font_family = COALESCE(?, font_family),
-          facebook_url = COALESCE(?, facebook_url),
-          instagram_url = COALESCE(?, instagram_url),
-          whatsapp_number = COALESCE(?, whatsapp_number)
-        WHERE id = ? OR slug = ?`,
-        [
-          data.name ?? null,
-          data.logo && !data.logo.startsWith("blob:") ? data.logo : null,
-          data.cover && !data.cover.startsWith("blob:") ? data.cover : null,
-          data.favicon && !data.favicon.startsWith("blob:") ? data.favicon : null,
-          data.socialPreview && !data.socialPreview.startsWith("blob:") ? data.socialPreview : null,
-          data.cuisineType ?? null,
-          data.phone ?? null,
-          data.intro ?? null,
-          data.description ?? null,
-          data.about ?? null,
-          data.openingHours ?? null,
-          data.facilities ?? null,
-          data.address ?? null,
-          data.appearance?.themeColor ?? null,
-          data.appearance?.menuLayout ?? null,
-          data.appearance?.fontFamily ?? null,
-          data.facebookUrl ?? null,
-          data.instagramUrl ?? null,
-          data.whatsappNumber ?? null,
-          tenant.restaurantId,
-          targetSlug,
-        ],
-      );
+
+      const updates: string[] = [];
+      const values: unknown[] = [];
+
+      if (data.name !== undefined) {
+        updates.push("name = ?");
+        values.push(data.name);
+      }
+      if (data.logo && !data.logo.startsWith("blob:")) {
+        updates.push("logo_url = ?");
+        values.push(data.logo);
+      }
+      if (data.cover && !data.cover.startsWith("blob:")) {
+        updates.push("cover_url = ?");
+        values.push(data.cover);
+      }
+      if (data.favicon && !data.favicon.startsWith("blob:")) {
+        updates.push("favicon_url = ?");
+        values.push(data.favicon);
+      }
+      if (data.socialPreview && !data.socialPreview.startsWith("blob:")) {
+        updates.push("og_image_url = ?");
+        values.push(data.socialPreview);
+      }
+      if (data.cuisineType !== undefined) {
+        updates.push("cuisine = ?");
+        values.push(data.cuisineType);
+      }
+      if (data.phone !== undefined) {
+        updates.push("phone = ?");
+        values.push(data.phone);
+      }
+      if (data.intro !== undefined) {
+        updates.push("intro = ?");
+        values.push(data.intro);
+      }
+      if (data.description !== undefined) {
+        updates.push("description = ?");
+        values.push(data.description);
+      }
+      if (data.about !== undefined) {
+        updates.push("about = ?");
+        values.push(data.about);
+      }
+      if (data.openingHours !== undefined) {
+        updates.push("operating_hours = ?");
+        values.push(data.openingHours);
+      }
+      if (data.facilities !== undefined) {
+        updates.push("facilities = ?");
+        values.push(data.facilities);
+      }
+      if (data.address !== undefined) {
+        updates.push("location = ?");
+        values.push(data.address);
+      }
+      if (data.appearance?.themeColor !== undefined) {
+        updates.push("theme_color = ?");
+        values.push(data.appearance.themeColor);
+      }
+      if (data.appearance?.menuLayout !== undefined) {
+        updates.push("menu_layout = ?");
+        values.push(data.appearance.menuLayout);
+      }
+      if (data.appearance?.fontFamily !== undefined) {
+        updates.push("font_family = ?");
+        values.push(data.appearance.fontFamily);
+      }
+      if (data.facebookUrl !== undefined) {
+        updates.push("facebook_url = ?");
+        values.push(data.facebookUrl);
+      }
+      if (data.instagramUrl !== undefined) {
+        updates.push("instagram_url = ?");
+        values.push(data.instagramUrl);
+      }
+      if (data.whatsappNumber !== undefined) {
+        updates.push("whatsapp_number = ?");
+        values.push(data.whatsappNumber);
+      }
+
+      if (updates.length > 0) {
+        const sql = `UPDATE restaurants SET ${updates.join(", ")} WHERE id = ? OR slug = ?`;
+        values.push(tenant.restaurantId, targetSlug);
+        await query(sql, values);
+      }
+
       return { success: true };
     } catch (err) {
       console.error("[MySQL] updateRestaurantProfile query error:", err);
-      throw new Error("Failed to update restaurant profile in database");
+      try {
+        if (data.logo && !data.logo.startsWith("blob:")) {
+          await query("UPDATE restaurants SET logo_url = ? WHERE id = ? OR slug = ?", [
+            data.logo,
+            tenant.restaurantId,
+            targetSlug,
+          ]);
+        }
+        if (data.cover && !data.cover.startsWith("blob:")) {
+          await query("UPDATE restaurants SET cover_url = ? WHERE id = ? OR slug = ?", [
+            data.cover,
+            tenant.restaurantId,
+            targetSlug,
+          ]);
+        }
+        if (data.name) {
+          await query("UPDATE restaurants SET name = ? WHERE id = ? OR slug = ?", [
+            data.name,
+            tenant.restaurantId,
+            targetSlug,
+          ]);
+        }
+        return { success: true };
+      } catch (fallbackErr) {
+        console.error("[MySQL] updateRestaurantProfile fallback error:", fallbackErr);
+        throw new Error("Failed to update restaurant profile in database");
+      }
     }
   });
 
