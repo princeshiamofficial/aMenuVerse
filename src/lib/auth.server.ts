@@ -44,26 +44,23 @@ const COOKIE_NAME = "menuverse_session";
 
 export async function createSession(userId: string): Promise<string> {
   const sessionToken = crypto.randomUUID();
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
 
   // Session Token Rotation: delete previous active sessions for user
   try {
     await query("DELETE FROM sessions WHERE user_id = ?", [userId]);
-    await query("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)", [
-      sessionToken,
-      userId,
-      expiresAt,
-    ]);
+    await query(
+      "INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY))",
+      [sessionToken, userId],
+    );
   } catch (e) {
     console.warn("[Auth] MySQL session insertion fallback to cookie-only mode.", e);
   }
 
-  // Set HTTP-only session cookie
+  // Set session cookie - secure: false ensures compatibility behind reverse proxies (OpenLiteSpeed / Nginx)
   try {
     setCookie(COOKIE_NAME, sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
@@ -290,7 +287,7 @@ export async function verifySession(): Promise<AuthenticatedUser | null> {
     // 1. Try querying MySQL database for valid session
     try {
       const sessions = await query<Record<string, string>[]>(
-        "SELECT s.user_id, s.expires_at FROM sessions s WHERE s.id = ? AND s.expires_at > NOW()",
+        "SELECT s.user_id, s.expires_at FROM sessions s WHERE s.id = ? AND (s.expires_at > NOW() OR s.expires_at IS NULL)",
         [sessionToken],
       );
 
