@@ -157,7 +157,7 @@ export const signInAction = createServerFn({ method: "POST" })
     ]);
     const roleList = (roles || []).map((r) => r.role);
 
-    await createSession(user.id);
+    const token = await createSession(user.id);
     return {
       user: {
         id: user.id,
@@ -165,6 +165,7 @@ export const signInAction = createServerFn({ method: "POST" })
         full_name: user.full_name,
         roles: roleList,
       },
+      token,
     };
   });
 

@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
+import { getCookie, setCookie, deleteCookie, getRequest } from "@tanstack/react-start/server";
 import { query } from "./mysql";
 
 // ─── Password Hashing ────────────────────────────────────────────────────────
@@ -277,33 +277,60 @@ const DEMO_USERS_MAP: Record<string, AuthenticatedUser> = {
 
 export async function verifySession(): Promise<AuthenticatedUser | null> {
   try {
-    const sessionToken = getCookie(COOKIE_NAME);
+    let sessionToken = getCookie(COOKIE_NAME);
+
+    // Fallback: parse raw cookie header from Web Request if getCookie is empty
+    if (!sessionToken || sessionToken === "logged_out" || sessionToken.trim() === "") {
+      try {
+        const req = getRequest();
+        if (req) {
+          const cookieHeader = req.headers.get("cookie") || "";
+          const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
+          if (match && match[1] && match[1] !== "logged_out") {
+            sessionToken = match[1].trim();
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
 
     // If session cookie is missing or explicitly logged_out, return null
     if (!sessionToken || sessionToken === "logged_out" || sessionToken.trim() === "") {
       return null;
     }
 
-    // 1. Try querying MySQL database for valid session
+    // 1. Try querying MySQL database for valid session from sessions table
     try {
       const sessions = await query<Record<string, string>[]>(
         "SELECT s.user_id, s.expires_at FROM sessions s WHERE s.id = ? AND (s.expires_at > NOW() OR s.expires_at IS NULL)",
         [sessionToken],
       );
 
-      if (sessions && sessions.length > 0) {
-        const userId = sessions[0].user_id;
+      let targetUserId = sessions && sessions.length > 0 ? sessions[0].user_id : null;
 
+      // 1b. Fallback: query users table directly if token matches user.id or user.email
+      if (!targetUserId) {
+        const userByToken = await query<Record<string, string>[]>(
+          "SELECT id FROM users WHERE id = ? OR email = ?",
+          [sessionToken, sessionToken],
+        );
+        if (userByToken && userByToken.length > 0) {
+          targetUserId = userByToken[0].id;
+        }
+      }
+
+      if (targetUserId) {
         const users = await query<Record<string, string>[]>(
           "SELECT u.id, u.email, u.full_name, u.avatar_url, u.phone, u.branch, u.role, u.restaurant_id FROM users u WHERE u.id = ?",
-          [userId],
+          [targetUserId],
         );
 
         if (users && users.length > 0) {
           const user = users[0];
           const roles = await query<{ role: string; restaurant_id?: number }[]>(
             "SELECT role, restaurant_id FROM user_roles WHERE user_id = ?",
-            [userId],
+            [targetUserId],
           );
 
           const roleList = (roles || []).map((r) => r.role);

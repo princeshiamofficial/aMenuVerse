@@ -43,6 +43,9 @@ function AuthPage() {
     setLoading(true);
     try {
       const res = await signInAction({ data: { email, password } });
+      if (res?.token && typeof document !== "undefined") {
+        document.cookie = `menuverse_session=${res.token}; path=/; max-age=604800; SameSite=Lax`;
+      }
       setLoading(false);
       toast.success("Welcome back!");
       const roles = res?.user?.roles || [];
