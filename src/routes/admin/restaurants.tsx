@@ -337,18 +337,27 @@ function AdminRestaurantsComponent() {
                                   item.id === r.id ? { ...item, isVerified: nextState } : item,
                                 ),
                               );
+                              const token =
+                                typeof window !== "undefined"
+                                  ? localStorage.getItem("menuverse_session") || undefined
+                                  : undefined;
                               try {
                                 await updateRestaurantVerificationServer({
                                   data: { id: r.id!, isVerified: nextState },
                                 });
-                              } catch {
-                                /* ignore */
+                                toast.success(
+                                  nextState
+                                    ? `Restaurant "${r.name}" verified badge enabled!`
+                                    : `Restaurant "${r.name}" verified badge disabled!`,
+                                );
+                                setRestaurantsList((list) =>
+                                  list.map((item) =>
+                                    item.id === r.id ? { ...item, isVerified: nextState } : item,
+                                  ),
+                                );
+                              } catch (err: unknown) {
+                                toast.error((err as Error)?.message || "Failed to update verification badge");
                               }
-                              toast.success(
-                                nextState
-                                  ? `Restaurant "${r.name}" verified badge enabled!`
-                                  : `Restaurant "${r.name}" verified badge disabled!`,
-                              );
                             }}
                           >
                             <BadgeCheck className="mr-2 h-4 w-4 text-blue-500" />
@@ -572,6 +581,11 @@ function AdminRestaurantsComponent() {
                   return;
                 }
 
+                const token =
+                  typeof window !== "undefined"
+                    ? localStorage.getItem("menuverse_session") || undefined
+                    : undefined;
+
                 if (editingRestaurant.id) {
                   try {
                     await updateRestaurantDetailsServer({
@@ -585,24 +599,23 @@ function AdminRestaurantsComponent() {
                         status: editingRestaurant.status,
                       },
                     });
-                  } catch (err) {
-                    console.warn("Failed to update restaurant in DB:", err);
-                  }
 
-                  setRestaurantsList((list) =>
-                    list.map((r) =>
-                      r.id === editingRestaurant.id
-                        ? ({ ...r, ...editingRestaurant } as typeof r)
-                        : r,
-                    ),
-                  );
-                  toast.success(`Updated details for "${editingRestaurant.name}"!`);
+                    setRestaurantsList((list) =>
+                      list.map((r) =>
+                        r.id === editingRestaurant.id
+                          ? ({ ...r, ...editingRestaurant } as typeof r)
+                          : r,
+                      ),
+                    );
+                    toast.success(`Updated details for "${editingRestaurant.name}"!`);
+                    setIsAddEditOpen(false);
+                  } catch (err: unknown) {
+                    toast.error((err as Error)?.message || "Failed to update restaurant details");
+                  }
                 } else {
                   const name = editingRestaurant.name || "Unnamed Restaurant";
                   const username = editingRestaurant.username || "restaurant";
 
-                  let createdId: string | number =
-                    `rest-${Math.floor(1000 + Math.random() * 9000)}`;
                   try {
                     const res = await createRestaurantServer({
                       data: {
@@ -614,43 +627,50 @@ function AdminRestaurantsComponent() {
                         status: editingRestaurant.status || "active",
                       },
                     });
-                    if (res?.id) createdId = res.id;
-                  } catch (err) {
-                    console.warn("Failed to create restaurant in DB:", err);
+
+                    const createdId = res?.id || `rest-${Date.now()}`;
+                    const newRestEntry = {
+                      id: String(createdId),
+                      name,
+                      username: res?.slug || username,
+                      cuisine: editingRestaurant.cuisine || "Gourmet Kitchen",
+                      location: editingRestaurant.location || "Downtown",
+                      plan: editingRestaurant.plan || "Starter",
+                      status: editingRestaurant.status || "active",
+                      logoImage: "/default-logo.png",
+                      branches: 1,
+                      categories: 0,
+                      foodItems: 0,
+                      isVerified: false,
+                      mrr:
+                        editingRestaurant.plan === "Business"
+                          ? 89
+                          : editingRestaurant.plan === "Enterprise"
+                            ? 299
+                            : editingRestaurant.plan === "Starter"
+                              ? 29
+                              : 0,
+                      joined: editingRestaurant.joined || new Date().toISOString().split("T")[0],
+                    };
+
+                    setRestaurantsList((list) => [
+                      newRestEntry as (typeof list)[0],
+                      ...list,
+                    ]);
+                    toast.success(
+                      `Restaurant "${name}" created! Digital Menu active at /${res?.slug || username}`,
+                    );
+                    setIsAddEditOpen(false);
+
+                    // Re-fetch clean authoritative MySQL data
+                    const freshData = await getAdminRestaurantsServer();
+                    if (freshData && freshData.length > 0) {
+                      setRestaurantsList(freshData as unknown as typeof restaurantsList);
+                    }
+                  } catch (err: unknown) {
+                    toast.error((err as Error)?.message || "Failed to create restaurant in database");
                   }
-
-                  const newRestEntry = {
-                    id: String(createdId),
-                    name,
-                    username,
-                    cuisine: editingRestaurant.cuisine || "Gourmet Kitchen",
-                    location: editingRestaurant.location || "Downtown",
-                    plan: editingRestaurant.plan || "Starter",
-                    status: editingRestaurant.status || "active",
-                    logoImage: "/default-logo.png",
-                    branches: 1,
-                    mrr:
-                      editingRestaurant.plan === "Business"
-                        ? 89
-                        : editingRestaurant.plan === "Enterprise"
-                          ? 299
-                          : editingRestaurant.plan === "Starter"
-                            ? 29
-                            : 0,
-                    joined: editingRestaurant.joined || new Date().toISOString().split("T")[0],
-                  };
-
-                  setRestaurantsList((list) => [
-                    list[0]
-                      ? (newRestEntry as (typeof list)[0])
-                      : (newRestEntry as unknown as (typeof list)[0]),
-                    ...list,
-                  ]);
-                  toast.success(
-                    `Restaurant "${name}" created! Digital Menu active at /${username}`,
-                  );
                 }
-                setIsAddEditOpen(false);
               }}
               className="gradient-warm text-primary-foreground"
             >

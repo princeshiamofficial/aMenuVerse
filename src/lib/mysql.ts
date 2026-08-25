@@ -39,11 +39,39 @@ export async function ensureAllTablesExist(): Promise<void> {
  */
 export function getPool(): mysql.Pool {
   if (!globalForMysql.__mysql_pool__) {
-    const host = process.env.MYSQL_HOST || "localhost";
-    const port = process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT, 10) : 3306;
-    const user = process.env.MYSQL_USER || "root";
-    const password = process.env.MYSQL_PASSWORD || "";
-    const database = process.env.MYSQL_DATABASE || "amenuverse";
+    const host =
+      process.env.DATABASE_HOST ||
+      process.env.MYSQL_HOST ||
+      process.env.DB_HOST ||
+      process.env.MYSQLHOST ||
+      "localhost";
+    const port = parseInt(
+      process.env.DATABASE_PORT ||
+        process.env.MYSQL_PORT ||
+        process.env.DB_PORT ||
+        process.env.MYSQLPORT ||
+        "3306",
+      10,
+    );
+    const user =
+      process.env.DATABASE_USER ||
+      process.env.MYSQL_USER ||
+      process.env.DB_USER ||
+      process.env.MYSQLUSER ||
+      "root";
+    const password =
+      process.env.DATABASE_PASSWORD ||
+      process.env.MYSQL_PASSWORD ||
+      process.env.DB_PASSWORD ||
+      process.env.MYSQLPASSWORD ||
+      process.env.DB_PASS ||
+      "";
+    const database =
+      process.env.DATABASE_NAME ||
+      process.env.MYSQL_DATABASE ||
+      process.env.DB_NAME ||
+      process.env.MYSQLDATABASE ||
+      "amenuverse";
 
     console.log(
       `[MySQL] Initializing connection pool to ${host}:${port}/${database} as user ${user}`,
