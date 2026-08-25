@@ -843,7 +843,10 @@ export function PublicRestaurantView({
         const id = (x.id || "").toLowerCase().trim();
         const name = (x.name || "").toLowerCase().trim();
         const slug = name.replace(/[^a-z0-9]+/g, "-");
-        const menuId = (x.menuId || "").toLowerCase().replace(/^menu-/, "").trim();
+        const menuId = (x.menuId || "")
+          .toLowerCase()
+          .replace(/^menu-/, "")
+          .trim();
 
         return (
           id === target ||
@@ -851,7 +854,11 @@ export function PublicRestaurantView({
           slug === target ||
           id.startsWith(target) ||
           target.startsWith(id) ||
-          (menuId && (menuId === target || menuId === targetClean || target.includes(menuId) || menuId.includes(target)))
+          (menuId &&
+            (menuId === target ||
+              menuId === targetClean ||
+              target.includes(menuId) ||
+              menuId.includes(target)))
         );
       }) || null
     );
@@ -1369,7 +1376,7 @@ export function PublicRestaurantView({
         discountPrice: discountPrice && discountPrice < itemPrice ? discountPrice : null,
       };
     });
-  }, [adminFoodItems, adminCategories, restaurant, serverPromotions, currentBranch]);
+  }, [adminFoodItems, adminCategories, restaurant, serverPromotions, activeBranch, currentBranch]);
 
   const filteredItems = useMemo(() => {
     if (!effectiveMenuItems.length) return [];
