@@ -256,7 +256,7 @@ async function main() {
       await connection.query(
         `INSERT INTO users (id, restaurant_id, name, email, password_hash, role, assigned_branch_id, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE restaurant_id=VALUES(restaurant_id), password_hash=VALUES(password_hash)`,
+         ON DUPLICATE KEY UPDATE id=id`,
         [userId, r.id, `${r.name} Admin`, email, defaultHashedPassword, "admin", null, "Active"],
       );
 
@@ -264,7 +264,7 @@ async function main() {
       await connection.query(
         `INSERT INTO user_roles (user_id, role, restaurant_id)
          VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE role=VALUES(role), restaurant_id=VALUES(restaurant_id)`,
+         ON DUPLICATE KEY UPDATE id=id`,
         [userId, "admin", r.id],
       );
       console.log(`- Created admin: ${email} (for ${r.name})`);
@@ -287,14 +287,14 @@ async function main() {
       await connection.query(
         `INSERT INTO users (id, restaurant_id, name, email, password_hash, role, assigned_branch_id, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')
-         ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash), role=VALUES(role), restaurant_id=VALUES(restaurant_id)`,
+         ON DUPLICATE KEY UPDATE id=id`,
         [demo.id, demo.restId === 0 ? null : demo.restId, demo.name, demo.email, hashedDemoPwd, demo.role, demo.branch],
       );
 
       await connection.query(
         `INSERT INTO user_roles (user_id, role, restaurant_id)
          VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE role=VALUES(role), restaurant_id=VALUES(restaurant_id)`,
+         ON DUPLICATE KEY UPDATE id=id`,
         [demo.id, demo.role, demo.restId || 0],
       );
       console.log(`- Created demo account: ${demo.email} (Password: ${demo.pwd})`);
