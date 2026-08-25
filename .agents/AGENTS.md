@@ -78,6 +78,10 @@ For guidelines on fast start rules, search budgets, minimal file reading, target
   - Do not use non-existent or obsolete ESLint rule directives (e.g. `@typescript-eslint/no-require-imports`) in Node.js helper scripts. Run `npx prettier --write` and `npx eslint --fix` to ensure zero linter errors and uniform LF formatting across utility scripts.
 - **Zero-Fallback Strict DB Data & Resolution Standard**:
   - No server function or public menu resolution logic (`getRestaurantData`, `getRestaurantProfile`, `getCategoriesServer`, `getFoodItemsServer`, `getBranchesServer`, `getUserAssignedBranches`) may inject or fall back to mock data structures (`baseRestaurant.categories`, `baseRestaurant.menuItems`, `DEFAULT_BRANCHES_MAP`) when database queries return zero rows. If a tenant has 0 categories, 0 items, or 0 branches in MySQL, the functions must strictly return empty arrays `[]` or `null`. Unregistered/non-existent slugs must return `null` and immediately render the 404 Restaurant Not Found view without rendering dummy tenant data.
+- **TanStack Start Server Function Parameter Payload Standard**:
+  - Always wrap all validator-backed `createServerFn` calls with `{ data: {} }` or `{ data: { ... } }` on client components (e.g. `getOrdersServer({ data: {} })`, `getBranchesServer({ data: {} })`, `getCategoriesServer({ data: {} })`, `getFoodItemsServer({ data: {} })`, `getPromotionsServer({ data: {} })`, `getReservationsServer({ data: {} })`, `getStaffServer({ data: {} })`). Never invoke validator-backed server functions without the `{ data: ... }` wrapper to prevent empty array returns or runtime validation rejections.
+- **MySQL utf8mb4 4-Byte Emoji Support Standard**:
+  - Always configure `charset: "utf8mb4"` in connection pool options (`mysql.ts` and `db.ts`) and execute `ALTER TABLE table_name CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci` across all tables holding user text, emojis, icons, and food names to prevent 4-byte UTF-8 emoji truncation or `ER_TRUNCATED_WRONG_VALUE_FOR_FIELD` errors.
 
 ---
 
