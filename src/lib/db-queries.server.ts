@@ -364,10 +364,15 @@ export const getRestaurantData = createServerFn({ method: "GET" })
     const restaurant = restaurants[0];
 
     // 2. Fetch branches
-    const branches = await query<Record<string, string>[]>(
-      "SELECT id, name, address, phone, manager FROM branches WHERE restaurant_id = ?",
-      [restaurant.id],
-    );
+    let branches: Record<string, unknown>[] = [];
+    try {
+      branches = await query<Record<string, unknown>[]>(
+        "SELECT id, name, address, phone, manager, status, is_default, menu_id FROM branches WHERE restaurant_id = ?",
+        [restaurant.id],
+      );
+    } catch {
+      branches = [];
+    }
 
     // 3. Fetch active categories, food items, and profile from DB for this specific tenant
     const serverCategories = await getCategoriesServer({ data: username });
@@ -415,7 +420,7 @@ export const getRestaurantData = createServerFn({ method: "GET" })
       return validCategoryKeys.has(itemCatKey);
     });
 
-    // 4. Fetch active promotions for this restaurant tenant to compute offer prices
+    // 4. Fetch active promotions for this restaurant tenant
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
     const currentTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -497,132 +502,31 @@ export const getRestaurantData = createServerFn({ method: "GET" })
         address: String(b.address || ""),
         phone: String(b.phone || ""),
         manager: String(b.manager || ""),
+        status: String(b.status || "open"),
+        isDefault: Boolean(b.is_default || b.isDefault),
+        menuId: String(b.menu_id || b.menuId || ""),
       })),
       categories: activeCategories.map((c: CategoryItem) => ({
         name: String(c.name || ""),
         emoji: String(c.icon || c.emoji || "🍽️"),
       })),
-      menuItems: activeItems.map((i: FoodItemRecordOrMenuItem, itemIdx: number) => {
+      menuItems: activeItems.map((i: FoodItemRecordOrMenuItem) => {
         const itemPrice = Number(i.price || 0);
-        let maxDiscountPct = 0;
-
-        for (const p of validPromotions) {
-          const promoBranchName = String(p.branch_name || p.branchName || "")
-            .toLowerCase()
-            .trim();
-          const promoBranchId = String(p.branch_id || p.branchId || "")
-            .toLowerCase()
-            .trim();
-          const isAllBranches =
-            !promoBranchName ||
-            promoBranchName === "all" ||
-            promoBranchId === "all" ||
-            promoBranchName === "all branches" ||
-            promoBranchId === "all branches";
-
-          // Server-side default item discount only applies for All Branches promos so branch-specific offers never leak
-          if (!isAllBranches) continue;
-
-          const kind = p.kind || p.type;
-          const startTime = p.start_time || p.startTime;
-          const endTime = p.end_time || p.endTime;
-
-          // Happy Hour daily window check
-          if (kind === "happy-hour" && startTime && endTime) {
-            if (!isTimeInWindow(String(startTime), String(endTime))) {
-              continue;
-            }
-          }
-
-          let itemIds: string[] = [];
-          const rawItemIds = p.item_ids_json ?? p.itemIds;
-          try {
-            if (typeof rawItemIds === "string") {
-              itemIds = JSON.parse(rawItemIds);
-            } else if (Array.isArray(rawItemIds)) {
-              itemIds = rawItemIds;
-            }
-          } catch {
-            itemIds = [];
-          }
-
-          let categoryNames: string[] = [];
-          const rawCatNames = p.category_names_json ?? p.categoryNames;
-          try {
-            if (typeof rawCatNames === "string") {
-              categoryNames = JSON.parse(rawCatNames);
-            } else if (Array.isArray(rawCatNames)) {
-              categoryNames = rawCatNames;
-            }
-          } catch {
-            categoryNames = [];
-          }
-
-          const targetScope = String(p.target_scope || p.targetScope || "all");
-          let applies = false;
-
-          if (targetScope === "all" || (itemIds.length === 0 && categoryNames.length === 0)) {
-            applies = true;
-          } else if (targetScope === "categories" && categoryNames.length > 0) {
-            const itemCat = String(i.category || "")
-              .toLowerCase()
-              .trim();
-            applies = categoryNames.some((c) => String(c).toLowerCase().trim() === itemCat);
-          } else if (itemIds.length > 0) {
-            const itemIdStr = String(i.id || "")
-              .toLowerCase()
-              .trim();
-            const itemIndexStr = `item-${itemIdx + 1}`;
-            const itemNameStr = String(i.name || "")
-              .toLowerCase()
-              .trim();
-            applies = itemIds.some((id) => {
-              const targetId = String(id || "")
-                .toLowerCase()
-                .trim();
-              return (
-                targetId === itemIdStr ||
-                targetId === itemIndexStr ||
-                (targetId.startsWith("item-") && targetId === itemIndexStr) ||
-                (itemNameStr.length > 2 && targetId.includes(itemNameStr)) ||
-                (itemNameStr.length > 2 && itemNameStr.includes(targetId))
-              );
-            });
-          } else {
-            applies = true;
-          }
-
-          if (applies) {
-            const pct = Number(p.discount_percent ?? p.discountPercent ?? 0);
-            if (pct > maxDiscountPct) {
-              maxDiscountPct = pct;
-            }
-          }
-        }
-
-        let discountPrice: number | null = null;
-        if (maxDiscountPct > 0) {
-          discountPrice = Math.round(itemPrice * (1 - maxDiscountPct / 100) * 100) / 100;
-        }
-
-        // Fall back to item-level discountPrice if no active promotion applies
-        if (
-          discountPrice == null &&
-          i.discountPrice != null &&
-          Number(i.discountPrice) < itemPrice
-        ) {
-          discountPrice = Number(i.discountPrice);
-        }
+        const itemDiscountPrice =
+          i.discountPrice != null && Number(i.discountPrice) < itemPrice
+            ? Number(i.discountPrice)
+            : null;
 
         return {
           id: String(i.id || ""),
           name: String(i.name || ""),
           description: String(i.shortDescription || i.longDescription || i.description || ""),
           price: itemPrice,
-          discountPrice: discountPrice && discountPrice < itemPrice ? discountPrice : null,
+          discountPrice: itemDiscountPrice,
           image: String(i.image || ""),
           category: String(i.category || "General"),
           popular: Boolean(i.popular || i.bestSeller),
+          trending: Boolean(i.popular || i.bestSeller),
         };
       }),
       promotions: validPromotions.map((p) => ({
@@ -4558,6 +4462,7 @@ export const getPublicActivePromotionsServer = createServerFn({ method: "GET" })
         image: r.image ? String(r.image) : undefined,
         description: r.description ? String(r.description) : undefined,
         showPopup: r.show_popup !== 0,
+        branchName: r.branch_name ? String(r.branch_name) : undefined,
         branchId: r.branch_id ? String(r.branch_id) : "all",
       }));
     } catch (err) {

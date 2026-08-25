@@ -890,7 +890,7 @@ export function PublicRestaurantView({
       const promoBranchName = (p.branchName || "").toLowerCase().trim();
       const promoBranchId = (p.branchId || "").toLowerCase().trim();
       const isAllBranches =
-        !promoBranchName ||
+        (!promoBranchName && !promoBranchId) ||
         promoBranchName === "all" ||
         promoBranchId === "all" ||
         promoBranchName === "all branches" ||
@@ -1273,7 +1273,7 @@ export function PublicRestaurantView({
       const promoBranchName = (p.branchName || "").toLowerCase().trim();
       const promoBranchId = (p.branchId || "").toLowerCase().trim();
       const isAllBranches =
-        !promoBranchName ||
+        (!promoBranchName && !promoBranchId) ||
         promoBranchName === "all" ||
         promoBranchId === "all" ||
         promoBranchName === "all branches" ||
