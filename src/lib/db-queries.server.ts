@@ -5229,7 +5229,7 @@ export const saveStaffServer = createServerFn({ method: "POST" })
         if (s.password && s.password.trim().length >= 6) {
           const passHash = await hashPassword(s.password.trim());
           await query(
-            `UPDATE users SET email = ?, full_name = ?, password_hash = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ? WHERE id = ?`,
+            `UPDATE users SET email = ?, full_name = ?, password_hash = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ?, restaurant_id = ? WHERE id = ?`,
             [
               sanitizedEmail,
               sanitizedName,
@@ -5240,12 +5240,13 @@ export const saveStaffServer = createServerFn({ method: "POST" })
               sanitizedBranch,
               s.status || "active",
               sanitizedShift,
+              tenant.restaurantId,
               userId,
             ],
           );
         } else {
           await query(
-            `UPDATE users SET email = ?, full_name = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ? WHERE id = ?`,
+            `UPDATE users SET email = ?, full_name = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ?, restaurant_id = ? WHERE id = ?`,
             [
               sanitizedEmail,
               sanitizedName,
@@ -5255,6 +5256,7 @@ export const saveStaffServer = createServerFn({ method: "POST" })
               sanitizedBranch,
               s.status || "active",
               sanitizedShift,
+              tenant.restaurantId,
               userId,
             ],
           );
@@ -5268,8 +5270,8 @@ export const saveStaffServer = createServerFn({ method: "POST" })
         const newId = s.id || crypto.randomUUID();
         const passHash = s.password ? await hashPassword(s.password.trim()) : null;
         await query(
-          `INSERT INTO users (id, email, password_hash, full_name, phone, avatar_url, branch, assigned_branch_id, status, shift)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO users (id, email, password_hash, full_name, phone, avatar_url, branch, assigned_branch_id, status, shift, restaurant_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             newId,
             sanitizedEmail,
@@ -5281,6 +5283,7 @@ export const saveStaffServer = createServerFn({ method: "POST" })
             sanitizedBranch,
             s.status || "active",
             sanitizedShift,
+            tenant.restaurantId,
           ],
         );
         await query(`INSERT INTO user_roles (user_id, role, restaurant_id) VALUES (?, ?, ?)`, [
