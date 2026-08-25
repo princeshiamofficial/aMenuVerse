@@ -33,20 +33,7 @@ export async function uploadToImgBB(fileOrBase64: File | string): Promise<string
     return base64String || (typeof fileOrBase64 === "string" ? fileOrBase64 : "");
   }
 
-  // 2. Primary Strategy: Server-side Node fetch (Bypasses browser CORS & extension blocks)
-  if (base64String) {
-    try {
-      const serverCdnUrl = await uploadToImgBBServer({ data: base64String });
-      if (serverCdnUrl) {
-        console.log("[ImgBB Upload Success via Server]", serverCdnUrl);
-        return serverCdnUrl;
-      }
-    } catch (serverErr) {
-      console.warn("[ImgBB Server Upload Warning]", serverErr);
-    }
-  }
-
-  // 3. Fallback Strategy: Client-side FormData fetch
+  // 1. Primary Strategy: Direct Binary FormData fetch (Best quality, zero base64 corruption)
   try {
     const formData = new FormData();
     if (fileOrBase64 instanceof File) {
@@ -74,6 +61,19 @@ export async function uploadToImgBB(fileOrBase64: File | string): Promise<string
     }
   } catch (clientErr) {
     console.warn("[ImgBB Client Upload Warning]", clientErr);
+  }
+
+  // 2. Secondary Strategy: Server-side Node fetch (Bypasses browser CORS & extension blocks)
+  if (base64String) {
+    try {
+      const serverCdnUrl = await uploadToImgBBServer({ data: base64String });
+      if (serverCdnUrl) {
+        console.log("[ImgBB Upload Success via Server]", serverCdnUrl);
+        return serverCdnUrl;
+      }
+    } catch (serverErr) {
+      console.warn("[ImgBB Server Upload Warning]", serverErr);
+    }
   }
 
   // 4. Final Guaranteed Fallback
