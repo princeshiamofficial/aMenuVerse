@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { PermissionKey } from "./permissions";
 import { RESTAURANTS } from "./restaurants-data";
-import { toISODateString, isTimeInWindow, decodeTableToken } from "./utils";
+import { toISODateString, isTimeInWindow, decodeTableToken, encodeTableToken } from "./utils";
 
 // Lazy server module loaders (prevents Node/mysql2/ioredis modules from leaking into client Vite bundle graph)
 const query = async <T = unknown>(sql: string, params?: unknown): Promise<T> => {
@@ -3292,19 +3292,28 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
           const t = tables[idx];
           const tableId =
             t.id.startsWith(branchId) || t.id.length > 15 ? t.id : `${branchId}-${t.id}`;
+          const qrToken = encodeTableToken(branchId, t.tableNo);
           try {
             await conn.execute(
-              `INSERT INTO branch_tables (id, restaurant_id, branch_id, table_no, zone, sort_order) 
-               VALUES (?, ?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order)`,
-              [tableId, tenant.restaurantId, branchId, t.tableNo, t.zone || "MAIN ROOM", idx],
+              `INSERT INTO branch_tables (id, restaurant_id, branch_id, table_no, zone, sort_order, qr_token) 
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
+              [
+                tableId,
+                tenant.restaurantId,
+                branchId,
+                t.tableNo,
+                t.zone || "MAIN ROOM",
+                idx,
+                qrToken,
+              ],
             );
           } catch {
             await conn.execute(
-              `INSERT INTO branch_tables (id, branch_id, table_no, zone, sort_order) 
-               VALUES (?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order)`,
-              [tableId, branchId, t.tableNo, t.zone || "MAIN ROOM", idx],
+              `INSERT INTO branch_tables (id, branch_id, table_no, zone, sort_order, qr_token) 
+               VALUES (?, ?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
+              [tableId, branchId, t.tableNo, t.zone || "MAIN ROOM", idx, qrToken],
             );
           }
         }
@@ -3319,8 +3328,13 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
 
 export const validateTableQrServer = createServerFn({ method: "POST" })
   .validator(
-    (data: { restaurantSlug: string; branchId?: string; tableNo: string; tableId?: string }) =>
-      data,
+    (data: {
+      restaurantSlug: string;
+      token?: string;
+      branchId?: string;
+      tableNo?: string;
+      tableId?: string;
+    }) => data,
   )
   .handler(async ({ data }) => {
     try {
@@ -3330,30 +3344,45 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
       }
 
       let rows: Record<string, unknown>[] = [];
-      if (data.tableId) {
+
+      // 1. Search by exact qr_token token in MySQL branch_tables
+      if (data.token) {
         rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone, status FROM branch_tables WHERE id = ? AND restaurant_id = ? LIMIT 1",
+          "SELECT id, table_no, zone, status, qr_token FROM branch_tables WHERE (qr_token = ? OR id = ?) AND restaurant_id = ? LIMIT 1",
+          [data.token, data.token, tenant.restaurantId],
+        );
+      }
+
+      // 2. Search by tableId
+      if ((!rows || rows.length === 0) && data.tableId) {
+        rows = await query<Record<string, unknown>[]>(
+          "SELECT id, table_no, zone, status, qr_token FROM branch_tables WHERE id = ? AND restaurant_id = ? LIMIT 1",
           [data.tableId, tenant.restaurantId],
         );
       }
 
-      if (!rows || rows.length === 0) {
-        rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone, status FROM branch_tables WHERE (branch_id = ? OR branch_id = ?) AND table_no = ? AND restaurant_id = ? LIMIT 1",
-          [
-            data.branchId || "",
-            (data.branchId || "").replace("branch-", ""),
-            data.tableNo,
-            tenant.restaurantId,
-          ],
-        );
+      // 3. Fallback search by table_no only if valid token matches computed token
+      if ((!rows || rows.length === 0) && data.branchId && data.tableNo) {
+        const expectedToken = encodeTableToken(data.branchId, data.tableNo);
+        if (!data.token || data.token === expectedToken) {
+          rows = await query<Record<string, unknown>[]>(
+            "SELECT id, table_no, zone, status, qr_token FROM branch_tables WHERE (branch_id = ? OR branch_id = ?) AND table_no = ? AND (qr_token = ? OR qr_token IS NULL) AND restaurant_id = ? LIMIT 1",
+            [
+              data.branchId,
+              data.branchId.replace("branch-", ""),
+              data.tableNo,
+              expectedToken,
+              tenant.restaurantId,
+            ],
+          );
+        }
       }
 
       if (!rows || rows.length === 0) {
         return {
           valid: false,
           reason:
-            "This dining table QR code has been removed or is not registered in the database.",
+            "Invalid QR Code Token: This dining table QR code has not been created or saved in the database.",
         };
       }
 
@@ -3367,7 +3396,7 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
       };
     } catch (err) {
       console.warn("[validateTableQrServer Warning]", err);
-      return { valid: true };
+      return { valid: false, reason: "Database validation failed" };
     }
   });
 

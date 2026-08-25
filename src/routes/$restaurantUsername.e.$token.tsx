@@ -32,6 +32,7 @@ function RestaurantEncryptedTableRoute() {
         const valRes = await validateTableQrServer({
           data: {
             restaurantSlug: restaurantUsername,
+            token,
             branchId: branchSlug,
             tableNo,
           },

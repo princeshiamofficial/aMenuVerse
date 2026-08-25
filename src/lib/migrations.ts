@@ -148,10 +148,12 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       table_no VARCHAR(50) NOT NULL,
       zone VARCHAR(100) DEFAULT 'MAIN ROOM',
       sort_order INT DEFAULT 0,
+      qr_token VARCHAR(255) NULL,
       status VARCHAR(50) DEFAULT 'available',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_branch_tables_restaurant (restaurant_id),
-      INDEX idx_branch_tables_branch (restaurant_id, branch_id)
+      INDEX idx_branch_tables_branch (restaurant_id, branch_id),
+      INDEX idx_branch_tables_token (restaurant_id, qr_token)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
     // 9. POS Orders Table (Single source of truth for orders)
@@ -331,6 +333,15 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
   try {
     await pool.execute(
       "ALTER TABLE pos_orders ADD COLUMN branch_id VARCHAR(255) AFTER restaurant_id",
+    );
+  } catch {
+    /* Column already exists */
+  }
+
+  // Add 'qr_token' column to branch_tables if missing
+  try {
+    await pool.execute(
+      "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL AFTER sort_order",
     );
   } catch {
     /* Column already exists */
