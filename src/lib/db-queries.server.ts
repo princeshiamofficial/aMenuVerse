@@ -2213,7 +2213,10 @@ export const uploadToImgBBServer = createServerFn({ method: "POST" })
     validateImagePayload(base64String);
 
     const apiKey =
-      process.env.VITE_IMGBB_API_KEY || (import.meta.env.VITE_IMGBB_API_KEY as string | undefined);
+      process.env.VITE_IMGBB_API_KEY ||
+      process.env.IMGBB_API_KEY ||
+      process.env.IMGBB_KEY ||
+      (import.meta.env.VITE_IMGBB_API_KEY as string | undefined);
 
     if (!apiKey) {
       throw new Error(
@@ -2233,8 +2236,10 @@ export const uploadToImgBBServer = createServerFn({ method: "POST" })
       });
 
       const json = await res.json();
-      if (json?.data?.url || json?.data?.display_url || json?.data?.url_viewer) {
-        return (json.data.display_url || json.data.url || json.data.url_viewer) as string;
+      const directCdnUrl =
+        json?.data?.image?.url || json?.data?.display_url || json?.data?.url || null;
+      if (directCdnUrl && typeof directCdnUrl === "string") {
+        return directCdnUrl;
       }
     } catch (err) {
       console.warn("[Node Server ImgBB FormData Warning]", err);
@@ -2254,8 +2259,10 @@ export const uploadToImgBBServer = createServerFn({ method: "POST" })
       });
 
       const json = await res.json();
-      if (json?.data?.url || json?.data?.display_url || json?.data?.url_viewer) {
-        return (json.data.display_url || json.data.url || json.data.url_viewer) as string;
+      const directCdnUrl =
+        json?.data?.image?.url || json?.data?.display_url || json?.data?.url || null;
+      if (directCdnUrl && typeof directCdnUrl === "string") {
+        return directCdnUrl;
       }
     } catch (err) {
       console.error("[Node Server ImgBB URLSearchParams Error]", err);

@@ -64,8 +64,10 @@ export async function uploadToImgBB(fileOrBase64: File | string): Promise<string
     const json = await res.json();
     console.log("[ImgBB Client Upload Response]", json);
 
-    if (json?.data?.url || json?.data?.display_url) {
-      return (json.data.url || json.data.display_url) as string;
+    const directCdnUrl =
+      json?.data?.image?.url || json?.data?.display_url || json?.data?.url || null;
+    if (directCdnUrl && typeof directCdnUrl === "string") {
+      return directCdnUrl;
     }
     if (json?.error?.message) {
       console.warn("[ImgBB API Warning]", json.error.message);
