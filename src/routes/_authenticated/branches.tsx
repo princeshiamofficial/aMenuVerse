@@ -189,12 +189,7 @@ function BranchesPage() {
     const set = new Set<string>();
 
     const actualManagers = dbStaff
-      .filter(
-        (s) =>
-          (s.role || "").toLowerCase().trim() === "manager" ||
-          (s.role || "").toLowerCase().trim() === "owner" ||
-          (s.role || "").toLowerCase().trim() === "super_admin",
-      )
+      .filter((s) => (s.role || "").toLowerCase().trim() === "manager")
       .map((s) => cleanManagerName(s.name))
       .filter(Boolean);
 
