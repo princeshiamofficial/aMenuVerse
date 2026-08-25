@@ -372,7 +372,8 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       INSERT IGNORE INTO restaurants (id, name, slug, description, logo_url, cover_url, cuisine, phone, location, status, plan)
       VALUES 
       (1, 'Burger Craft Lab', 'burgercraftlab', 'Gourmet burgers in Dhanmondi', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600', 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800', 'Gourmet Burgers', '+880 1700-112233', 'Dhanmondi, Dhaka', 'active', 'Business'),
-      (2, 'Sultan''s Dine', 'sultansdine', 'Experience royal Kacchi Biryani & traditional Mughal delicacies', 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600', 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800', 'Kacchi & Biryani', '+880 1912-990011', 'Gulshan, Dhaka', 'active', 'Enterprise');
+      (2, 'Sultan''s Dine', 'sultansdine', 'Experience royal Kacchi Biryani & traditional Mughal delicacies', 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600', 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800', 'Kacchi & Biryani', '+880 1912-990011', 'Gulshan, Dhaka', 'active', 'Enterprise'),
+      (3, 'MenuVerse Kitchen', 'menuverse', 'Multi-Cuisine & Gourmet Specialties', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600', 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800', 'Multi-Cuisine', '+880 1700-112233', 'Global', 'active', 'Business');
     `);
   } catch (err) {
     console.warn("[Migration] Seed notice:", (err as Error).message);

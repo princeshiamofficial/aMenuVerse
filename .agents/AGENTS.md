@@ -76,6 +76,8 @@ For guidelines on fast start rules, search budgets, minimal file reading, target
   - When querying or filtering items with optional metadata properties (e.g. `address`, `manager`, `phone` on `Branch`), always use safe fallbacks `(b.prop || "").toLowerCase().includes(...)` before executing string prototype methods to prevent TypeScript `TS2532: Object is possibly undefined` errors.
 - **Valid ESLint Directives & Prettier Code Cleanliness Standard**:
   - Do not use non-existent or obsolete ESLint rule directives (e.g. `@typescript-eslint/no-require-imports`) in Node.js helper scripts. Run `npx prettier --write` and `npx eslint --fix` to ensure zero linter errors and uniform LF formatting across utility scripts.
+- **Zero-Fallback Strict DB Data & Resolution Standard**:
+  - No server function or public menu resolution logic (`getRestaurantData`, `getRestaurantProfile`, `getCategoriesServer`, `getFoodItemsServer`, `getBranchesServer`, `getUserAssignedBranches`) may inject or fall back to mock data structures (`baseRestaurant.categories`, `baseRestaurant.menuItems`, `DEFAULT_BRANCHES_MAP`) when database queries return zero rows. If a tenant has 0 categories, 0 items, or 0 branches in MySQL, the functions must strictly return empty arrays `[]` or `null`. Unregistered/non-existent slugs must return `null` and immediately render the 404 Restaurant Not Found view without rendering dummy tenant data.
 
 ---
 

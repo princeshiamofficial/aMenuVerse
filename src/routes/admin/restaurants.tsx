@@ -92,7 +92,7 @@ function AdminRestaurantsComponent() {
     async function loadData() {
       try {
         const data = await getAdminRestaurantsServer();
-        if (data && data.length > 0) {
+        if (data) {
           setRestaurantsList(data as unknown as typeof restaurantsList);
         }
       } catch (err) {
@@ -103,10 +103,12 @@ function AdminRestaurantsComponent() {
   }, [setRestaurantsList]);
 
   const filteredRestaurants = useMemo(() => {
-    return restaurantsList.filter(
+    return (restaurantsList || []).filter(
       (r) =>
-        (planFilter === "all" || r.plan === planFilter) &&
-        (q.trim() === "" || r.name.toLowerCase().includes(q.toLowerCase())),
+        (planFilter === "all" || (r.plan || "").toLowerCase() === planFilter.toLowerCase()) &&
+        (q.trim() === "" ||
+          (r.name || "").toLowerCase().includes(q.toLowerCase()) ||
+          (r.username || "").toLowerCase().includes(q.toLowerCase())),
     );
   }, [restaurantsList, q, planFilter]);
 

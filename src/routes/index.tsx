@@ -158,7 +158,7 @@ import { decodeTableToken } from "@/lib/utils";
 import type { Restaurant } from "@/lib/restaurants-data";
 
 function SubdomainMenuRenderer({ subdomain }: { subdomain: string }) {
-  const [restaurantData, setRestaurantData] = useState<Restaurant>(() =>
+  const [restaurantData, setRestaurantData] = useState<Restaurant | null>(() =>
     fetchPublicMenuSync(subdomain),
   );
 
@@ -198,18 +198,32 @@ function SubdomainMenuRenderer({ subdomain }: { subdomain: string }) {
       const decoded = decodeTableToken(pathParts[1]);
       if (decoded) {
         tableNo = decoded.tableNo;
-        branchSlug = decoded.branchSlug;
+        branchSlug = decoded.branchSlug || "";
       }
     } else if (tokenParam) {
       const decoded = decodeTableToken(tokenParam);
       if (decoded) {
         tableNo = decoded.tableNo;
-        branchSlug = decoded.branchSlug;
+        branchSlug = decoded.branchSlug || "";
       }
     } else if (tableParam) {
       tableNo = tableParam;
       if (pathParts[0]) branchSlug = pathParts[0];
     }
+  }
+
+  if (!restaurantData) {
+    return (
+      <div className="mx-auto max-w-2xl p-8 text-center min-h-[60vh] flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold">Restaurant not found</h1>
+        <p className="mt-2 text-muted-foreground">
+          No active restaurant matches this subdomain or username.
+        </p>
+        <Link to="/" className="mt-4 inline-block underline">
+          Go home
+        </Link>
+      </div>
+    );
   }
 
   return (

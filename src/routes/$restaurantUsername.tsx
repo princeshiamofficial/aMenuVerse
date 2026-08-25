@@ -337,6 +337,7 @@ export const Route = createFileRoute("/$restaurantUsername")({
     const nameMap: Record<string, string> = {
       burgercraftlab: "Burger Craft Lab",
       sultansdine: "Sultan's Dine",
+      menuverse: "MenuVerse Kitchen",
     };
     const baseTitle =
       restaurant?.name ||

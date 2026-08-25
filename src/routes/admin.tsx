@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Outlet, useLocation, Link } from "@tanstack/react-router";
-import { useState, useMemo, createContext, useContext } from "react";
+import { useState, useMemo, useEffect, createContext, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +56,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { redirect } from "@tanstack/react-router";
-import { getCurrentUser, signOutAction } from "@/lib/db-queries.server";
+import { getCurrentUser, signOutAction, getAdminRestaurantsServer } from "@/lib/db-queries.server";
 
 import {
   AdminContext,
@@ -221,11 +221,25 @@ function AdminDashboardShell({ children }: { children: React.ReactNode }) {
 }
 
 function AdminLayoutComponent() {
-  const [restaurantsList, setRestaurantsList] = useState(RESTAURANTS);
+  const [restaurantsList, setRestaurantsList] = useState<any[]>([]);
   const [tickets, setTickets] = useState(INITIAL_TICKETS);
   const [flags, setFlags] = useState(INITIAL_FLAGS);
   const [announcements, setAnnouncements] = useState(INITIAL_ANNOUNCEMENTS);
   const [logLevel, setLogLevel] = useState("all");
+
+  useEffect(() => {
+    async function loadDbData() {
+      try {
+        const rows = await getAdminRestaurantsServer();
+        if (rows) {
+          setRestaurantsList(rows);
+        }
+      } catch (err) {
+        console.warn("[AdminLayoutComponent] Error loading DB restaurants:", err);
+      }
+    }
+    loadDbData();
+  }, []);
 
   const contextValue = useMemo(
     () => ({

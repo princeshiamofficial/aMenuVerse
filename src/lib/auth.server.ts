@@ -277,7 +277,8 @@ const DEMO_USERS_MAP: Record<string, AuthenticatedUser> = {
 
 export async function verifySession(explicitToken?: string): Promise<AuthenticatedUser | null> {
   try {
-    let sessionToken = (explicitToken && explicitToken.trim() !== "") ? explicitToken.trim() : getCookie(COOKIE_NAME);
+    let sessionToken =
+      explicitToken && explicitToken.trim() !== "" ? explicitToken.trim() : getCookie(COOKIE_NAME);
 
     // Fallback: parse raw cookie header from Web Request if getCookie is empty
     if (!sessionToken || sessionToken === "logged_out" || sessionToken.trim() === "") {
@@ -321,10 +322,9 @@ export async function verifySession(explicitToken?: string): Promise<Authenticat
       }
 
       if (targetUserId) {
-        const users = await query<Record<string, string>[]>(
-          "SELECT * FROM users WHERE id = ?",
-          [targetUserId],
-        );
+        const users = await query<Record<string, string>[]>("SELECT * FROM users WHERE id = ?", [
+          targetUserId,
+        ]);
 
         if (users && users.length > 0) {
           const user = users[0];

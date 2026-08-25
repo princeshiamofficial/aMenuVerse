@@ -157,7 +157,7 @@ function RootShell({ children }: { children: ReactNode }) {
                   var target = sub || path;
                   var reserved = ['admin', 'login', 'auth', 'settings', 'subscription', 'pos', 'orders', 'staff', 'branches', 'categories', 'food-items', 'promotions', 'reservations', 'analytics', 'restaurant-profile', 'menu-ai'];
                   if (target && !reserved.includes(target.toLowerCase())) {
-                    var nameMap = { burgercraftlab: "Burger Craft Lab", sultansdine: "Sultan's Dine" };
+                    var nameMap = { burgercraftlab: "Burger Craft Lab", sultansdine: "Sultan's Dine", menuverse: "MenuVerse Kitchen" };
                     var titleText = nameMap[target.toLowerCase()] || target.replace(/[^a-zA-Z0-9]/g, ' ').replace(/\\b\\w/g, function(c) { return c.toUpperCase(); });
                     if (titleText) document.title = titleText + ' — Digital Menu';
                   }

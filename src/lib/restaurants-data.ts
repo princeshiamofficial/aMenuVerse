@@ -66,6 +66,84 @@ export interface Restaurant {
 
 export const RESTAURANTS: Restaurant[] = [
   {
+    id: "menuverse",
+    name: "MenuVerse Kitchen",
+    cuisine: "Multi-Cuisine & Gourmet Specialties",
+    rating: "4.9",
+    reviews: "340",
+    price: "$$",
+    time: "15-25 min",
+    location: "Global / Main Location",
+    logo: "M",
+    logoBg: "from-amber-500 to-orange-600",
+    image:
+      "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&auto=format&fit=crop&q=80",
+    logoImage:
+      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=80&auto=format&fit=crop&q=80",
+    username: "menuverse",
+    isVerified: true,
+    phone: "+880 1700-112233",
+    operatingHours: "Open Daily: 11:00 AM - 11:30 PM",
+    facilities: "Air Conditioned, Wifi, Table QR ordering, bKash & Card payments",
+    introText:
+      "Welcome to MenuVerse Kitchen. Scan QR codes at your table to place kitchen orders instantly.",
+    descriptionText:
+      "MenuVerse Kitchen serves artisan multi-cuisine dishes, gourmet burgers, pizza, pasta, and beverages.",
+    branches: [
+      {
+        id: "main-location",
+        name: "Main Location",
+        address: "Main Location, Global",
+        location: "Main Location",
+        phone: "+880 1700-112233",
+        operatingHours: "11:00 AM - 11:30 PM",
+        tables: [
+          { name: "Table 01", location: "Main Hall", status: "Active" },
+          { name: "Table 02", location: "Main Hall", status: "Active" },
+          { name: "Table 03", location: "Window Side", status: "Active" },
+        ],
+      },
+    ],
+    categories: [
+      { name: "Burgers", emoji: "🍔" },
+      { name: "Pizza", emoji: "🍕" },
+      { name: "Beverages", emoji: "🥤" },
+    ],
+    menuItems: [
+      {
+        id: "mv-1",
+        name: "MenuVerse Special Burger",
+        description:
+          "Double smash patty with caramelized onions, cheddar cheese, and signature house sauce.",
+        price: 9.5,
+        image:
+          "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80",
+        category: "Burgers",
+        popular: true,
+      },
+      {
+        id: "mv-2",
+        name: "Artisan Truffle Pizza",
+        description:
+          "Stone-baked Neapolitan pizza topped with wild mushrooms, truffle oil, and fresh mozzarella.",
+        price: 14.0,
+        image:
+          "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600&auto=format&fit=crop&q=80",
+        category: "Pizza",
+        popular: true,
+      },
+      {
+        id: "mv-3",
+        name: "Fresh Iced Lemonade",
+        description: "Freshly squeezed lemon juice with garden mint and sparkling soda.",
+        price: 3.5,
+        image:
+          "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80",
+        category: "Beverages",
+      },
+    ],
+  },
+  {
     id: "mehnur-food-gallery",
     name: "Mehnur Food Gallery",
     cuisine: "Gourmet Asian & Multi-Cuisine",

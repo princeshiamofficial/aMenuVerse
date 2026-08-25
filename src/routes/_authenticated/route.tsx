@@ -217,7 +217,8 @@ function AuthenticatedLayout() {
     >
       <GlobalRealtimeNotifier
         restaurantId={
-          (currentUser as unknown as Record<string, unknown>)?.restaurant_id as string | number | undefined
+          (currentUser as unknown as Record<string, unknown>)?.restaurant_id as
+            string | number | undefined
         }
         branch={(currentUser as unknown as Record<string, unknown>)?.branch as string | undefined}
         role={currentUser?.role}

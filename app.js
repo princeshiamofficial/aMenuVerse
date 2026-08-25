@@ -12,7 +12,10 @@ if (fs.existsSync(envPath)) {
     const eqIdx = trimmed.indexOf("=");
     if (eqIdx > 0) {
       const key = trimmed.slice(0, eqIdx).trim();
-      const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "");
+      const val = trimmed
+        .slice(eqIdx + 1)
+        .trim()
+        .replace(/^["']|["']$/g, "");
       if (key && process.env[key] === undefined) {
         process.env[key] = val;
       }
@@ -27,4 +30,3 @@ import(entryUrl).catch((err) => {
   console.error("Failed to start aMenuVerse server from .output/server/index.mjs:", err);
   process.exit(1);
 });
-

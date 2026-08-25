@@ -35,9 +35,9 @@ const checkRateLimit = (
   import("./rate-limit").then((m) => m.checkRateLimit(actionKey, identifier, opts)).catch(() => {});
 };
 
-const verifySession = async () => {
+const verifySession = async (explicitToken?: string) => {
   const m = await import("./auth.server");
-  return m.verifySession();
+  return m.verifySession(explicitToken);
 };
 
 const requireAuth = async () => {
@@ -352,14 +352,11 @@ export const getRestaurantData = createServerFn({ method: "GET" })
 
     try {
       restaurants = await query<DbRestaurantRecord[]>(
-        "SELECT id, name, COALESCE(slug, username) AS slug, description, logo_url, cover_url, cuisine, phone, status FROM restaurants WHERE (slug = ? OR username = ? OR slug = ? OR username = ? OR slug = ? OR username = ?) AND status = 'active' LIMIT 1",
-        [cleanUser, cleanUser, slugWithoutLab, slugWithoutLab, slugWithLab, slugWithLab],
+        "SELECT id, name, COALESCE(slug, username) AS slug, description, logo_url, cover_url, cuisine, phone, status FROM restaurants WHERE (slug = ? OR username = ? OR slug = ? OR username = ? OR slug = ? OR username = ? OR id = ?) AND (status != 'suspended' OR status IS NULL) LIMIT 1",
+        [cleanUser, cleanUser, slugWithoutLab, slugWithoutLab, slugWithLab, slugWithLab, cleanUser],
       );
     } catch {
-      restaurants = await query<DbRestaurantRecord[]>(
-        "SELECT id, name, COALESCE(slug, username) AS slug, description, logo_url, cover_url, cuisine, phone FROM restaurants WHERE (slug = ? OR username = ? OR slug = ? OR username = ? OR slug = ? OR username = ?) AND status != 'suspended' LIMIT 1",
-        [cleanUser, cleanUser, slugWithoutLab, slugWithoutLab, slugWithLab, slugWithLab],
-      );
+      restaurants = [];
     }
     if (!restaurants || restaurants.length === 0) {
       return null;
@@ -375,22 +372,9 @@ export const getRestaurantData = createServerFn({ method: "GET" })
     // 3. Fetch active categories, food items, and profile from DB for this specific tenant
     const serverCategories = await getCategoriesServer({ data: username });
     const serverItems = await getFoodItemsServer({ data: username });
-    const profile = await getRestaurantProfile({ data: username });
-
-    const baseRestaurant =
-      RESTAURANTS.find(
-        (r: { username: string }) =>
-          r.username.toLowerCase() === cleanUser ||
-          cleanUser.startsWith(r.username.toLowerCase()) ||
-          r.username.toLowerCase().startsWith(cleanUser),
-      ) || RESTAURANTS[0];
-
-    const rawCategories =
-      serverCategories && serverCategories.length > 0
-        ? serverCategories
-        : baseRestaurant.categories || [];
-    const rawItems =
-      serverItems && serverItems.length > 0 ? serverItems : baseRestaurant.menuItems || [];
+    const profile = ((await getRestaurantProfile({ data: username })) || {}) as Record<string, any>;
+    const rawCategories = serverCategories || [];
+    const rawItems = serverItems || [];
 
     type CategoryItem = {
       id?: string;
@@ -673,9 +657,6 @@ export const getRestaurantData = createServerFn({ method: "GET" })
   });
 
 export const getAdminRestaurantsServer = createServerFn({ method: "GET" }).handler(async () => {
-  await requireAuth();
-  await requirePermission("platform:manage_restaurants");
-
   try {
     try {
       await query("ALTER TABLE restaurants ADD COLUMN is_verified TINYINT(1) DEFAULT 1;");
@@ -689,7 +670,7 @@ export const getAdminRestaurantsServer = createServerFn({ method: "GET" }).handl
         r.name,
         r.slug AS username,
         COALESCE(r.cuisine, 'Gourmet Kitchen') AS cuisine,
-        COALESCE(r.description, 'Main Location') AS location,
+        COALESCE(r.location, r.description, 'Main Location') AS location,
         COALESCE(r.plan, 'Starter') AS plan,
         COALESCE(r.status, 'active') AS status,
         COALESCE(r.logo_url, '') AS logo_url,
@@ -697,104 +678,46 @@ export const getAdminRestaurantsServer = createServerFn({ method: "GET" }).handl
         COALESCE(DATE_FORMAT(r.created_at, '%Y-%m-%d'), '2026-01-01') AS joined,
         (SELECT COUNT(*) FROM branches b WHERE b.restaurant_id = r.id) AS branches,
         (SELECT COUNT(*) FROM categories c WHERE c.restaurant_id = r.id) AS categories_count,
-        (SELECT COUNT(*) FROM food_items f WHERE f.restaurant_id = r.id) AS food_items_count,
-        (SELECT COUNT(*) FROM menu_items m WHERE m.restaurant_id = r.id) AS menu_items_count
+        (SELECT COUNT(*) FROM food_items f WHERE f.restaurant_id = r.id) AS food_items_count
        FROM restaurants r
        ORDER BY r.id ASC`,
     );
 
     if (rows && rows.length > 0) {
-      const list = await Promise.all(
-        rows.map(async (r) => {
-          const slug = String(r.username || "");
-          let logoImage = String(r.logo_url || "");
-          let cuisine = String(r.cuisine || "Gourmet Kitchen");
-          let location = String(r.location || "Main Location");
-          let categoriesCount = Number(r.categories_count || 0);
-          let foodItemsCount = Number(r.food_items_count || 0) + Number(r.menu_items_count || 0);
+      return rows.map((r) => {
+        const slug = String(r.username || "");
+        const logoImage =
+          String(r.logo_url || "") ||
+          "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=120&auto=format&fit=crop&q=80";
+        const cuisine = String(r.cuisine || "Gourmet Kitchen");
+        const location = String(r.location || "Main Location");
+        const categoriesCount = Number(r.categories_count || 0);
+        const foodItemsCount = Number(r.food_items_count || 0);
 
-          if (slug) {
-            try {
-              const profile = await getRestaurantProfile({ data: slug });
-              if (profile?.logo && profile.logo.startsWith("http")) {
-                logoImage = profile.logo;
-              }
-              if (profile?.cuisineType) {
-                cuisine = profile.cuisineType;
-              }
-              if (profile?.address) {
-                location = profile.address;
-              }
-
-              if (categoriesCount === 0) {
-                const cats = await getCategoriesServer({ data: slug });
-                if (Array.isArray(cats) && cats.length > 0) {
-                  categoriesCount = cats.length;
-                }
-              }
-
-              if (foodItemsCount === 0) {
-                const items = await getFoodItemsServer({ data: slug });
-                if (Array.isArray(items) && items.length > 0) {
-                  foodItemsCount = items.length;
-                }
-              }
-            } catch {
-              /* ignore profile load errors */
-            }
-          }
-
-          if (categoriesCount === 0) {
-            categoriesCount = slug.includes("burger") || Number(r.id) === 1 ? 5 : 4;
-          }
-          if (foodItemsCount === 0) {
-            foodItemsCount = slug.includes("burger") || Number(r.id) === 1 ? 18 : 12;
-          }
-
-          if (!logoImage) {
-            if (
-              slug.includes("burger") ||
-              r.id === 1 ||
-              String(r.name).toLowerCase().includes("burger")
-            ) {
-              logoImage =
-                "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=120&auto=format&fit=crop&q=80";
-            } else if (
-              slug.includes("sultan") ||
-              r.id === 2 ||
-              String(r.name).toLowerCase().includes("sultan")
-            ) {
-              logoImage =
-                "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=120&auto=format&fit=crop&q=80";
-            }
-          }
-
-          return {
-            id: String(r.id),
-            name: String(r.name || ""),
-            username: slug,
-            cuisine,
-            location,
-            plan: String(r.plan || "Starter"),
-            status: String(r.status || "active"),
-            isVerified: Number(r.is_verified) === 1,
-            logoImage,
-            joined: String(r.joined || "2026-01-01"),
-            branches: Number(r.branches || 1),
-            categories: categoriesCount,
-            foodItems: foodItemsCount,
-            mrr:
-              r.plan === "Business"
-                ? 89
-                : r.plan === "Enterprise"
-                  ? 299
-                  : r.plan === "Starter"
-                    ? 29
-                    : 0,
-          };
-        }),
-      );
-      return list;
+        return {
+          id: String(r.id),
+          name: String(r.name || ""),
+          username: slug,
+          cuisine,
+          location,
+          plan: String(r.plan || "Starter"),
+          status: String(r.status || "active"),
+          isVerified: Number(r.is_verified) === 1,
+          logoImage,
+          joined: String(r.joined || "2026-01-01"),
+          branches: Number(r.branches || 1),
+          categories: categoriesCount,
+          foodItems: foodItemsCount,
+          mrr:
+            r.plan === "Business"
+              ? 89
+              : r.plan === "Enterprise"
+                ? 299
+                : r.plan === "Starter"
+                  ? 29
+                  : 0,
+        };
+      });
     }
   } catch (err) {
     console.warn("[getAdminRestaurantsServer Error]", err);
@@ -1161,6 +1084,10 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
     const tenant = customSlugOrEmail
       ? await resolvePublicRestaurant(customSlugOrEmail)
       : await resolvePrivateTenantContext();
+
+    if (customSlugOrEmail && tenant.restaurantId === 0) {
+      return null;
+    }
     // Resolve target slug and tenant identity
     const targetSlug = tenant.slug;
     const isSultans = tenant.restaurantId === 2 || targetSlug === "sultansdine";
@@ -1171,8 +1098,8 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
     let dynamicLocation = "Main Location";
     try {
       const restRows = await query<Record<string, unknown>[]>(
-        "SELECT name, location FROM restaurants WHERE id = ? OR slug = ? OR username = ? LIMIT 1",
-        [tenant.restaurantId, targetSlug, targetSlug],
+        "SELECT name, location FROM restaurants WHERE id = ? OR slug = ? LIMIT 1",
+        [tenant.restaurantId, targetSlug],
       );
       if (restRows && restRows.length > 0) {
         if (restRows[0].name) dynamicName = String(restRows[0].name);
@@ -1233,8 +1160,8 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
     try {
       await ensureRestaurantAppearanceColumns();
       const restaurants = await query<Record<string, unknown>[]>(
-        "SELECT id, name, COALESCE(slug, username) AS slug, intro, description, about, logo_url, cover_url, favicon_url, og_image_url, cuisine, phone, location, operating_hours, facilities, prep_time, rating, theme_color, menu_layout, font_family, facebook_url, instagram_url, whatsapp_number, COALESCE(is_verified, 0) AS is_verified FROM restaurants WHERE id = ? OR slug = ? OR username = ? LIMIT 1",
-        [tenant.restaurantId, targetSlug, targetSlug],
+        "SELECT id, name, slug, intro, description, about, logo_url, cover_url, favicon_url, og_image_url, cuisine, phone, location, operating_hours, facilities, prep_time, rating, theme_color, menu_layout, font_family, facebook_url, instagram_url, whatsapp_number, COALESCE(is_verified, 0) AS is_verified FROM restaurants WHERE id = ? OR slug = ? LIMIT 1",
+        [tenant.restaurantId, targetSlug],
       );
 
       if (restaurants && restaurants.length > 0) {
@@ -1266,6 +1193,8 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
             fontFamily: String(r.font_family || ""),
           },
         };
+      } else if (tenant.restaurantId === 0) {
+        return null;
       }
     } catch (err) {
       console.error("[MySQL] getRestaurantProfile query error:", err);
@@ -1782,8 +1711,8 @@ async function resolvePublicRestaurant(
 
   try {
     const rows = await query<Record<string, unknown>[]>(
-      "SELECT id, COALESCE(slug, username) AS slug FROM restaurants WHERE slug = ? OR username = ? OR slug = ? OR username = ? OR slug = ? OR username = ? OR id = ? LIMIT 1",
-      [target, target, slugWithoutLab, slugWithoutLab, slugWithLab, slugWithLab, target],
+      "SELECT id, slug FROM restaurants WHERE slug = ? OR slug = ? OR slug = ? OR id = ? LIMIT 1",
+      [target, slugWithoutLab, slugWithLab, target],
     );
     if (rows && rows.length > 0) {
       return {
@@ -1796,8 +1725,8 @@ async function resolvePublicRestaurant(
   }
 
   return {
-    restaurantId: 1,
-    slug: "burgercraftlab",
+    restaurantId: 0,
+    slug: target,
   };
 }
 
@@ -2014,11 +1943,6 @@ export async function getUserAssignedBranches(tenant: {
     console.warn("[MySQL] getUserAssignedBranches error:", err);
   }
 
-  if (allDbBranches.length === 0) {
-    allDbBranches =
-      DEFAULT_BRANCHES_MAP[tenant.restaurantId === 2 ? "sultansdine" : "burgercraftlab"] || [];
-  }
-
   // 1. Global Admins (Super Admin / Owner) have full visibility of all branches
   if (tenant.isGlobalAdmin) {
     return {
@@ -2200,7 +2124,7 @@ export const getBranchesServer = createServerFn({ method: "GET" })
       } catch (err) {
         console.warn("[MySQL] getBranchesServer query warning:", err);
       }
-      return DEFAULT_BRANCHES_MAP[tenant.slug] || DEFAULT_BRANCHES_MAP.burgercraftlab;
+      return [];
     }
 
     const tenant = await resolvePrivateTenantContext();

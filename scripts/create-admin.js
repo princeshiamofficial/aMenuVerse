@@ -67,9 +67,7 @@ async function main() {
   try {
     // Skip bootstrapping if user accounts already exist in the database
     try {
-      const [existingUsers] = await connection.query(
-        "SELECT COUNT(*) AS total FROM users",
-      );
+      const [existingUsers] = await connection.query("SELECT COUNT(*) AS total FROM users");
       const userCount = existingUsers && existingUsers[0] ? Number(existingUsers[0].total) : 0;
       if (userCount > 0) {
         console.log(`✅ Found ${userCount} existing user account(s) in database.`);
@@ -82,6 +80,28 @@ async function main() {
 
     // 1. Create all 5 default Restaurants so all public URLs work
     const restaurantsData = [
+      {
+        name: "MenuVerse Kitchen",
+        cuisine: "Multi-Cuisine",
+        rating: "4.9",
+        reviews: "340",
+        price: "$$",
+        time: "15-25 min",
+        location: "Global",
+        logo: "M",
+        logo_bg: "from-amber-500 to-orange-600",
+        username: "menuverse",
+        primary_color: "#ff7a00",
+        font_family: "Outfit",
+        layout_type: "grid",
+        branch: {
+          id: "main-location",
+          name: "Main Location",
+          location: "Global",
+          phone: "+8801700-112233",
+          operating_hours: "Open Daily: 11:00 AM - 11:30 PM",
+        },
+      },
       {
         name: "Burger Craft Lab",
         cuisine: "Gourmet Burgers",
@@ -287,13 +307,69 @@ async function main() {
 
     // 3. Create UI Quick Demo Accounts
     const demoAccounts = [
-      { id: "demo-admin-menuverse-app", email: "admin@menuverse.app", pwd: "admin123", name: "System Super Admin", role: "super_admin", restId: 0, branch: null },
-      { id: "demo-owner-burgercraft-com", email: "owner@burgercraft.com", pwd: "owner123", name: "Tariqul Islam (Owner - Burger Craft)", role: "owner", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
-      { id: "demo-manager-burgercraft-com", email: "manager@burgercraft.com", pwd: "manager123", name: "Sabrina Rahman (Manager - Burger Craft)", role: "manager", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
-      { id: "demo-cashier-burgercraft-com", email: "cashier@burgercraft.com", pwd: "cashier123", name: "Tamanna Akter (Cashier - Burger Craft)", role: "cashier", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
-      { id: "demo-chef-burgercraft-com", email: "chef@burgercraft.com", pwd: "chef123", name: "Arif Chowdhury (Chef - Burger Craft)", role: "chef", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
-      { id: "demo-waiter-burgercraft-com", email: "waiter@burgercraft.com", pwd: "waiter123", name: "Rakib Hassan (Waiter - Burger Craft)", role: "waiter", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
-      { id: "demo-host-burgercraft-com", email: "host@burgercraft.com", pwd: "host123", name: "Nadia Islam (Host - Burger Craft)", role: "host", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
+      {
+        id: "demo-admin-menuverse-app",
+        email: "admin@menuverse.app",
+        pwd: "admin123",
+        name: "System Super Admin",
+        role: "super_admin",
+        restId: 0,
+        branch: null,
+      },
+      {
+        id: "demo-owner-burgercraft-com",
+        email: "owner@burgercraft.com",
+        pwd: "owner123",
+        name: "Tariqul Islam (Owner - Burger Craft)",
+        role: "owner",
+        restId: burgerCraftLabId,
+        branch: "dhanmondi-branch",
+      },
+      {
+        id: "demo-manager-burgercraft-com",
+        email: "manager@burgercraft.com",
+        pwd: "manager123",
+        name: "Sabrina Rahman (Manager - Burger Craft)",
+        role: "manager",
+        restId: burgerCraftLabId,
+        branch: "dhanmondi-branch",
+      },
+      {
+        id: "demo-cashier-burgercraft-com",
+        email: "cashier@burgercraft.com",
+        pwd: "cashier123",
+        name: "Tamanna Akter (Cashier - Burger Craft)",
+        role: "cashier",
+        restId: burgerCraftLabId,
+        branch: "dhanmondi-branch",
+      },
+      {
+        id: "demo-chef-burgercraft-com",
+        email: "chef@burgercraft.com",
+        pwd: "chef123",
+        name: "Arif Chowdhury (Chef - Burger Craft)",
+        role: "chef",
+        restId: burgerCraftLabId,
+        branch: "dhanmondi-branch",
+      },
+      {
+        id: "demo-waiter-burgercraft-com",
+        email: "waiter@burgercraft.com",
+        pwd: "waiter123",
+        name: "Rakib Hassan (Waiter - Burger Craft)",
+        role: "waiter",
+        restId: burgerCraftLabId,
+        branch: "dhanmondi-branch",
+      },
+      {
+        id: "demo-host-burgercraft-com",
+        email: "host@burgercraft.com",
+        pwd: "host123",
+        name: "Nadia Islam (Host - Burger Craft)",
+        role: "host",
+        restId: burgerCraftLabId,
+        branch: "dhanmondi-branch",
+      },
     ];
 
     console.log("\nCreating Quick Demo Accounts...");
@@ -303,7 +379,15 @@ async function main() {
         `INSERT INTO users (id, restaurant_id, name, email, password_hash, role, assigned_branch_id, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')
          ON DUPLICATE KEY UPDATE id=id`,
-        [demo.id, demo.restId === 0 ? null : demo.restId, demo.name, demo.email, hashedDemoPwd, demo.role, demo.branch],
+        [
+          demo.id,
+          demo.restId === 0 ? null : demo.restId,
+          demo.name,
+          demo.email,
+          hashedDemoPwd,
+          demo.role,
+          demo.branch,
+        ],
       );
 
       await connection.query(

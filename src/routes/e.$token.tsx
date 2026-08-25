@@ -17,7 +17,7 @@ function EncryptedTableRoute() {
   const branchSlug = decoded?.branchSlug || "";
   const tableNo = decoded?.tableNo || "01";
 
-  const [restaurantData, setRestaurantData] = useState<Restaurant>(() =>
+  const [restaurantData, setRestaurantData] = useState<Restaurant | null>(() =>
     fetchPublicMenuSync(subdomain),
   );
 
@@ -32,6 +32,17 @@ function EncryptedTableRoute() {
     }
     loadAsync();
   }, [subdomain]);
+
+  if (!restaurantData) {
+    return (
+      <div className="mx-auto max-w-2xl p-8 text-center min-h-[60vh] flex flex-col items-center justify-center">
+        <h1 className="text-2xl font-bold">Restaurant not found</h1>
+        <p className="mt-2 text-muted-foreground">
+          No active restaurant matches this table QR code.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <PublicRestaurantView

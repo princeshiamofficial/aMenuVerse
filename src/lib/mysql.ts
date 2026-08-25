@@ -23,7 +23,7 @@ export function getPool(): mysql.Pool {
   if (!globalForMysql.__mysql_pool__) {
     const host = process.env.MYSQL_HOST || "localhost";
     const port = process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT) : 3306;
-    const user = process.env.MYSQL_USER || "menuverse_app";
+    const user = process.env.MYSQL_USER || "root";
     const password = process.env.MYSQL_PASSWORD || "";
     const database = process.env.MYSQL_DATABASE || "amenuverse";
 
