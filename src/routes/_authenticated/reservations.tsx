@@ -388,7 +388,7 @@ function ReservationsPage() {
       }
 
       try {
-        const dbBranches = await getBranchesServer();
+        const dbBranches = await getBranchesServer({ data: {} });
         if (dbBranches && Array.isArray(dbBranches) && dbBranches.length > 0) {
           setBranches(
             dbBranches as Array<{
@@ -442,7 +442,7 @@ function ReservationsPage() {
       }
 
       try {
-        const dbRes = await getReservationsServer();
+        const dbRes = await getReservationsServer({ data: {} });
         if (dbRes && Array.isArray(dbRes)) {
           setReservations(dbRes as unknown as Reservation[]);
         } else {

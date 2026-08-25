@@ -325,7 +325,7 @@ function OrdersPage() {
       }
 
       try {
-        const brs = await getBranchesServer();
+        const brs = await getBranchesServer({ data: {} });
         if (brs && Array.isArray(brs)) {
           setBranchesList(
             brs as Array<{
@@ -392,7 +392,7 @@ function OrdersPage() {
       }
 
       try {
-        const dbItems = await getFoodItemsServer();
+        const dbItems = await getFoodItemsServer({ data: {} });
         if (dbItems && Array.isArray(dbItems) && dbItems.length > 0) {
           setItems(dbItems as unknown as FoodItem[]);
         }
@@ -401,7 +401,7 @@ function OrdersPage() {
       }
 
       try {
-        const dbCats = await getCategoriesServer();
+        const dbCats = await getCategoriesServer({ data: {} });
         if (dbCats && Array.isArray(dbCats) && dbCats.length > 0) {
           setCategories(dbCats as unknown as Category[]);
         }

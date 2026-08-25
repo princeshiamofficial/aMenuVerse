@@ -96,7 +96,7 @@ export function DashboardShell({
 
       try {
         const [branches, subData] = await Promise.all([
-          getBranchesServer(),
+          getBranchesServer({ data: {} }),
           getTenantSubscriptionServer(),
         ]);
 
@@ -173,7 +173,7 @@ export function DashboardShell({
       }
 
       try {
-        const branches = await getBranchesServer();
+        const branches = await getBranchesServer({ data: {} });
         if (Array.isArray(branches) && branches.length > 0) {
           const target = userBranch || (await getCurrentUser())?.branch;
           if (target) {

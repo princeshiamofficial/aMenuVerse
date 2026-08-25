@@ -214,7 +214,7 @@ function BranchesPage() {
       }
 
       try {
-        const staffList = await getStaffServer();
+        const staffList = await getStaffServer({ data: {} });
         if (staffList && Array.isArray(staffList)) {
           setDbStaff(staffList.map((s) => ({ name: s.name, role: s.role })));
         }
@@ -223,7 +223,7 @@ function BranchesPage() {
       }
 
       try {
-        const dbBranches = await getBranchesServer();
+        const dbBranches = await getBranchesServer({ data: {} });
         if (dbBranches && Array.isArray(dbBranches) && dbBranches.length > 0) {
           let list = dbBranches as Branch[];
           if (!list.some((b) => b.isDefault)) {

@@ -647,7 +647,7 @@ function StaffPage() {
       }
 
       try {
-        const brs = await getBranchesServer();
+        const brs = await getBranchesServer({ data: {} });
         if (brs && Array.isArray(brs)) {
           setBranchesList(
             brs as Array<{ id: string; name: string; manager?: string; isDefault?: boolean }>,
@@ -683,7 +683,7 @@ function StaffPage() {
       }
 
       try {
-        const dbStaff = await getStaffServer();
+        const dbStaff = await getStaffServer({ data: {} });
         if (dbStaff && Array.isArray(dbStaff) && dbStaff.length > 0) {
           const map = new Map<string, StaffMember>();
           (dbStaff as StaffMember[]).forEach((s) => {

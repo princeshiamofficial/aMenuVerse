@@ -202,7 +202,7 @@ function Dashboard() {
       }
 
       try {
-        const dbBranches = await getBranchesServer();
+        const dbBranches = await getBranchesServer({ data: {} });
         if (dbBranches && Array.isArray(dbBranches) && dbBranches.length > 0) {
           setBranches(dbBranches.map((b) => ({ id: b.id, name: b.name })));
 
@@ -253,7 +253,7 @@ function Dashboard() {
       }
 
       try {
-        const dbRes = await getReservationsServer();
+        const dbRes = await getReservationsServer({ data: {} });
         if (dbRes && Array.isArray(dbRes)) {
           setReservations(dbRes);
         }
@@ -262,7 +262,7 @@ function Dashboard() {
       }
 
       try {
-        const dbItems = await getFoodItemsServer();
+        const dbItems = await getFoodItemsServer({ data: {} });
         if (dbItems && Array.isArray(dbItems) && dbItems.length > 0) {
           const popular = dbItems.find((i) => i.bestSeller || i.popular) || dbItems[0];
           if (popular?.name) setTopFoodItem(popular.name);

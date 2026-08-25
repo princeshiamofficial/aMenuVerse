@@ -164,7 +164,7 @@ function PromotionsPage() {
       }
 
       try {
-        const brs = await getBranchesServer();
+        const brs = await getBranchesServer({ data: {} });
         if (brs && Array.isArray(brs)) {
           setBranchesList(
             brs as Array<{ id: string; name: string; manager?: string; isDefault?: boolean }>,
@@ -200,7 +200,7 @@ function PromotionsPage() {
       }
 
       try {
-        const dbItems = await getFoodItemsServer();
+        const dbItems = await getFoodItemsServer({ data: {} });
         if (dbItems && Array.isArray(dbItems) && dbItems.length > 0) {
           const mergedItems = (dbItems as unknown as FoodItem[]).map((it) => {
             if (!it.image) {
@@ -216,7 +216,7 @@ function PromotionsPage() {
       }
 
       try {
-        const dbCats = await getCategoriesServer();
+        const dbCats = await getCategoriesServer({ data: {} });
         if (dbCats && Array.isArray(dbCats) && dbCats.length > 0) {
           setCategories(dbCats as unknown as Category[]);
         }
@@ -225,7 +225,7 @@ function PromotionsPage() {
       }
 
       try {
-        const dbPromos = await getPromotionsServer();
+        const dbPromos = await getPromotionsServer({ data: {} });
         if (dbPromos && Array.isArray(dbPromos)) {
           setPromotions(dbPromos as unknown as Promotion[]);
         }
@@ -531,13 +531,12 @@ function PromotionsPage() {
         )
       : null;
     const resolvedManagerBranchId = managerBranchRecord?.id || p.branchId || "assigned";
-    const resolvedManagerBranchName = managerBranchRecord?.name || managerBranch || p.branchName || "Assigned Branch";
+    const resolvedManagerBranchName =
+      managerBranchRecord?.name || managerBranch || p.branchName || "Assigned Branch";
 
     const promoToSave: Promotion = {
       ...p,
-      branchName: isManager
-        ? resolvedManagerBranchName
-        : p.branchName || "all",
+      branchName: isManager ? resolvedManagerBranchName : p.branchName || "all",
       // Always store UUID — never branch name — in branchId
       branchId: isManager ? resolvedManagerBranchId : p.branchId || "all",
       createdByRole: isManager ? "manager" : p.createdByRole || "owner",

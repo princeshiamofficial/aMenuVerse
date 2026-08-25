@@ -212,8 +212,8 @@ function FoodItemsPage() {
     async function loadFromDb() {
       try {
         const [dbItems, dbCategories, subData, prof, dbSettings] = await Promise.all([
-          getFoodItemsServer(),
-          getCategoriesServer(),
+          getFoodItemsServer({ data: {} }),
+          getCategoriesServer({ data: {} }),
           getTenantSubscriptionServer(),
           getRestaurantProfile().catch(() => null),
           getSettingsServer().catch(() => null),

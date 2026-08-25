@@ -4555,7 +4555,7 @@ export const getPromotionsServer = createServerFn({ method: "GET" })
         /* column already exists */
       }
 
-      let sql = "SELECT * FROM promotions WHERE restaurant_id = ?";
+      let sql = "SELECT * FROM promotions WHERE (restaurant_id = ? OR restaurant_id = 0)";
       const params: unknown[] = [tenant.restaurantId];
 
       if (filter.branchId && filter.branchId !== "all") {
@@ -4903,7 +4903,36 @@ export const getReservationsServer = createServerFn({ method: "GET" })
     }
 
     try {
-      let sql = "SELECT * FROM reservations WHERE restaurant_id = ?";
+      try {
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE reservations CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+          "ALTER TABLE reservations ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE reservations ADD COLUMN branch_id VARCHAR(255) NULL",
+          "ALTER TABLE reservations ADD COLUMN branch_name VARCHAR(255) NULL",
+          "ALTER TABLE reservations ADD COLUMN guest_name VARCHAR(255) NULL",
+          "ALTER TABLE reservations ADD COLUMN guest_phone VARCHAR(50) NULL",
+          "ALTER TABLE reservations ADD COLUMN guest_email VARCHAR(255) NULL",
+          "ALTER TABLE reservations ADD COLUMN guests INT DEFAULT 2",
+          "ALTER TABLE reservations ADD COLUMN reservation_time VARCHAR(50) NULL",
+          "ALTER TABLE reservations ADD COLUMN table_number VARCHAR(50) NULL",
+          "ALTER TABLE reservations ADD COLUMN status VARCHAR(50) DEFAULT 'confirmed'",
+          "ALTER TABLE reservations ADD COLUMN notes TEXT NULL",
+          "ALTER TABLE reservations ADD COLUMN special_requests TEXT NULL",
+          "ALTER TABLE reservations MODIFY COLUMN id VARCHAR(255) NOT NULL",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
+      let sql = "SELECT * FROM reservations WHERE (restaurant_id = ? OR restaurant_id = 0)";
       const params: unknown[] = [tenant.restaurantId];
 
       if (filter.branchId && filter.branchId !== "all") {

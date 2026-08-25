@@ -158,7 +158,7 @@ function AnalyticsPage() {
       }
 
       try {
-        const brs = await getBranchesServer();
+        const brs = await getBranchesServer({ data: {} });
         if (brs && Array.isArray(brs)) {
           setBranchesList(
             brs as Array<{ id: string; name: string; manager?: string; isDefault?: boolean }>,
@@ -201,7 +201,7 @@ function AnalyticsPage() {
         /* ignore */
       }
       try {
-        const items = await getFoodItemsServer();
+        const items = await getFoodItemsServer({ data: {} });
         if (items && Array.isArray(items)) setDbFoodItems(items as Record<string, unknown>[]);
       } catch {
         /* ignore */

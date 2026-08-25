@@ -192,7 +192,7 @@ function POSPage() {
     async function loadBranches() {
       try {
         const u = await getCurrentUser();
-        const dbBranches = await getBranchesServer();
+        const dbBranches = await getBranchesServer({ data: {} });
         if (dbBranches && Array.isArray(dbBranches) && dbBranches.length > 0) {
           setBranchesList(dbBranches.map((b) => ({ id: b.id, name: b.name })));
 
@@ -327,7 +327,7 @@ function POSPage() {
       }
 
       try {
-        const dbItems = await getFoodItemsServer();
+        const dbItems = await getFoodItemsServer({ data: {} });
         if (dbItems && Array.isArray(dbItems) && dbItems.length > 0) {
           setItems(
             dbItems.map((it, idx) => sanitizePOSFoodItem(it as Record<string, unknown>, idx)),
@@ -338,7 +338,7 @@ function POSPage() {
       }
 
       try {
-        const dbCats = await getCategoriesServer();
+        const dbCats = await getCategoriesServer({ data: {} });
         if (dbCats && Array.isArray(dbCats) && dbCats.length > 0) {
           setCategories(
             dbCats.map((c, idx) => sanitizeCategory(c as Record<string, unknown>, idx)),

@@ -408,7 +408,7 @@ function CategoriesPage() {
     async function loadFromDb() {
       try {
         const [dbCategories, subData] = await Promise.all([
-          getCategoriesServer(),
+          getCategoriesServer({ data: {} }),
           getTenantSubscriptionServer(),
         ]);
         if (dbCategories && Array.isArray(dbCategories)) {

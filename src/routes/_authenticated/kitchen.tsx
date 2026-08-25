@@ -277,7 +277,7 @@ function KitchenDisplayPage() {
     async function loadSessionAndBranches() {
       try {
         const u = await getCurrentUser();
-        const dbBranches = await getBranchesServer();
+        const dbBranches = await getBranchesServer({ data: {} });
         if (dbBranches && Array.isArray(dbBranches) && dbBranches.length > 0) {
           setBranchesList(dbBranches.map((b) => ({ id: b.id, name: b.name })));
 

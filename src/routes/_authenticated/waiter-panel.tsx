@@ -788,9 +788,9 @@ function WaiterPanelPage() {
   const loadMenu = useCallback(async () => {
     try {
       const [rawItems, rawCats, rawBranches, dbSettings, prof] = await Promise.all([
-        getFoodItemsServer(),
-        getCategoriesServer(),
-        getBranchesServer(),
+        getFoodItemsServer({ data: {} }),
+        getCategoriesServer({ data: {} }),
+        getBranchesServer({ data: {} }),
         getSettingsServer().catch(() => null),
         getRestaurantProfile().catch(() => null),
       ]);

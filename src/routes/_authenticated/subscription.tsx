@@ -309,7 +309,7 @@ function SubscriptionPage() {
 
     async function loadBranchCount() {
       try {
-        const rows = await getBranchesServer();
+        const rows = await getBranchesServer({ data: {} });
         if (Array.isArray(rows)) setRealBranchCount(rows.length);
       } catch {
         // keep default
@@ -318,7 +318,7 @@ function SubscriptionPage() {
 
     async function loadItemCount() {
       try {
-        const rows = await getFoodItemsServer();
+        const rows = await getFoodItemsServer({ data: {} });
         if (Array.isArray(rows)) setRealItemCount(rows.length);
       } catch {
         // keep default
