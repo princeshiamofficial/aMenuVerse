@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const mysql = require("mysql2/promise");
-const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
@@ -48,9 +48,10 @@ const MYSQL_USER = process.env.MYSQL_USER || "root";
 const MYSQL_PASSWORD = process.env.MYSQL_PASSWORD || "";
 const MYSQL_DATABASE = process.env.MYSQL_DATABASE || "digital_food_menu";
 
-async function hashPassword(password) {
-  const salt = await bcrypt.genSalt(10);
-  return await bcrypt.hash(password, salt);
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.pbkdf2Sync(password, salt, 600000, 64, "sha512").toString("hex");
+  return `$pbkdf2v2$${salt}:${hash}`;
 }
 
 async function main() {
@@ -225,8 +226,8 @@ async function main() {
     }
 
     // 2. Create Admin Users for all restaurants
-    const password = "password123";
-    const hashedPassword = await hashPassword(password);
+    const defaultPassword = "password123";
+    const defaultHashedPassword = hashPassword(defaultPassword);
 
     // Fetch all inserted restaurants to get their IDs and usernames
     const [insertedRestaurants] = await connection.query(
@@ -248,20 +249,45 @@ async function main() {
         `INSERT INTO users (restaurant_id, name, email, password_hash, role, assigned_branch_id, status)
          VALUES (?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE restaurant_id=VALUES(restaurant_id), password_hash=VALUES(password_hash)`,
-        [r.id, `${r.name} Admin`, email, hashedPassword, "admin", null, "Active"],
+        [r.id, `${r.name} Admin`, email, defaultHashedPassword, "admin", null, "Active"],
       );
       console.log(`- Created admin: ${email} (for ${r.name})`);
     }
 
-    console.log(`\n✅ Admin users successfully created for all restaurants!`);
+    // 3. Create UI Quick Demo Accounts
+    const demoAccounts = [
+      { id: "demo-admin-menuverse-app", email: "admin@menuverse.app", pwd: "admin123", name: "System Super Admin", role: "super_admin", restId: null, branch: null },
+      { id: "demo-owner-burgercraft-com", email: "owner@burgercraft.com", pwd: "owner123", name: "Tariqul Islam (Owner - Burger Craft)", role: "owner", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
+      { id: "demo-manager-burgercraft-com", email: "manager@burgercraft.com", pwd: "manager123", name: "Sabrina Rahman (Manager - Burger Craft)", role: "manager", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
+      { id: "demo-cashier-burgercraft-com", email: "cashier@burgercraft.com", pwd: "cashier123", name: "Tamanna Akter (Cashier - Burger Craft)", role: "cashier", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
+      { id: "demo-chef-burgercraft-com", email: "chef@burgercraft.com", pwd: "chef123", name: "Arif Chowdhury (Chef - Burger Craft)", role: "chef", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
+      { id: "demo-waiter-burgercraft-com", email: "waiter@burgercraft.com", pwd: "waiter123", name: "Rakib Hassan (Waiter - Burger Craft)", role: "waiter", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
+      { id: "demo-host-burgercraft-com", email: "host@burgercraft.com", pwd: "host123", name: "Nadia Islam (Host - Burger Craft)", role: "host", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
+    ];
+
+    console.log("\nCreating Quick Demo Accounts...");
+    for (const demo of demoAccounts) {
+      const hashedDemoPwd = hashPassword(demo.pwd);
+      await connection.query(
+        `INSERT INTO users (id, restaurant_id, name, email, password_hash, role, assigned_branch_id, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')
+         ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash), role=VALUES(role), restaurant_id=VALUES(restaurant_id)`,
+        [demo.id, demo.restId, demo.name, demo.email, hashedDemoPwd, demo.role, demo.branch],
+      );
+      console.log(`- Created demo account: ${demo.email} (Password: ${demo.pwd})`);
+    }
+
+    console.log(`\n✅ Admin and Quick Demo users successfully created!`);
     console.log(`-----------------------------------------------`);
-    console.log(`Password for all accounts: ${password}`);
-    console.log(`Logins:`);
-    console.log(`  - admin@example.com (Burger Craft Lab)`);
-    console.log(`  - sakura@example.com (Sakura Sushi Bar)`);
-    console.log(`  - ladolcevita@example.com (La Dolce Vita)`);
-    console.log(`  - spicywok@example.com (The Spicy Wok)`);
-    console.log(`  - redchili@example.com (Red Chili)`);
+    console.log(`Quick Demo Buttons on Auth Page:`);
+    console.log(`  - owner@burgercraft.com (Pass: owner123)`);
+    console.log(`  - manager@burgercraft.com (Pass: manager123)`);
+    console.log(`  - cashier@burgercraft.com (Pass: cashier123)`);
+    console.log(`  - chef@burgercraft.com (Pass: chef123)`);
+    console.log(`  - waiter@burgercraft.com (Pass: waiter123)`);
+    console.log(`  - host@burgercraft.com (Pass: host123)`);
+    console.log(`  - admin@menuverse.app (Pass: admin123)`);
+    console.log(`  - admin@example.com (Pass: password123)`);
     console.log(`-----------------------------------------------`);
   } catch (err) {
     console.error("Error bootstrapping admin user:", err);
