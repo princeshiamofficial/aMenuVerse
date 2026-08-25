@@ -71,6 +71,7 @@ import {
   updateBranchesServer,
   getBranchTablesServer,
   saveBranchTablesServer,
+  getCurrentTenantSlugServer,
   getTenantSubscriptionServer,
   getSubscriptionPackagesServer,
   getStaffServer,
@@ -882,21 +883,28 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newTableNo, setNewTableNo] = useState("");
   const [newTableZone, setNewTableZone] = useState("MAIN ROOM");
+  const [restaurantSlug, setRestaurantSlug] = useState<string>("");
 
   useEffect(() => {
     if (!branch) return;
     const currentBranchId = branch.id;
     async function loadTables() {
       try {
-        const dbTables = await getBranchTablesServer({ data: currentBranchId });
+        const [dbTables, tenantRes] = await Promise.all([
+          getBranchTablesServer({ data: currentBranchId }),
+          getCurrentTenantSlugServer().catch(() => null),
+        ]);
         if (dbTables && Array.isArray(dbTables)) {
           setTables(dbTables);
-          return;
+        } else {
+          setTables([]);
+        }
+        if (tenantRes && tenantRes.slug) {
+          setRestaurantSlug(tenantRes.slug);
         }
       } catch {
-        /* ignore */
+        setTables([]);
       }
-      setTables([]);
     }
     loadTables();
   }, [branch]);
@@ -936,13 +944,13 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
 
   const getTableUrl = (tNo: string) => {
     if (!branch) return "";
-    const restaurantUsername = "burgercraft";
+    const username = restaurantSlug || "burgercraft";
     const branchSlug = branch.name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
-    return getEncryptedTableUrl(restaurantUsername, branchSlug, tNo);
+    return getEncryptedTableUrl(username, branchSlug, tNo);
   };
 
   const downloadTableQr = (tableNo: string, canvasId: string) => {

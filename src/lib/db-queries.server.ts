@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { PermissionKey } from "./permissions";
 import { RESTAURANTS } from "./restaurants-data";
-import { toISODateString, isTimeInWindow } from "./utils";
+import { toISODateString, isTimeInWindow, decodeTableToken } from "./utils";
 
 // Lazy server module loaders (prevents Node/mysql2/ioredis modules from leaking into client Vite bundle graph)
 const query = async <T = unknown>(sql: string, params?: unknown): Promise<T> => {
@@ -3369,6 +3369,58 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
       console.warn("[validateTableQrServer Warning]", err);
       return { valid: true };
     }
+  });
+
+export const getCurrentTenantSlugServer = createServerFn({ method: "GET" }).handler(async () => {
+  const tenant = await resolvePrivateTenantContext();
+  return { slug: tenant.slug, restaurantId: tenant.restaurantId };
+});
+
+export const resolveTableRestaurantServer = createServerFn({ method: "POST" })
+  .validator((data: { token: string; subdomain?: string | null }) => data)
+  .handler(async ({ data }) => {
+    const { token, subdomain } = data;
+
+    if (subdomain && subdomain !== "www" && subdomain !== "app" && subdomain !== "localhost") {
+      try {
+        const rows = await query<Record<string, unknown>[]>(
+          "SELECT slug FROM restaurants WHERE slug = ? OR slug LIKE ? OR name LIKE ? LIMIT 1",
+          [subdomain, `%${subdomain}%`, `%${subdomain}%`],
+        );
+        if (rows && rows.length > 0 && rows[0].slug) {
+          return { slug: String(rows[0].slug) };
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    try {
+      const decoded = decodeTableToken(token);
+      if (decoded) {
+        const { branchSlug, tableNo } = decoded;
+        const rows = await query<Record<string, unknown>[]>(
+          `SELECT r.slug 
+           FROM branch_tables bt 
+           JOIN restaurants r ON bt.restaurant_id = r.id 
+           WHERE (bt.branch_id = ? OR bt.branch_id LIKE ? OR bt.id LIKE ?) 
+             AND bt.table_no = ? 
+           LIMIT 1`,
+          [branchSlug, `%${branchSlug}%`, `%${token}%`, tableNo],
+        );
+        if (rows && rows.length > 0 && rows[0].slug) {
+          return { slug: String(rows[0].slug) };
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
+    if (subdomain && subdomain !== "localhost") {
+      return { slug: subdomain };
+    }
+
+    return { slug: null };
   });
 
 // =========================================================
