@@ -941,8 +941,7 @@ export function PublicRestaurantView({
 
   useEffect(() => {
     if (popupPromo && popupPromo.showPopup !== false) {
-      const activeBranchKey = (activeBranch || currentBranch)?.id || "all";
-      const sessionKey = `menuverse:promo-session-seen:${restaurantUsername}:${popupPromo.id}:${activeBranchKey}`;
+      const sessionKey = `menuverse:promo-session-seen:${restaurantUsername}:${popupPromo.id}`;
       const hasSeenInSession =
         typeof window !== "undefined" ? sessionStorage.getItem(sessionKey) : null;
 
@@ -956,13 +955,14 @@ export function PublicRestaurantView({
         return () => clearTimeout(timer);
       }
     }
-  }, [popupPromo, activeBranch, currentBranch, restaurantUsername]);
+  }, [popupPromo, restaurantUsername]);
 
   const handleClosePromoPopup = () => {
     if (popupPromo && typeof window !== "undefined") {
-      const activeBranchKey = (activeBranch || currentBranch)?.id || "all";
-      const sessionKey = `menuverse:promo-session-seen:${restaurantUsername}:${popupPromo.id}:${activeBranchKey}`;
-      sessionStorage.setItem(sessionKey, "true");
+      sessionStorage.setItem(
+        `menuverse:promo-session-seen:${restaurantUsername}:${popupPromo.id}`,
+        "true",
+      );
     }
     setPromoPopupOpen(false);
   };
