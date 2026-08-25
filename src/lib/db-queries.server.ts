@@ -3316,22 +3316,29 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
     const tenant = await resolvePrivateTenantContext();
     saveTablesToFile(branchId, tables);
     try {
-      await query(`
-        CREATE TABLE IF NOT EXISTS branch_tables (
-          id VARCHAR(100) PRIMARY KEY,
-          restaurant_id INT DEFAULT 1,
-          branch_id VARCHAR(100) NOT NULL,
-          table_no VARCHAR(50) NOT NULL,
-          zone VARCHAR(100) DEFAULT 'MAIN ROOM',
-          sort_order INT DEFAULT 0,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-      `);
-
       try {
-        await query("ALTER TABLE branch_tables ADD COLUMN restaurant_id INT DEFAULT 1");
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+          "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(50) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(100) DEFAULT 'MAIN ROOM'",
+          "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
+          "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+          "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
+          "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
+        }
       } catch {
-        /* Column already exists */
+        /* ignore */
       }
 
       // Check QR Code package limit for tenant
@@ -3380,44 +3387,54 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
           /* fallback */
         }
 
-        try {
-          const pool = await getPool();
-          await pool.query(
-            "ALTER TABLE branch_tables MODIFY COLUMN name VARCHAR(255) NULL DEFAULT ''",
-          );
-        } catch {
-          /* ignore */
-        }
-
         for (let idx = 0; idx < tables.length; idx++) {
           const t = tables[idx];
           const tableId =
             t.id.startsWith(branchId) || t.id.length > 15 ? t.id : `${branchId}-${t.id}`;
           const qrToken = encodeTableToken(bSlug || branchId, t.tableNo);
-          const tableNameVal = `Table ${t.tableNo}`;
           try {
             await conn.execute(
-              `INSERT INTO branch_tables (id, restaurant_id, branch_id, table_no, name, zone, sort_order, qr_token) 
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), name = VALUES(name), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
+              `INSERT INTO branch_tables (id, restaurant_id, branch_id, table_no, zone, sort_order, qr_token) 
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
               [
                 tableId,
                 tenant.restaurantId,
                 branchId,
                 t.tableNo,
-                tableNameVal,
                 t.zone || "MAIN ROOM",
                 idx,
                 qrToken,
               ],
             );
-          } catch {
-            await conn.execute(
-              `INSERT INTO branch_tables (id, branch_id, table_no, name, zone, sort_order, qr_token) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), name = VALUES(name), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
-              [tableId, branchId, t.tableNo, tableNameVal, t.zone || "MAIN ROOM", idx, qrToken],
+          } catch (insertErr) {
+            console.warn(
+              "[MySQL] Primary branch_tables insert notice, trying fallback:",
+              insertErr,
             );
+            try {
+              await conn.execute(
+                `INSERT INTO branch_tables (id, branch_id, table_no, zone, sort_order, qr_token) 
+                 VALUES (?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
+                [tableId, branchId, t.tableNo, t.zone || "MAIN ROOM", idx, qrToken],
+              );
+            } catch (fallbackErr) {
+              console.warn(
+                "[MySQL] Secondary branch_tables insert notice, trying legacy name fallback:",
+                fallbackErr,
+              );
+              try {
+                await conn.execute(
+                  `INSERT INTO branch_tables (id, branch_id, name, location, status) 
+                   VALUES (?, ?, ?, ?, ?)
+                   ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), name = VALUES(name), location = VALUES(location)`,
+                  [tableId, branchId, t.tableNo, t.zone || "MAIN ROOM", "available"],
+                );
+              } catch (finalErr) {
+                console.error("[MySQL] Final branch_tables insert fallback error:", finalErr);
+              }
+            }
           }
         }
       });

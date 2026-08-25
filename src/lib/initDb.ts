@@ -56,12 +56,17 @@ export async function initDb(): Promise<void> {
     // 3. Branch Tables
     await conn.query(`
       CREATE TABLE IF NOT EXISTS branch_tables (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        branch_id VARCHAR(100) NOT NULL,
-        name VARCHAR(100) NOT NULL,
-        location VARCHAR(255),
-        status VARCHAR(50) DEFAULT 'Active',
-        FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
+        id VARCHAR(255) PRIMARY KEY,
+        restaurant_id INT NOT NULL DEFAULT 1,
+        branch_id VARCHAR(255) NOT NULL,
+        table_no VARCHAR(50) NOT NULL,
+        zone VARCHAR(100) DEFAULT 'MAIN ROOM',
+        sort_order INT DEFAULT 0,
+        qr_token VARCHAR(255) NULL,
+        status VARCHAR(50) DEFAULT 'available',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_branch_tables_restaurant (restaurant_id),
+        INDEX idx_branch_tables_branch (restaurant_id, branch_id)
       )
     `);
 

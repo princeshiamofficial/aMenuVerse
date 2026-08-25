@@ -496,16 +496,18 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   // Ensure all branch_tables table columns exist across legacy schemas
   const branchTableColumnAlters = [
-    "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NULL DEFAULT 0",
-    "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NULL",
-    "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(50) NULL",
+    "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+    "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+    "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
     "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(50) NULL",
-    "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL DEFAULT ''",
-    "ALTER TABLE branch_tables MODIFY COLUMN name VARCHAR(255) NULL DEFAULT ''",
     "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(100) DEFAULT 'MAIN ROOM'",
     "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
     "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL",
     "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+    "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
+    "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
+    "ALTER TABLE branch_tables MODIFY COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+    "ALTER TABLE branch_tables MODIFY COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
   ];
   for (const alter of branchTableColumnAlters) {
     try {
