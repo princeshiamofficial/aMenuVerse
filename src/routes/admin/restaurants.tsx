@@ -356,7 +356,9 @@ function AdminRestaurantsComponent() {
                                   ),
                                 );
                               } catch (err: unknown) {
-                                toast.error((err as Error)?.message || "Failed to update verification badge");
+                                toast.error(
+                                  (err as Error)?.message || "Failed to update verification badge",
+                                );
                               }
                             }}
                           >
@@ -653,10 +655,7 @@ function AdminRestaurantsComponent() {
                       joined: editingRestaurant.joined || new Date().toISOString().split("T")[0],
                     };
 
-                    setRestaurantsList((list) => [
-                      newRestEntry as (typeof list)[0],
-                      ...list,
-                    ]);
+                    setRestaurantsList((list) => [newRestEntry as (typeof list)[0], ...list]);
                     toast.success(
                       `Restaurant "${name}" created! Digital Menu active at /${res?.slug || username}`,
                     );
@@ -668,7 +667,9 @@ function AdminRestaurantsComponent() {
                       setRestaurantsList(freshData as unknown as typeof restaurantsList);
                     }
                   } catch (err: unknown) {
-                    toast.error((err as Error)?.message || "Failed to create restaurant in database");
+                    toast.error(
+                      (err as Error)?.message || "Failed to create restaurant in database",
+                    );
                   }
                 }
               }}
