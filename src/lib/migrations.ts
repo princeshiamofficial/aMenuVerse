@@ -307,6 +307,26 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     /* Column already exists */
   }
 
+  // Ensure all users table columns exist across legacy schemas
+  const userColumnAlters = [
+    "ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL",
+    "ALTER TABLE users ADD COLUMN name VARCHAR(255) NULL",
+    "ALTER TABLE users ADD COLUMN avatar_url TEXT NULL",
+    "ALTER TABLE users ADD COLUMN avatar VARCHAR(512) NULL",
+    "ALTER TABLE users ADD COLUMN phone VARCHAR(50) NULL",
+    "ALTER TABLE users ADD COLUMN branch VARCHAR(255) NULL",
+    "ALTER TABLE users ADD COLUMN role VARCHAR(50) NULL",
+    "ALTER TABLE users ADD COLUMN restaurant_id INT NULL",
+    "ALTER TABLE users ADD COLUMN assigned_branch_id VARCHAR(100) NULL",
+  ];
+  for (const alter of userColumnAlters) {
+    try {
+      await pool.execute(alter);
+    } catch {
+      /* Column already exists */
+    }
+  }
+
   // Add 'branch_id' column to pos_orders if missing
   try {
     await pool.execute(

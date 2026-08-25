@@ -322,7 +322,7 @@ export async function verifySession(explicitToken?: string): Promise<Authenticat
 
       if (targetUserId) {
         const users = await query<Record<string, string>[]>(
-          "SELECT u.id, u.email, u.full_name, u.avatar_url, u.phone, u.branch, u.role, u.restaurant_id FROM users u WHERE u.id = ?",
+          "SELECT * FROM users WHERE id = ?",
           [targetUserId],
         );
 
@@ -352,12 +352,12 @@ export async function verifySession(explicitToken?: string): Promise<Authenticat
           return {
             id: user.id,
             email: user.email,
-            full_name: user.full_name,
-            avatar_url: user.avatar_url,
-            phone: user.phone,
+            full_name: user.full_name || user.name || user.email || "",
+            avatar_url: user.avatar_url || user.avatar || null,
+            phone: user.phone || null,
             role: effectiveRole,
             restaurant_id: effectiveRole === "super_admin" ? null : effectiveRestId,
-            branch: user.branch || null,
+            branch: user.branch || user.assigned_branch_id || null,
           };
         }
       }
