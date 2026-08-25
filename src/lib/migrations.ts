@@ -380,6 +380,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   // Ensure all categories table columns exist across legacy schemas
   const categoryColumnAlters = [
+    "ALTER TABLE categories ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
     "ALTER TABLE categories ADD COLUMN description TEXT NULL",
     "ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL",
     "ALTER TABLE categories ADD COLUMN emoji VARCHAR(50) NULL",
@@ -387,6 +388,8 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     "ALTER TABLE categories ADD COLUMN image_url TEXT NULL",
     "ALTER TABLE categories ADD COLUMN sort_order INT DEFAULT 0",
     "ALTER TABLE categories ADD COLUMN is_active TINYINT(1) DEFAULT 1",
+    "ALTER TABLE categories MODIFY COLUMN id VARCHAR(255) NOT NULL",
+    "ALTER TABLE categories MODIFY COLUMN name VARCHAR(255) NOT NULL",
   ];
   for (const alter of categoryColumnAlters) {
     try {
@@ -398,6 +401,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   // Ensure all food_items table columns exist across legacy schemas
   const foodItemColumnAlters = [
+    "ALTER TABLE food_items ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
     "ALTER TABLE food_items ADD COLUMN category VARCHAR(255) NULL",
     "ALTER TABLE food_items ADD COLUMN category_id VARCHAR(255) NULL",
     "ALTER TABLE food_items ADD COLUMN slug VARCHAR(255) NULL",
@@ -421,6 +425,8 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     "ALTER TABLE food_items ADD COLUMN out_of_stock TINYINT(1) DEFAULT 0",
     "ALTER TABLE food_items ADD COLUMN is_available TINYINT(1) DEFAULT 1",
     "ALTER TABLE food_items ADD COLUMN sort_order INT DEFAULT 0",
+    "ALTER TABLE food_items MODIFY COLUMN id VARCHAR(255) NOT NULL",
+    "ALTER TABLE food_items MODIFY COLUMN name VARCHAR(255) NOT NULL",
   ];
   for (const alter of foodItemColumnAlters) {
     try {

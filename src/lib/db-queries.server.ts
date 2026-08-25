@@ -2802,22 +2802,33 @@ export const getCategoriesServer = createServerFn({ method: "GET" })
       : await resolvePrivateTenantContext();
 
     try {
-      await query(`
-        CREATE TABLE IF NOT EXISTS categories (
-          id VARCHAR(100) PRIMARY KEY,
-          restaurant_id INT DEFAULT 1,
-          name VARCHAR(255) NOT NULL,
-          description TEXT,
-          icon VARCHAR(100),
-          image TEXT,
-          sort_order INT DEFAULT 0,
-          is_active TINYINT(1) DEFAULT 1,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-      `);
+      try {
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE categories ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE categories ADD COLUMN description TEXT NULL",
+          "ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL",
+          "ALTER TABLE categories ADD COLUMN emoji VARCHAR(50) NULL",
+          "ALTER TABLE categories ADD COLUMN image TEXT NULL",
+          "ALTER TABLE categories ADD COLUMN image_url TEXT NULL",
+          "ALTER TABLE categories ADD COLUMN sort_order INT DEFAULT 0",
+          "ALTER TABLE categories ADD COLUMN is_active TINYINT(1) DEFAULT 1",
+          "ALTER TABLE categories MODIFY COLUMN id VARCHAR(255) NOT NULL",
+          "ALTER TABLE categories MODIFY COLUMN name VARCHAR(255) NOT NULL",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore */
+      }
 
       let sql = `
-        SELECT c.id, c.name, c.description, c.icon, c.image, c.sort_order, c.is_active,
+        SELECT c.id, c.name, c.description, COALESCE(c.icon, c.emoji, '🍽️') as icon, COALESCE(c.image, c.image_url, '') as image, c.sort_order, c.is_active,
                COUNT(f.id) as item_count
         FROM categories c
         LEFT JOIN food_items f ON (f.category = c.id OR f.category = c.name) AND f.restaurant_id = c.restaurant_id
@@ -2835,11 +2846,23 @@ export const getCategoriesServer = createServerFn({ method: "GET" })
       }
 
       sql += `
-        GROUP BY c.id, c.name, c.description, c.icon, c.image, c.sort_order, c.is_active
+        GROUP BY c.id, c.name, c.description, c.icon, c.emoji, c.image, c.image_url, c.sort_order, c.is_active
         ORDER BY c.sort_order ASC, c.name ASC
       `;
 
-      const rows = await query<Record<string, unknown>[]>(sql, params);
+      let rows: Record<string, unknown>[] | null = null;
+      try {
+        rows = await query<Record<string, unknown>[]>(sql, params);
+      } catch (groupErr) {
+        console.warn(
+          "[MySQL] getCategoriesServer complex group query notice, falling back to simple SELECT:",
+          groupErr,
+        );
+        rows = await query<Record<string, unknown>[]>(
+          "SELECT id, name, description, COALESCE(icon, emoji, '🍽️') as icon, COALESCE(image, image_url, '') as image, sort_order, is_active FROM categories WHERE restaurant_id = ? ORDER BY sort_order ASC, name ASC",
+          [tenant.restaurantId],
+        );
+      }
 
       if (rows && rows.length > 0) {
         const dbCategories: CategoryRecord[] = rows.map((r) => ({
@@ -2883,6 +2906,31 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
     const tenant = await resolvePrivateTenantContext();
 
     try {
+      try {
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE categories ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE categories ADD COLUMN description TEXT NULL",
+          "ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL",
+          "ALTER TABLE categories ADD COLUMN emoji VARCHAR(50) NULL",
+          "ALTER TABLE categories ADD COLUMN image TEXT NULL",
+          "ALTER TABLE categories ADD COLUMN image_url TEXT NULL",
+          "ALTER TABLE categories ADD COLUMN sort_order INT DEFAULT 0",
+          "ALTER TABLE categories ADD COLUMN is_active TINYINT(1) DEFAULT 1",
+          "ALTER TABLE categories MODIFY COLUMN id VARCHAR(255) NOT NULL",
+          "ALTER TABLE categories MODIFY COLUMN name VARCHAR(255) NOT NULL",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
       // Check category package limit
       const existingCategories = await query<Record<string, unknown>[]>(
         "SELECT id FROM categories WHERE restaurant_id = ?",
@@ -2905,27 +2953,46 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
       await transaction(async (conn) => {
         for (let idx = 0; idx < categories.length; idx++) {
           const c = categories[idx];
-          await conn.execute(
-            `INSERT INTO categories (id, restaurant_id, name, description, icon, image, sort_order, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE
-               name = VALUES(name),
-               description = VALUES(description),
-               icon = VALUES(icon),
-               image = VALUES(image),
-               sort_order = VALUES(sort_order),
-               is_active = VALUES(is_active)`,
-            [
-              c.id || crypto.randomUUID(),
-              tenant.restaurantId,
-              sanitizeText(c.name),
-              sanitizeText(c.description || ""),
-              sanitizeText(c.icon || "🍽️"),
-              c.image || "",
-              idx,
-              c.visible ? 1 : 0,
-            ],
-          );
+          try {
+            await conn.execute(
+              `INSERT INTO categories (id, restaurant_id, name, description, icon, image, sort_order, is_active)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE
+                 name = VALUES(name),
+                 description = VALUES(description),
+                 icon = VALUES(icon),
+                 image = VALUES(image),
+                 sort_order = VALUES(sort_order),
+                 is_active = VALUES(is_active)`,
+              [
+                c.id || crypto.randomUUID(),
+                tenant.restaurantId,
+                sanitizeText(c.name),
+                sanitizeText(c.description || ""),
+                sanitizeText(c.icon || "🍽️"),
+                c.image || "",
+                idx,
+                c.visible ? 1 : 0,
+              ],
+            );
+          } catch (insertErr) {
+            console.warn("[MySQL] Primary categories insert notice, trying fallback:", insertErr);
+            await conn.execute(
+              `INSERT INTO categories (id, restaurant_id, name, description, emoji)
+               VALUES (?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE
+                 name = VALUES(name),
+                 description = VALUES(description),
+                 emoji = VALUES(emoji)`,
+              [
+                c.id || crypto.randomUUID(),
+                tenant.restaurantId,
+                sanitizeText(c.name),
+                sanitizeText(c.description || ""),
+                sanitizeText(c.icon || "🍽️"),
+              ],
+            );
+          }
         }
       });
       return { success: true, categories };
@@ -3092,6 +3159,47 @@ export const saveFoodItemsServer = createServerFn({ method: "POST" })
     const tenant = await resolvePrivateTenantContext();
 
     try {
+      try {
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE food_items ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE food_items ADD COLUMN category VARCHAR(255) NULL",
+          "ALTER TABLE food_items ADD COLUMN category_id VARCHAR(255) NULL",
+          "ALTER TABLE food_items ADD COLUMN slug VARCHAR(255) NULL",
+          "ALTER TABLE food_items ADD COLUMN short_description TEXT NULL",
+          "ALTER TABLE food_items ADD COLUMN long_description TEXT NULL",
+          "ALTER TABLE food_items ADD COLUMN description TEXT NULL",
+          "ALTER TABLE food_items ADD COLUMN image_url TEXT NULL",
+          "ALTER TABLE food_items ADD COLUMN image TEXT NULL",
+          "ALTER TABLE food_items ADD COLUMN price DECIMAL(10,2) NOT NULL DEFAULT 0",
+          "ALTER TABLE food_items ADD COLUMN discount_price DECIMAL(10,2) NULL",
+          "ALTER TABLE food_items ADD COLUMN prep_time INT DEFAULT 15",
+          "ALTER TABLE food_items ADD COLUMN calories INT DEFAULT 0",
+          "ALTER TABLE food_items ADD COLUMN ingredients TEXT NULL",
+          "ALTER TABLE food_items ADD COLUMN allergens TEXT NULL",
+          "ALTER TABLE food_items ADD COLUMN spicy_level INT DEFAULT 0",
+          "ALTER TABLE food_items ADD COLUMN best_seller TINYINT(1) DEFAULT 0",
+          "ALTER TABLE food_items ADD COLUMN popular TINYINT(1) DEFAULT 0",
+          "ALTER TABLE food_items ADD COLUMN chef_choice TINYINT(1) DEFAULT 0",
+          "ALTER TABLE food_items ADD COLUMN vegetarian TINYINT(1) DEFAULT 0",
+          "ALTER TABLE food_items ADD COLUMN halal TINYINT(1) DEFAULT 1",
+          "ALTER TABLE food_items ADD COLUMN out_of_stock TINYINT(1) DEFAULT 0",
+          "ALTER TABLE food_items ADD COLUMN is_available TINYINT(1) DEFAULT 1",
+          "ALTER TABLE food_items ADD COLUMN sort_order INT DEFAULT 0",
+          "ALTER TABLE food_items MODIFY COLUMN id VARCHAR(255) NOT NULL",
+          "ALTER TABLE food_items MODIFY COLUMN name VARCHAR(255) NOT NULL",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
       // Check food item package limit
       const existingItems = await query<Record<string, unknown>[]>(
         "SELECT id FROM food_items WHERE restaurant_id = ?",
