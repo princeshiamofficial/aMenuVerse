@@ -296,7 +296,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   for (const stmt of tableStatements) {
     try {
-      await pool.execute(stmt);
+      await pool.query(stmt);
     } catch (err) {
       console.warn("[Migration] Table initialization notice:", (err as Error).message);
     }
@@ -577,7 +577,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   for (const alt of constraintStatements) {
     try {
-      await pool.execute(alt);
+      await pool.query(alt);
     } catch {
       /* Constraint already exists */
     }

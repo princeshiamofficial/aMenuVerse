@@ -1,28 +1,77 @@
 import mysql from "mysql2/promise";
+import { runDatabaseMigrations } from "./migrations";
 
-// Singleton connection pool across Vite HMR reloads
+// Singleton connection pool across Vite HMR reloads and SSR invocations
 const globalForMysql = globalThis as unknown as {
   __mysql_pool__?: mysql.Pool;
   __mysql_tables_initialized__?: boolean;
+  __mysql_migration_promise__?: Promise<void> | null;
+  __mysql_db_checked__?: boolean;
 };
 
-import { runDatabaseMigrations } from "./migrations";
+/**
+ * Ensures the target database exists before pool initialization (idempotent).
+ */
+async function ensureDatabaseExists(): Promise<void> {
+  if (globalForMysql.__mysql_db_checked__) return;
+  const host = process.env.MYSQL_HOST || "localhost";
+  const port = process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT, 10) : 3306;
+  const user = process.env.MYSQL_USER || "root";
+  const password = process.env.MYSQL_PASSWORD || "";
+  const database = process.env.MYSQL_DATABASE || "amenuverse";
 
-export async function ensureAllTablesExist(): Promise<void> {
-  if (globalForMysql.__mysql_tables_initialized__) return;
-  const pool = getPool();
   try {
-    await runDatabaseMigrations(pool);
-    globalForMysql.__mysql_tables_initialized__ = true;
+    const tempConn = await mysql.createConnection({
+      host,
+      port,
+      user,
+      password,
+    });
+    await tempConn.query(
+      `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+    );
+    await tempConn.end();
+    globalForMysql.__mysql_db_checked__ = true;
   } catch (err) {
-    console.warn("[MySQL] Auto table migration warning:", (err as Error).message);
+    // If permissions do not allow database creation or remote host restricts, proceed to pool creation
+    globalForMysql.__mysql_db_checked__ = true;
   }
 }
 
+/**
+ * Idempotently executes database migrations and ensures all tables, indexes, and seeds exist.
+ * Concurrency-safe: multiple callers await the same in-flight migration promise.
+ */
+export async function ensureAllTablesExist(): Promise<void> {
+  if (globalForMysql.__mysql_tables_initialized__) return;
+  if (globalForMysql.__mysql_migration_promise__) {
+    return globalForMysql.__mysql_migration_promise__;
+  }
+
+  globalForMysql.__mysql_migration_promise__ = (async () => {
+    try {
+      await ensureDatabaseExists();
+      const pool = getPool();
+      await runDatabaseMigrations(pool);
+      globalForMysql.__mysql_tables_initialized__ = true;
+      console.log("[MySQL] All tables, indexes, and constraints verified successfully.");
+    } catch (err) {
+      console.warn("[MySQL] Auto table migration notice:", (err as Error).message);
+    } finally {
+      globalForMysql.__mysql_migration_promise__ = null;
+    }
+  })();
+
+  return globalForMysql.__mysql_migration_promise__;
+}
+
+/**
+ * Returns singleton MySQL connection pool.
+ */
 export function getPool(): mysql.Pool {
   if (!globalForMysql.__mysql_pool__) {
     const host = process.env.MYSQL_HOST || "localhost";
-    const port = process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT) : 3306;
+    const port = process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT, 10) : 3306;
     const user = process.env.MYSQL_USER || "root";
     const password = process.env.MYSQL_PASSWORD || "";
     const database = process.env.MYSQL_DATABASE || "amenuverse";
@@ -37,7 +86,7 @@ export function getPool(): mysql.Pool {
       password,
       database,
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: 15,
       queueLimit: 0,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
@@ -54,14 +103,20 @@ export function getPool(): mysql.Pool {
     process.once("SIGINT", shutdown);
     process.once("SIGTERM", shutdown);
 
-    // Auto verify & create missing database tables on pool creation
+    // Trigger auto-table verification on pool creation
     ensureAllTablesExist().catch(() => {});
   }
   return globalForMysql.__mysql_pool__;
 }
 
-// Helper to run a query with automatic connection release & auto table creation fallback
+/**
+ * Helper to run a parameterized query with automatic table creation & retry fallback.
+ */
 export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValues): Promise<T> {
+  if (!globalForMysql.__mysql_tables_initialized__) {
+    await ensureAllTablesExist();
+  }
+
   const connectionPool = getPool();
   try {
     const [rows] = await connectionPool.execute(sql, params);
@@ -94,6 +149,10 @@ export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValu
 export async function transaction<T = unknown>(
   callback: (conn: mysql.PoolConnection) => Promise<T>,
 ): Promise<T> {
+  if (!globalForMysql.__mysql_tables_initialized__) {
+    await ensureAllTablesExist();
+  }
+
   const pool = getPool();
   const connection = await pool.getConnection();
   try {
