@@ -298,7 +298,7 @@ export async function verifySession(): Promise<AuthenticatedUser | null> {
         const userId = sessions[0].user_id;
 
         const users = await query<Record<string, string>[]>(
-          "SELECT u.id, u.email, u.full_name, u.avatar_url, u.phone, u.branch FROM users u WHERE u.id = ?",
+          "SELECT u.id, u.email, u.full_name, u.avatar_url, u.phone, u.branch, u.role, u.restaurant_id FROM users u WHERE u.id = ?",
           [userId],
         );
 
@@ -310,12 +310,20 @@ export async function verifySession(): Promise<AuthenticatedUser | null> {
           );
 
           const roleList = (roles || []).map((r) => r.role);
-          const hasSuperAdmin = roleList.includes("super_admin");
+          const hasSuperAdmin = roleList.includes("super_admin") || user.role === "super_admin";
           const roleInfo = hasSuperAdmin
             ? (roles || []).find((r) => r.role === "super_admin")
             : roles && roles.length > 0
               ? roles[0]
               : null;
+
+          const effectiveRole = roleInfo?.role || user.role || "owner";
+          const effectiveRestId =
+            roleInfo?.restaurant_id != null
+              ? String(roleInfo.restaurant_id)
+              : user.restaurant_id != null
+                ? String(user.restaurant_id)
+                : "1";
 
           return {
             id: user.id,
@@ -323,8 +331,8 @@ export async function verifySession(): Promise<AuthenticatedUser | null> {
             full_name: user.full_name,
             avatar_url: user.avatar_url,
             phone: user.phone,
-            role: roleInfo ? roleInfo.role : null,
-            restaurant_id: roleInfo?.restaurant_id ? String(roleInfo.restaurant_id) : null,
+            role: effectiveRole,
+            restaurant_id: effectiveRole === "super_admin" ? null : effectiveRestId,
             branch: user.branch || null,
           };
         }

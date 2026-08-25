@@ -259,12 +259,20 @@ async function main() {
          ON DUPLICATE KEY UPDATE restaurant_id=VALUES(restaurant_id), password_hash=VALUES(password_hash)`,
         [userId, r.id, `${r.name} Admin`, email, defaultHashedPassword, "admin", null, "Active"],
       );
+
+      // Seed user_roles entry
+      await connection.query(
+        `INSERT INTO user_roles (user_id, role, restaurant_id)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE role=VALUES(role), restaurant_id=VALUES(restaurant_id)`,
+        [userId, "admin", r.id],
+      );
       console.log(`- Created admin: ${email} (for ${r.name})`);
     }
 
     // 3. Create UI Quick Demo Accounts
     const demoAccounts = [
-      { id: "demo-admin-menuverse-app", email: "admin@menuverse.app", pwd: "admin123", name: "System Super Admin", role: "super_admin", restId: null, branch: null },
+      { id: "demo-admin-menuverse-app", email: "admin@menuverse.app", pwd: "admin123", name: "System Super Admin", role: "super_admin", restId: 0, branch: null },
       { id: "demo-owner-burgercraft-com", email: "owner@burgercraft.com", pwd: "owner123", name: "Tariqul Islam (Owner - Burger Craft)", role: "owner", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
       { id: "demo-manager-burgercraft-com", email: "manager@burgercraft.com", pwd: "manager123", name: "Sabrina Rahman (Manager - Burger Craft)", role: "manager", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
       { id: "demo-cashier-burgercraft-com", email: "cashier@burgercraft.com", pwd: "cashier123", name: "Tamanna Akter (Cashier - Burger Craft)", role: "cashier", restId: burgerCraftLabId, branch: "dhanmondi-branch" },
@@ -280,7 +288,14 @@ async function main() {
         `INSERT INTO users (id, restaurant_id, name, email, password_hash, role, assigned_branch_id, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')
          ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash), role=VALUES(role), restaurant_id=VALUES(restaurant_id)`,
-        [demo.id, demo.restId, demo.name, demo.email, hashedDemoPwd, demo.role, demo.branch],
+        [demo.id, demo.restId === 0 ? null : demo.restId, demo.name, demo.email, hashedDemoPwd, demo.role, demo.branch],
+      );
+
+      await connection.query(
+        `INSERT INTO user_roles (user_id, role, restaurant_id)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE role=VALUES(role), restaurant_id=VALUES(restaurant_id)`,
+        [demo.id, demo.role, demo.restId || 0],
       );
       console.log(`- Created demo account: ${demo.email} (Password: ${demo.pwd})`);
     }
