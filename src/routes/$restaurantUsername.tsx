@@ -810,7 +810,23 @@ export function PublicRestaurantView({
     if (branchId) return branchId;
     if (typeof window !== "undefined") {
       const pathParts = window.location.pathname.split("/").filter(Boolean);
+      // Format 1: /e/:token
       if (pathParts[0] === "e" && pathParts[1]) return pathParts[1];
+      // Format 2: /:restaurantUsername/e/:token
+      if (pathParts[1] === "e" && pathParts[2]) return pathParts[2];
+      // Format 3: /:branchId/:tableId (Subdomain URL)
+      if (
+        pathParts.length >= 2 &&
+        pathParts[0] !== "auth" &&
+        pathParts[0] !== "dashboard" &&
+        pathParts[0] !== "admin"
+      ) {
+        return pathParts[0];
+      }
+      // Format 4: /:restaurantUsername/:branchId/:tableId (Path-based URL)
+      if (pathParts.length >= 3) {
+        return pathParts[1];
+      }
       const search = new URLSearchParams(window.location.search);
       return search.get("branch") || search.get("b") || "";
     }
@@ -820,36 +836,31 @@ export function PublicRestaurantView({
   const activeBranch = useMemo(() => {
     if (!effectiveBranchId) return null;
     const target = effectiveBranchId.toLowerCase().trim();
-    const targetCode = target.replace(/\d+/g, "").slice(0, 2);
+    const targetClean = target.replace(/^menu-/, "");
 
     return (
       allBranches.find((x: Branch) => {
         const id = (x.id || "").toLowerCase().trim();
         const name = (x.name || "").toLowerCase().trim();
         const slug = name.replace(/[^a-z0-9]+/g, "-");
-        const parts = name.split(/\s+/).filter(Boolean);
-        const code =
-          parts.length >= 2
-            ? (parts[0][0] + parts[1][0]).toLowerCase()
-            : name.slice(0, 2).toLowerCase();
+        const menuId = (x.menuId || "").toLowerCase().replace(/^menu-/, "").trim();
 
         return (
           id === target ||
           name === target ||
           slug === target ||
-          slug.includes(target) ||
-          target.includes(slug) ||
-          code === target ||
-          (Boolean(targetCode) && code === targetCode) ||
-          (Boolean(targetCode) && slug.startsWith(targetCode))
+          id.startsWith(target) ||
+          target.startsWith(id) ||
+          (menuId && (menuId === target || menuId === targetClean || target.includes(menuId) || menuId.includes(target)))
         );
       }) || null
     );
   }, [effectiveBranchId, allBranches]);
+
   const currentBranch = useMemo(() => {
     if (activeBranch) return activeBranch;
-    if (allBranches && allBranches.length > 0) {
-      return allBranches.find((b) => b.isDefault) || allBranches[0];
+    if (allBranches && allBranches.length === 1) {
+      return allBranches[0];
     }
     return null;
   }, [activeBranch, allBranches]);
@@ -879,10 +890,13 @@ export function PublicRestaurantView({
         promoBranchId === "all branches";
 
       if (isAllBranches) return true;
-      if (!currentBranch) return false;
 
-      const currentBranchName = (currentBranch.name || "").toLowerCase().trim();
-      const currentBranchId = (currentBranch.id || "").toLowerCase().trim();
+      // If specific branch offer and no branch is selected on multi-branch restaurant, don't show
+      const targetBranch = activeBranch || currentBranch;
+      if (!targetBranch) return false;
+
+      const targetBranchName = (targetBranch.name || "").toLowerCase().trim();
+      const targetBranchId = (targetBranch.id || "").toLowerCase().trim();
 
       const promoBranchNames = promoBranchName
         .split(",")
@@ -896,22 +910,22 @@ export function PublicRestaurantView({
       const nameMatch = promoBranchNames.some(
         (bn) =>
           Boolean(bn) &&
-          Boolean(currentBranchName) &&
-          (bn === currentBranchName ||
-            bn.includes(currentBranchName) ||
-            currentBranchName.includes(bn)),
+          Boolean(targetBranchName) &&
+          (bn === targetBranchName ||
+            bn.includes(targetBranchName) ||
+            targetBranchName.includes(bn)),
       );
 
       const idMatch = promoBranchIds.some(
         (bi) =>
           Boolean(bi) &&
-          Boolean(currentBranchId) &&
-          (bi === currentBranchId || bi.includes(currentBranchId) || currentBranchId.includes(bi)),
+          Boolean(targetBranchId) &&
+          (bi === targetBranchId || bi.includes(targetBranchId) || targetBranchId.includes(bi)),
       );
 
       return nameMatch || idMatch;
     });
-  }, [serverPromotions, currentBranch]);
+  }, [serverPromotions, activeBranch, currentBranch]);
 
   const popupPromo = useMemo(() => {
     if (!activeBranchPromotions || activeBranchPromotions.length === 0) return null;
@@ -1259,10 +1273,13 @@ export function PublicRestaurantView({
         promoBranchId === "all branches";
 
       if (isAllBranches) return true;
-      if (!currentBranch) return false;
 
-      const currentBranchName = (currentBranch.name || "").toLowerCase().trim();
-      const currentBranchId = (currentBranch.id || "").toLowerCase().trim();
+      // If specific branch offer and no branch is selected on multi-branch restaurant, don't apply
+      const targetBranch = activeBranch || currentBranch;
+      if (!targetBranch) return false;
+
+      const targetBranchName = (targetBranch.name || "").toLowerCase().trim();
+      const targetBranchId = (targetBranch.id || "").toLowerCase().trim();
 
       const promoBranchNames = promoBranchName
         .split(",")
@@ -1276,17 +1293,17 @@ export function PublicRestaurantView({
       const nameMatch = promoBranchNames.some(
         (bn) =>
           Boolean(bn) &&
-          Boolean(currentBranchName) &&
-          (bn === currentBranchName ||
-            bn.includes(currentBranchName) ||
-            currentBranchName.includes(bn)),
+          Boolean(targetBranchName) &&
+          (bn === targetBranchName ||
+            bn.includes(targetBranchName) ||
+            targetBranchName.includes(bn)),
       );
 
       const idMatch = promoBranchIds.some(
         (bi) =>
           Boolean(bi) &&
-          Boolean(currentBranchId) &&
-          (bi === currentBranchId || bi.includes(currentBranchId) || currentBranchId.includes(bi)),
+          Boolean(targetBranchId) &&
+          (bi === targetBranchId || bi.includes(targetBranchId) || targetBranchId.includes(bi)),
       );
 
       return nameMatch || idMatch;
