@@ -451,6 +451,24 @@ function PromotionsPage() {
       .replace(/\s*\((Manager|Owner)\)/gi, "")
       .trim();
 
+    // Resolve manager branch UUID from branchesList by name match
+    const managerBranchRecord = isManager
+      ? branchesList.find(
+          (b) =>
+            b.name.toLowerCase().trim() === managerBranch.toLowerCase().trim() ||
+            b.name.toLowerCase().includes(managerBranch.toLowerCase()) ||
+            managerBranch.toLowerCase().includes(b.name.toLowerCase()),
+        )
+      : null;
+    const managerBranchId = managerBranchRecord?.id || managerBranch;
+    const managerBranchName2 = managerBranchRecord?.name || managerBranch;
+
+    // selectedBranchFilter now stores UUID; resolve display name
+    const selectedBranchRecord =
+      selectedBranchFilter !== "all"
+        ? branchesList.find((b) => b.id === selectedBranchFilter || b.name === selectedBranchFilter)
+        : null;
+
     return {
       id: generateId(),
       kind,
@@ -469,15 +487,17 @@ function PromotionsPage() {
       categoryNames: [],
       itemIds: [],
       active: true,
+      // branchName = human-readable label (for display only)
       branchName: isManager
-        ? managerBranch
-        : selectedBranchFilter !== "all"
-          ? selectedBranchFilter
+        ? managerBranchName2
+        : selectedBranchRecord
+          ? selectedBranchRecord.name
           : "all",
+      // branchId = authoritative UUID (never changes when admin renames branch)
       branchId: isManager
-        ? managerBranch
-        : selectedBranchFilter !== "all"
-          ? selectedBranchFilter
+        ? managerBranchId
+        : selectedBranchRecord
+          ? selectedBranchRecord.id
           : "all",
       createdByRole: isManager ? "manager" : "owner",
       createdByUserId:
@@ -501,12 +521,25 @@ function PromotionsPage() {
       .replace(/\s*\((Manager|Owner)\)/gi, "")
       .trim();
 
+    // Resolve manager UUID from branchesList (never use name as ID)
+    const managerBranchRecord = isManager
+      ? (branchesList || []).find(
+          (b) =>
+            b.name.toLowerCase().trim() === managerBranch.toLowerCase().trim() ||
+            b.name.toLowerCase().includes(managerBranch.toLowerCase()) ||
+            managerBranch.toLowerCase().includes(b.name.toLowerCase()),
+        )
+      : null;
+    const resolvedManagerBranchId = managerBranchRecord?.id || p.branchId || "assigned";
+    const resolvedManagerBranchName = managerBranchRecord?.name || managerBranch || p.branchName || "Assigned Branch";
+
     const promoToSave: Promotion = {
       ...p,
       branchName: isManager
-        ? managerBranch || p.branchName || "Assigned Branch"
+        ? resolvedManagerBranchName
         : p.branchName || "all",
-      branchId: isManager ? managerBranch || p.branchId || "assigned" : p.branchId || "all",
+      // Always store UUID — never branch name — in branchId
+      branchId: isManager ? resolvedManagerBranchId : p.branchId || "all",
       createdByRole: isManager ? "manager" : p.createdByRole || "owner",
       createdByUserId: isManager
         ? currentUser?.full_name || currentUser?.role || "manager"
@@ -687,7 +720,7 @@ function PromotionsPage() {
                   <SelectContent>
                     <SelectItem value="all">All Branches</SelectItem>
                     {branchesList.map((b) => (
-                      <SelectItem key={b.id || b.name} value={b.name}>
+                      <SelectItem key={b.id || b.name} value={b.id || b.name}>
                         {b.name}
                       </SelectItem>
                     ))}
