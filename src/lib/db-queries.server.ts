@@ -569,7 +569,7 @@ export const getAdminRestaurantsServer = createServerFn({ method: "GET" }).handl
       `SELECT 
         r.id,
         r.name,
-        r.slug AS username,
+        COALESCE(r.slug, r.username, '') AS username,
         COALESCE(r.cuisine, 'Gourmet Kitchen') AS cuisine,
         COALESCE(r.location, r.description, 'Main Location') AS location,
         COALESCE(r.plan, 'Starter') AS plan,
@@ -1344,16 +1344,30 @@ export const createRestaurantServer = createServerFn({ method: "POST" })
     );
 
     if (res.insertId) {
-      await query(
-        `INSERT INTO branches (id, restaurant_id, name, address, status, is_default)
-         VALUES (?, ?, ?, ?, 'open', 1)`,
-        [
-          `branch-main-${res.insertId}`,
-          res.insertId,
-          "Main Branch",
-          data.location || "Main Location",
-        ],
-      );
+      try {
+        await query(
+          `INSERT INTO branches (id, restaurant_id, name, address, location, status, is_default)
+           VALUES (?, ?, ?, ?, ?, 'open', 1)`,
+          [
+            `branch-main-${res.insertId}`,
+            res.insertId,
+            "Main Branch",
+            data.location || "Main Location",
+            data.location || "Main Location",
+          ],
+        );
+      } catch (branchErr) {
+        console.warn("[createRestaurantServer] Branch insert fallback notice:", branchErr);
+        try {
+          await query(
+            `INSERT INTO branches (id, restaurant_id, name, status, is_default)
+             VALUES (?, ?, ?, 'open', 1)`,
+            [`branch-main-${res.insertId}`, res.insertId, "Main Branch"],
+          );
+        } catch {
+          /* ignore */
+        }
+      }
     }
 
     return { id: res.insertId, slug: cleanSlug };
