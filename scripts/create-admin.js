@@ -225,6 +225,13 @@ async function main() {
       );
     }
 
+    // Ensure users.id column is VARCHAR(255) to support string UUIDs / demo IDs
+    try {
+      await connection.query("ALTER TABLE users MODIFY COLUMN id VARCHAR(255) NOT NULL");
+    } catch (e) {
+      /* ignore if already VARCHAR */
+    }
+
     // 2. Create Admin Users for all restaurants
     const defaultPassword = "password123";
     const defaultHashedPassword = hashPassword(defaultPassword);
@@ -245,11 +252,12 @@ async function main() {
         email = `${r.username}@example.com`;
       }
 
+      const userId = `admin-${r.username}`;
       await connection.query(
-        `INSERT INTO users (restaurant_id, name, email, password_hash, role, assigned_branch_id, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO users (id, restaurant_id, name, email, password_hash, role, assigned_branch_id, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE restaurant_id=VALUES(restaurant_id), password_hash=VALUES(password_hash)`,
-        [r.id, `${r.name} Admin`, email, defaultHashedPassword, "admin", null, "Active"],
+        [userId, r.id, `${r.name} Admin`, email, defaultHashedPassword, "admin", null, "Active"],
       );
       console.log(`- Created admin: ${email} (for ${r.name})`);
     }
