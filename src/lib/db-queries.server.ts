@@ -586,10 +586,11 @@ export const getAdminRestaurantsServer = createServerFn({ method: "GET" }).handl
          ORDER BY r.id ASC`,
       );
     } catch (fullQueryErr) {
-      console.warn("[getAdminRestaurantsServer] Complex query notice, falling back to simple SELECT:", fullQueryErr);
-      rows = await query<Record<string, unknown>[]>(
-        `SELECT * FROM restaurants ORDER BY id ASC`,
+      console.warn(
+        "[getAdminRestaurantsServer] Complex query notice, falling back to simple SELECT:",
+        fullQueryErr,
       );
+      rows = await query<Record<string, unknown>[]>(`SELECT * FROM restaurants ORDER BY id ASC`);
     }
 
     if (rows && rows.length > 0) {
@@ -623,14 +624,7 @@ export const getAdminRestaurantsServer = createServerFn({ method: "GET" }).handl
           branches: branchesCount,
           categories: categoriesCount,
           foodItems: foodItemsCount,
-          mrr:
-            plan === "Business"
-              ? 89
-              : plan === "Enterprise"
-                ? 299
-                : plan === "Starter"
-                  ? 29
-                  : 0,
+          mrr: plan === "Business" ? 89 : plan === "Enterprise" ? 299 : plan === "Starter" ? 29 : 0,
         };
       });
     }
@@ -5414,12 +5408,27 @@ export const saveAdminUserAccountServer = createServerFn({ method: "POST" })
         if (passwordHash) {
           await query(
             "UPDATE users SET full_name = ?, name = ?, password_hash = ?, branch = ?, role = ?, restaurant_id = ? WHERE id = ?",
-            [data.name, data.name, passwordHash, data.branchName || "Main Branch", roleDb, targetRestaurantId, uid],
+            [
+              data.name,
+              data.name,
+              passwordHash,
+              data.branchName || "Main Branch",
+              roleDb,
+              targetRestaurantId,
+              uid,
+            ],
           );
         } else {
           await query(
             "UPDATE users SET full_name = ?, name = ?, branch = ?, role = ?, restaurant_id = ? WHERE id = ?",
-            [data.name, data.name, data.branchName || "Main Branch", roleDb, targetRestaurantId, uid],
+            [
+              data.name,
+              data.name,
+              data.branchName || "Main Branch",
+              roleDb,
+              targetRestaurantId,
+              uid,
+            ],
           );
         }
         try {
@@ -5435,7 +5444,16 @@ export const saveAdminUserAccountServer = createServerFn({ method: "POST" })
         const uid = data.id || crypto.randomUUID();
         await query(
           "INSERT INTO users (id, email, password_hash, full_name, name, branch, role, restaurant_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')",
-          [uid, emailClean, targetPasswordHash, data.name, data.name, data.branchName || "Main Branch", roleDb, targetRestaurantId],
+          [
+            uid,
+            emailClean,
+            targetPasswordHash,
+            data.name,
+            data.name,
+            data.branchName || "Main Branch",
+            roleDb,
+            targetRestaurantId,
+          ],
         );
         try {
           await query(
@@ -5477,7 +5495,10 @@ export const getAdminUsersServer = createServerFn({ method: "GET" }).handler(asy
 
     if (rows && rows.length > 0) {
       return rows.map((u) => {
-        const rawRole = String(u.role || "").toLowerCase().replace(/_/g, " ").trim();
+        const rawRole = String(u.role || "")
+          .toLowerCase()
+          .replace(/_/g, " ")
+          .trim();
         const roleDisplay =
           rawRole === "super admin" || rawRole === "admin"
             ? "Super Admin"
@@ -5500,10 +5521,12 @@ export const getAdminUsersServer = createServerFn({ method: "GET" }).handler(asy
           name: String(u.name || "User"),
           email: String(u.email || ""),
           phone: String(u.phone || ""),
-          role: roleDisplay as "Super Admin" | "Owner" | "Manager" | "Cashier" | "Chef" | "Waiter" | "Host",
+          role: roleDisplay as
+            "Super Admin" | "Owner" | "Manager" | "Cashier" | "Chef" | "Waiter" | "Host",
           restaurantName: String(u.restaurant_name || "All Restaurants (Global)"),
           branchName: String(u.branch_name || "Main Branch"),
-          status: (String(u.status || "active") === "suspended" ? "suspended" : "active") as "active" | "invited" | "suspended",
+          status: (String(u.status || "active") === "suspended" ? "suspended" : "active") as
+            "active" | "invited" | "suspended",
           lastActive: "Just now",
           joinedDate: String(u.joined_date || "Recent"),
         };
