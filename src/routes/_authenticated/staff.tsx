@@ -773,9 +773,13 @@ function StaffPage() {
       }
       setForm(EMPTY_FORM);
       setShowPassword(false);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("saveStaffServer error:", err);
-      toast.error("Failed to save staff info in database. Please check your input and try again.");
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Failed to save staff info in database. Please check your input and try again.";
+      toast.error(msg);
     }
   };
 

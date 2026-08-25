@@ -5410,21 +5410,34 @@ export const saveStaffServer = createServerFn({ method: "POST" })
     }
 
     try {
-      const existing = await query<Record<string, unknown>[]>(
-        `SELECT u.id, ur.role, u.branch FROM users u 
-         JOIN user_roles ur ON u.id = ur.user_id 
-         WHERE (u.id = ? OR u.email = ?) AND ur.restaurant_id = ?`,
-        [s.id, s.email, tenant.restaurantId],
-      );
-
-      if (existing && existing.length > 0 && !isTenantOwner) {
-        const existingRole = String(existing[0].role || "").toLowerCase();
-        if (existingRole === "owner" || existingRole === "super_admin") {
-          throw new Error("Forbidden: Managers cannot modify Owner accounts.");
+      try {
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE users CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+          "ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL",
+          "ALTER TABLE users ADD COLUMN name VARCHAR(255) NULL",
+          "ALTER TABLE users ADD COLUMN phone VARCHAR(50) NULL",
+          "ALTER TABLE users ADD COLUMN avatar_url TEXT NULL",
+          "ALTER TABLE users ADD COLUMN branch VARCHAR(255) NULL",
+          "ALTER TABLE users ADD COLUMN assigned_branch_id VARCHAR(255) NULL",
+          "ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'active'",
+          "ALTER TABLE users ADD COLUMN shift VARCHAR(100) DEFAULT 'Full Day'",
+          "ALTER TABLE users ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'waiter'",
+          "ALTER TABLE user_roles ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
         }
+      } catch {
+        /* ignore */
       }
 
-      const roleLower = s.role.toLowerCase();
+      const roleLower = s.role.toLowerCase().trim();
       const sanitizedName = sanitizeText(s.name);
       const sanitizedEmail = s.email.toLowerCase().trim();
       const sanitizedPhone = sanitizeText(s.phone || "");
@@ -5455,14 +5468,28 @@ export const saveStaffServer = createServerFn({ method: "POST" })
       const sanitizedShift = sanitizeText(s.shift || "Full Day");
       const sanitizedAvatar = s.avatarUrl && !s.avatarUrl.startsWith("blob:") ? s.avatarUrl : null;
 
-      if (existing && existing.length > 0) {
-        const userId = String(existing[0].id);
+      // Check if user exists across the users table by ID or email
+      const existingUser = await query<Record<string, unknown>[]>(
+        "SELECT id, email, role, branch FROM users WHERE id = ? OR email = ? LIMIT 1",
+        [s.id || "", sanitizedEmail],
+      );
+
+      if (existingUser && existingUser.length > 0 && !isTenantOwner) {
+        const existingRole = String(existingUser[0].role || "").toLowerCase();
+        if (existingRole === "owner" || existingRole === "super_admin") {
+          throw new Error("Forbidden: Managers cannot modify Owner accounts.");
+        }
+      }
+
+      if (existingUser && existingUser.length > 0) {
+        const userId = String(existingUser[0].id);
         if (s.password && s.password.trim().length >= 6) {
           const passHash = await hashPassword(s.password.trim());
           await query(
-            `UPDATE users SET email = ?, full_name = ?, password_hash = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ?, restaurant_id = ?, role = ? WHERE id = ?`,
+            `UPDATE users SET email = ?, full_name = ?, name = ?, password_hash = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ?, restaurant_id = ?, role = ? WHERE id = ?`,
             [
               sanitizedEmail,
+              sanitizedName,
               sanitizedName,
               passHash,
               sanitizedPhone,
@@ -5478,9 +5505,10 @@ export const saveStaffServer = createServerFn({ method: "POST" })
           );
         } else {
           await query(
-            `UPDATE users SET email = ?, full_name = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ?, restaurant_id = ?, role = ? WHERE id = ?`,
+            `UPDATE users SET email = ?, full_name = ?, name = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ?, restaurant_id = ?, role = ? WHERE id = ?`,
             [
               sanitizedEmail,
+              sanitizedName,
               sanitizedName,
               sanitizedPhone,
               sanitizedAvatar,
@@ -5494,21 +5522,31 @@ export const saveStaffServer = createServerFn({ method: "POST" })
             ],
           );
         }
-        await query(`UPDATE user_roles SET role = ? WHERE user_id = ? AND restaurant_id = ?`, [
-          roleLower,
-          userId,
-          tenant.restaurantId,
-        ]);
+        try {
+          await query(
+            `INSERT INTO user_roles (id, user_id, role, restaurant_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role), restaurant_id = VALUES(restaurant_id)`,
+            [crypto.randomUUID(), userId, roleLower, tenant.restaurantId],
+          );
+        } catch {
+          await query(`UPDATE user_roles SET role = ?, restaurant_id = ? WHERE user_id = ?`, [
+            roleLower,
+            tenant.restaurantId,
+            userId,
+          ]);
+        }
       } else {
         const newId = s.id || crypto.randomUUID();
-        const passHash = s.password ? await hashPassword(s.password.trim()) : null;
+        const passHash = s.password
+          ? await hashPassword(s.password.trim())
+          : await hashPassword("password123");
         await query(
-          `INSERT INTO users (id, email, password_hash, full_name, phone, avatar_url, branch, assigned_branch_id, status, shift, restaurant_id, role)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO users (id, email, password_hash, full_name, name, phone, avatar_url, branch, assigned_branch_id, status, shift, restaurant_id, role)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             newId,
             sanitizedEmail,
             passHash,
+            sanitizedName,
             sanitizedName,
             sanitizedPhone,
             sanitizedAvatar,
@@ -5520,16 +5558,20 @@ export const saveStaffServer = createServerFn({ method: "POST" })
             roleLower,
           ],
         );
-        await query(`INSERT INTO user_roles (user_id, role, restaurant_id) VALUES (?, ?, ?)`, [
-          newId,
-          roleLower,
-          tenant.restaurantId,
-        ]);
+        try {
+          await query(
+            `INSERT INTO user_roles (id, user_id, role, restaurant_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role), restaurant_id = VALUES(restaurant_id)`,
+            [crypto.randomUUID(), newId, roleLower, tenant.restaurantId],
+          );
+        } catch {
+          /* ignore */
+        }
       }
       return { success: true };
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[MySQL] saveStaffServer query error:", err);
-      throw new Error("Failed to save staff member in database");
+      const msg = err instanceof Error ? err.message : "Failed to save staff member in database";
+      throw new Error(msg);
     }
   });
 
