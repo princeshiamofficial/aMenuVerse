@@ -38,7 +38,23 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
 
   const baseData: Restaurant = localMatch
     ? JSON.parse(JSON.stringify(localMatch))
-    : JSON.parse(JSON.stringify(RESTAURANTS[0]));
+    : {
+        id: cleanUsername,
+        name: cleanUsername.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        username: cleanUsername,
+        cuisine: "Gourmet Kitchen",
+        rating: "4.9",
+        reviews: "100",
+        price: "$$",
+        time: "15-20 min",
+        location: "Main Location",
+        logo: cleanUsername.charAt(0).toUpperCase(),
+        logoBg: "from-amber-500 to-orange-600",
+        image: "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&auto=format&fit=crop&q=80",
+        logoImage: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=80&auto=format&fit=crop&q=80",
+        menuItems: [],
+        categories: [],
+      };
 
   // 2. Fetch MySQL DB data (profile, active categories, food items with promotional discount prices)
   try {

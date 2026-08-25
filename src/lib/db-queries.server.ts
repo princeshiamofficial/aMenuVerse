@@ -352,13 +352,13 @@ export const getRestaurantData = createServerFn({ method: "GET" })
 
     try {
       restaurants = await query<DbRestaurantRecord[]>(
-        "SELECT id, name, slug, description, logo_url, cover_url, cuisine, phone, status FROM restaurants WHERE (slug = ? OR slug = ? OR slug = ?) AND status = 'active' LIMIT 1",
-        [cleanUser, slugWithoutLab, slugWithLab],
+        "SELECT id, name, COALESCE(slug, username) AS slug, description, logo_url, cover_url, cuisine, phone, status FROM restaurants WHERE (slug = ? OR username = ? OR slug = ? OR username = ? OR slug = ? OR username = ?) AND status = 'active' LIMIT 1",
+        [cleanUser, cleanUser, slugWithoutLab, slugWithoutLab, slugWithLab, slugWithLab],
       );
     } catch {
       restaurants = await query<DbRestaurantRecord[]>(
-        "SELECT id, name, slug, description, logo_url, cover_url, cuisine, phone FROM restaurants WHERE (slug = ? OR slug = ? OR slug = ?) AND status != 'suspended' LIMIT 1",
-        [cleanUser, slugWithoutLab, slugWithLab],
+        "SELECT id, name, COALESCE(slug, username) AS slug, description, logo_url, cover_url, cuisine, phone FROM restaurants WHERE (slug = ? OR username = ? OR slug = ? OR username = ? OR slug = ? OR username = ?) AND status != 'suspended' LIMIT 1",
+        [cleanUser, cleanUser, slugWithoutLab, slugWithoutLab, slugWithLab, slugWithLab],
       );
     }
     if (!restaurants || restaurants.length === 0) {
@@ -1171,8 +1171,8 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
     let dynamicLocation = "Main Location";
     try {
       const restRows = await query<Record<string, unknown>[]>(
-        "SELECT name, location FROM restaurants WHERE id = ? OR slug = ? LIMIT 1",
-        [tenant.restaurantId, targetSlug],
+        "SELECT name, location FROM restaurants WHERE id = ? OR slug = ? OR username = ? LIMIT 1",
+        [tenant.restaurantId, targetSlug, targetSlug],
       );
       if (restRows && restRows.length > 0) {
         if (restRows[0].name) dynamicName = String(restRows[0].name);
@@ -1233,8 +1233,8 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
     try {
       await ensureRestaurantAppearanceColumns();
       const restaurants = await query<Record<string, unknown>[]>(
-        "SELECT id, name, slug, intro, description, about, logo_url, cover_url, favicon_url, og_image_url, cuisine, phone, location, operating_hours, facilities, prep_time, rating, theme_color, menu_layout, font_family, facebook_url, instagram_url, whatsapp_number, COALESCE(is_verified, 0) AS is_verified FROM restaurants WHERE id = ? OR slug = ? LIMIT 1",
-        [tenant.restaurantId, targetSlug],
+        "SELECT id, name, COALESCE(slug, username) AS slug, intro, description, about, logo_url, cover_url, favicon_url, og_image_url, cuisine, phone, location, operating_hours, facilities, prep_time, rating, theme_color, menu_layout, font_family, facebook_url, instagram_url, whatsapp_number, COALESCE(is_verified, 0) AS is_verified FROM restaurants WHERE id = ? OR slug = ? OR username = ? LIMIT 1",
+        [tenant.restaurantId, targetSlug, targetSlug],
       );
 
       if (restaurants && restaurants.length > 0) {
@@ -1782,8 +1782,8 @@ async function resolvePublicRestaurant(
 
   try {
     const rows = await query<Record<string, unknown>[]>(
-      "SELECT id, slug FROM restaurants WHERE slug = ? OR slug = ? OR slug = ? OR id = ? LIMIT 1",
-      [target, slugWithoutLab, slugWithLab, target],
+      "SELECT id, COALESCE(slug, username) AS slug FROM restaurants WHERE slug = ? OR username = ? OR slug = ? OR username = ? OR slug = ? OR username = ? OR id = ? LIMIT 1",
+      [target, target, slugWithoutLab, slugWithoutLab, slugWithLab, slugWithLab, target],
     );
     if (rows && rows.length > 0) {
       return {
