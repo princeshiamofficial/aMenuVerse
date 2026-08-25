@@ -82,6 +82,7 @@ export function getPool(): mysql.Pool {
       user,
       password,
       database,
+      charset: "utf8mb4",
       waitForConnections: true,
       connectionLimit: 15,
       queueLimit: 0,

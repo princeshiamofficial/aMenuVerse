@@ -2936,14 +2936,19 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
       try {
         const pool = await getPool();
         const alters = [
+          "ALTER TABLE categories CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
           "ALTER TABLE categories ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
           "ALTER TABLE categories ADD COLUMN description TEXT NULL",
-          "ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL",
+          "ALTER TABLE categories ADD COLUMN icon VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL",
+          "ALTER TABLE categories ADD COLUMN emoji VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL",
           "ALTER TABLE categories ADD COLUMN image TEXT NULL",
           "ALTER TABLE categories ADD COLUMN sort_order INT DEFAULT 0",
           "ALTER TABLE categories ADD COLUMN is_active TINYINT(1) DEFAULT 1",
           "ALTER TABLE categories MODIFY COLUMN id VARCHAR(255) NOT NULL",
-          "ALTER TABLE categories MODIFY COLUMN name VARCHAR(255) NOT NULL",
+          "ALTER TABLE categories MODIFY COLUMN name VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL",
+          "ALTER TABLE categories MODIFY COLUMN icon VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL",
+          "ALTER TABLE categories MODIFY COLUMN emoji VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL",
+          "ALTER TABLE categories MODIFY COLUMN description TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL",
         ];
         for (const alt of alters) {
           try {
@@ -2978,15 +2983,17 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
       await transaction(async (conn) => {
         for (let idx = 0; idx < categories.length; idx++) {
           const c = categories[idx];
+          const rawIcon = c.icon || "🍽️";
           try {
             await conn.execute(
-              `INSERT INTO categories (id, restaurant_id, name, description, icon, image, sort_order, is_active)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              `INSERT INTO categories (id, restaurant_id, name, description, icon, emoji, image, sort_order, is_active)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON DUPLICATE KEY UPDATE
                  restaurant_id = VALUES(restaurant_id),
                  name = VALUES(name),
                  description = VALUES(description),
                  icon = VALUES(icon),
+                 emoji = VALUES(emoji),
                  image = VALUES(image),
                  sort_order = VALUES(sort_order),
                  is_active = VALUES(is_active)`,
@@ -2995,7 +3002,8 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
                 tenant.restaurantId,
                 sanitizeText(c.name),
                 sanitizeText(c.description || ""),
-                sanitizeText(c.icon || "🍽️"),
+                rawIcon,
+                rawIcon,
                 c.image || "",
                 idx,
                 c.visible ? 1 : 0,
@@ -3005,17 +3013,21 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
             console.warn("[MySQL] Primary categories insert notice, trying fallback:", insertErr);
             try {
               await conn.execute(
-                `INSERT INTO categories (id, restaurant_id, name, description)
-                 VALUES (?, ?, ?, ?)
+                `INSERT INTO categories (id, restaurant_id, name, description, icon, emoji)
+                 VALUES (?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE
                    restaurant_id = VALUES(restaurant_id),
                    name = VALUES(name),
-                   description = VALUES(description)`,
+                   description = VALUES(description),
+                   icon = VALUES(icon),
+                   emoji = VALUES(emoji)`,
                 [
                   c.id || crypto.randomUUID(),
                   tenant.restaurantId,
                   sanitizeText(c.name),
                   sanitizeText(c.description || ""),
+                  rawIcon,
+                  rawIcon,
                 ],
               );
             } catch (fbErr) {
