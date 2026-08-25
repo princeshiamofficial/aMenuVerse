@@ -1084,8 +1084,17 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
           rating: String(r.rating || ""),
           avgPrepTime: String(r.prep_time || ""),
           cuisineType: String(r.cuisine || ""),
-          logo: String(r.logo_url || ""),
-          cover: String(r.cover_url || ""),
+          logo:
+            !String(r.logo_url || "").trim() ||
+            String(r.logo_url || "").includes("ibb.co/2ndCYJK") ||
+            String(r.logo_url || "").includes("image-not-found")
+              ? (defaultProfile.logo || "/default-logo.png")
+              : String(r.logo_url || ""),
+          cover:
+            !String(r.cover_url || "").trim() || String(r.cover_url || "").includes("image-not-found")
+              ? (defaultProfile.cover ||
+                "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=80")
+              : String(r.cover_url || ""),
           favicon: String(r.favicon_url || ""),
           socialPreview: String(r.og_image_url || ""),
           facebookUrl: String(r.facebook_url || ""),

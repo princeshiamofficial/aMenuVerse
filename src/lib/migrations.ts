@@ -537,6 +537,15 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     }
   }
 
+  // Sanitize broken legacy logo URLs in restaurants table
+  try {
+    await pool.query(
+      "UPDATE restaurants SET logo_url = '/default-logo.png' WHERE logo_url IS NULL OR logo_url = '' OR logo_url LIKE '%ibb.co/2ndCYJK%' OR logo_url LIKE '%image-not-found%'",
+    );
+  } catch {
+    /* ignore */
+  }
+
   // Idempotent Seed for Default Tenants
   try {
     await pool.execute(`

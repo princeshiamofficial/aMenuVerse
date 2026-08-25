@@ -503,15 +503,20 @@ function RestaurantProfilePage() {
       {/* Cover & Logo Banner Card */}
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-100">
         {/* Cover Area */}
-        <div
-          className="relative w-full h-32 sm:h-72 md:h-80 bg-cover bg-center transition-all"
-          style={{
-            backgroundImage: branding.cover
-              ? `url(${branding.cover})`
-              : "linear-gradient(135deg, #1c2b4a, var(--primary))",
-          }}
-        >
-          <div className="absolute right-4 top-4 flex items-center gap-2">
+        <div className="relative w-full h-32 sm:h-72 md:h-80 overflow-hidden bg-slate-900">
+          <img
+            src={
+              branding.cover ||
+              "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=80"
+            }
+            alt={branding.name || "Cover Photo"}
+            className="w-full h-full object-cover object-center transition-all"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src =
+                "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=80";
+            }}
+          />
+          <div className="absolute right-4 top-4 flex items-center gap-2 z-10">
             <span className="hidden sm:inline-flex items-center rounded-full bg-black/40 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
               Rec: 1600×450 px (3.5:1 ratio)
             </span>
@@ -531,19 +536,15 @@ function RestaurantProfilePage() {
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 p-6 -mt-12 sm:-mt-16 relative z-10">
           <div className="flex items-end gap-4 sm:gap-5 min-w-0">
             <div className="flex flex-col items-center shrink-0">
-              <label
-                className="h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded-full border-4 border-white bg-gray-50 shadow-md relative group cursor-pointer"
-                style={{
-                  backgroundImage: branding.logo ? `url(${branding.logo})` : undefined,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }}
-              >
-                {!branding.logo && (
-                  <div className="grid h-full w-full place-items-center bg-gray-900 text-white">
-                    <Building2 className="h-10 w-10 text-gray-400" />
-                  </div>
-                )}
+              <label className="h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded-full border-4 border-white bg-gray-50 shadow-md relative group cursor-pointer flex items-center justify-center">
+                <img
+                  src={branding.logo || "/default-logo.png"}
+                  alt={branding.name || "Logo"}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "/default-logo.png";
+                  }}
+                />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity text-white">
                   <Upload className="h-6 w-6" />
                 </div>
