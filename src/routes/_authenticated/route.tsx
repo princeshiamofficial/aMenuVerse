@@ -34,7 +34,11 @@ const PAGE_TITLE_MAP: Record<string, string> = {
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
-    const user = await getCurrentUser();
+    let token: string | undefined;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("menuverse_session") || undefined;
+    }
+    const user = await getCurrentUser({ data: { token } });
     if (!user) throw redirect({ to: "/auth" });
 
     // Role-Based Access Control (RBAC) path restrictions for tenant roles

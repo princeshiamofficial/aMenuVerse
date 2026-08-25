@@ -26,7 +26,11 @@ function AuthPage() {
   const [demoTab, setDemoTab] = useState<"saas" | "rest1" | "rest2">("rest1");
 
   useEffect(() => {
-    getCurrentUser().then((user) => {
+    let token: string | undefined;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("menuverse_session") || undefined;
+    }
+    getCurrentUser({ data: { token } }).then((user) => {
       if (user) {
         const isSuper = user.role === "super_admin";
         if (isSuper) {
@@ -43,16 +47,17 @@ function AuthPage() {
     setLoading(true);
     try {
       const res = await signInAction({ data: { email, password } });
-      if (res?.token && typeof document !== "undefined") {
+      if (res?.token && typeof window !== "undefined") {
         document.cookie = `menuverse_session=${res.token}; path=/; max-age=604800; SameSite=Lax`;
+        localStorage.setItem("menuverse_session", res.token);
       }
       setLoading(false);
       toast.success("Welcome back!");
       const roles = res?.user?.roles || [];
       if (roles.includes("super_admin")) {
-        window.location.href = "/admin";
+        navigate({ to: "/admin" });
       } else {
-        window.location.href = "/dashboard";
+        navigate({ to: "/dashboard" });
       }
     } catch (err: unknown) {
       const error = err as Error;

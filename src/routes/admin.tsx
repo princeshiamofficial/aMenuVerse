@@ -71,7 +71,11 @@ import {
 export const Route = createFileRoute("/admin")({
   ssr: false,
   beforeLoad: async () => {
-    const user = await getCurrentUser();
+    let token: string | undefined;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("menuverse_session") || undefined;
+    }
+    const user = await getCurrentUser({ data: { token } });
     if (!user) {
       throw redirect({ to: "/auth" });
     }

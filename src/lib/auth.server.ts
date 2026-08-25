@@ -275,9 +275,9 @@ const DEMO_USERS_MAP: Record<string, AuthenticatedUser> = {
   },
 };
 
-export async function verifySession(): Promise<AuthenticatedUser | null> {
+export async function verifySession(explicitToken?: string): Promise<AuthenticatedUser | null> {
   try {
-    let sessionToken = getCookie(COOKIE_NAME);
+    let sessionToken = (explicitToken && explicitToken.trim() !== "") ? explicitToken.trim() : getCookie(COOKIE_NAME);
 
     // Fallback: parse raw cookie header from Web Request if getCookie is empty
     if (!sessionToken || sessionToken === "logged_out" || sessionToken.trim() === "") {

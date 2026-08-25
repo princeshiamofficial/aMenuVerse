@@ -110,14 +110,16 @@ const validateImagePayload = (payload: string) => {
 // AUTHENTICATION SERVER FUNCTIONS
 // =========================================================
 
-export const getCurrentUser = createServerFn({ method: "GET" }).handler(async () => {
-  try {
-    return await verifySession();
-  } catch (err) {
-    console.error("getCurrentUser error:", err);
-    return null;
-  }
-});
+export const getCurrentUser = createServerFn({ method: "GET" })
+  .validator((data?: { token?: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      return await verifySession(data?.token);
+    } catch (err) {
+      console.error("getCurrentUser error:", err);
+      return null;
+    }
+  });
 
 export const signInAction = createServerFn({ method: "POST" })
   .validator((data: { email: string; password: string }) =>
