@@ -4470,6 +4470,103 @@ export const savePromotionsServer = createServerFn({ method: "POST" })
   });
 
 // =========================================================
+// PUBLIC ACTIVE PROMOTIONS (no auth required)
+// =========================================================
+
+export const getPublicActivePromotionsServer = createServerFn({ method: "GET" })
+  .validator(
+    (data: { restaurantSlug: string; branchId?: string }) =>
+      z
+        .object({ restaurantSlug: z.string(), branchId: z.string().optional() })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    try {
+      const tenant = await resolvePublicRestaurant(data.restaurantSlug);
+      if (!tenant || tenant.restaurantId === 0) return [];
+
+      const rows = await query<Record<string, unknown>[]>(
+        `SELECT id, kind, name, discount_percent, start_date, end_date,
+                start_time, end_time, target_scope, category_names_json,
+                item_ids_json, active, image, description, show_popup,
+                branch_name, branch_id
+         FROM promotions
+         WHERE restaurant_id = ? AND active = 1
+         ORDER BY created_at DESC`,
+        [tenant.restaurantId],
+      );
+
+      if (!rows || rows.length === 0) return [];
+
+      const now = new Date();
+      // Use local date string YYYY-MM-DD
+      const todayStr = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+      ].join("-");
+      const currentTimeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+      const activePromos = rows.filter((r) => {
+        // Date range check
+        const startDate = r.start_date ? String(r.start_date) : null;
+        const endDate = r.end_date ? String(r.end_date) : null;
+        if (startDate && todayStr < startDate) return false;
+        if (endDate && todayStr > endDate) return false;
+
+        // Time window check (optional — only for happy-hour)
+        const startTime = r.start_time ? String(r.start_time).slice(0, 5) : null;
+        const endTime = r.end_time ? String(r.end_time).slice(0, 5) : null;
+        if (startTime && endTime) {
+          if (currentTimeStr < startTime || currentTimeStr > endTime) return false;
+        }
+
+        // Branch filter — "all" means every branch
+        if (data.branchId) {
+          const promoBranchId = r.branch_id ? String(r.branch_id).toLowerCase() : "all";
+          const promoBranchName = r.branch_name ? String(r.branch_name).toLowerCase() : "all";
+          const targetBranch = data.branchId.toLowerCase();
+          if (
+            promoBranchId !== "all" &&
+            promoBranchName !== "all" &&
+            !promoBranchId.includes(targetBranch) &&
+            !targetBranch.includes(promoBranchId) &&
+            !promoBranchName.includes(targetBranch) &&
+            !targetBranch.includes(promoBranchName)
+          ) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      return activePromos.map((r) => ({
+        id: String(r.id),
+        kind: String(r.kind || "seasonal"),
+        name: String(r.name || ""),
+        discountPercent: Number(r.discount_percent || 0),
+        startDate: String(r.start_date || ""),
+        endDate: String(r.end_date || ""),
+        startTime: r.start_time ? String(r.start_time) : undefined,
+        endTime: r.end_time ? String(r.end_time) : undefined,
+        targetScope: String(r.target_scope || "all") as "all" | "items" | "categories",
+        categoryNames: r.category_names_json
+          ? (JSON.parse(String(r.category_names_json)) as string[])
+          : [],
+        itemIds: r.item_ids_json ? (JSON.parse(String(r.item_ids_json)) as string[]) : [],
+        image: r.image ? String(r.image) : undefined,
+        description: r.description ? String(r.description) : undefined,
+        showPopup: r.show_popup !== 0,
+        branchId: r.branch_id ? String(r.branch_id) : "all",
+      }));
+    } catch (err) {
+      console.warn("[MySQL] getPublicActivePromotionsServer warning:", err);
+      return [];
+    }
+  });
+
+// =========================================================
 // RESERVATIONS MYSQL SERVER FUNCTIONS
 // =========================================================
 

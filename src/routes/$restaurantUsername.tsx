@@ -9,6 +9,7 @@ import {
   getFoodItemsServer,
   getRestaurantProfile,
   recordAnalyticsEventServer,
+  getPublicActivePromotionsServer,
 } from "@/lib/db-queries.server";
 import { RESTAURANTS, Restaurant, MenuItem, Branch } from "@/lib/restaurants-data";
 import { fetchPublicMenu } from "@/lib/public-menu";
@@ -662,11 +663,14 @@ export function PublicRestaurantView({
       setIsMenuLoading(true);
       // Fetch directly from MySQL Database Server Functions (including promotional discount prices)
       try {
-        const [dbData, dbCategories, dbItems, dbProfile] = await Promise.all([
+        const [dbData, dbCategories, dbItems, dbProfile, dbPromos] = await Promise.all([
           getRestaurantData({ data: restaurantUsername }),
           getCategoriesServer({ data: restaurantUsername }),
           getFoodItemsServer({ data: restaurantUsername }),
           getRestaurantProfile({ data: restaurantUsername }).catch(() => null),
+          getPublicActivePromotionsServer({
+            data: { restaurantSlug: restaurantUsername },
+          }).catch(() => []),
         ]);
 
         const resData = dbData as Record<string, unknown> | null;
@@ -676,7 +680,10 @@ export function PublicRestaurantView({
         if (fetchedCurrency && typeof fetchedCurrency === "string") {
           setServerCurrency(fetchedCurrency);
         }
-        if (resData && resData.promotions && Array.isArray(resData.promotions)) {
+        // Load live MySQL promotions — this is the authoritative source
+        if (dbPromos && Array.isArray(dbPromos) && dbPromos.length > 0) {
+          setServerPromotions(dbPromos as unknown as typeof serverPromotions);
+        } else if (resData && resData.promotions && Array.isArray(resData.promotions)) {
           setServerPromotions(resData.promotions as unknown as typeof serverPromotions);
         }
 
