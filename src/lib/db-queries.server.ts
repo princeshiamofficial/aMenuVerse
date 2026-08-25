@@ -2837,9 +2837,7 @@ export const getCategoriesServer = createServerFn({ method: "GET" })
           "ALTER TABLE categories ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
           "ALTER TABLE categories ADD COLUMN description TEXT NULL",
           "ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL",
-          "ALTER TABLE categories ADD COLUMN emoji VARCHAR(50) NULL",
           "ALTER TABLE categories ADD COLUMN image TEXT NULL",
-          "ALTER TABLE categories ADD COLUMN image_url TEXT NULL",
           "ALTER TABLE categories ADD COLUMN sort_order INT DEFAULT 0",
           "ALTER TABLE categories ADD COLUMN is_active TINYINT(1) DEFAULT 1",
           "ALTER TABLE categories MODIFY COLUMN id VARCHAR(255) NOT NULL",
@@ -2856,53 +2854,53 @@ export const getCategoriesServer = createServerFn({ method: "GET" })
         /* ignore */
       }
 
-      let sql = `
-        SELECT c.id, c.name, c.description, COALESCE(c.icon, c.emoji, '🍽️') as icon, COALESCE(c.image, c.image_url, '') as image, c.sort_order, c.is_active,
-               COUNT(f.id) as item_count
-        FROM categories c
-        LEFT JOIN food_items f ON (f.category = c.id OR f.category = c.name) AND f.restaurant_id = c.restaurant_id
-        WHERE c.restaurant_id = ?
-      `;
+      let sql = "SELECT * FROM categories WHERE (restaurant_id = ? OR restaurant_id = 0)";
       const params: unknown[] = [tenant.restaurantId];
 
       if (filter.activeOnly) {
-        sql += " AND c.is_active = 1";
+        sql += " AND (is_active = 1 OR is_active IS NULL)";
       }
       if (filter.search && filter.search.trim()) {
-        sql += " AND (c.name LIKE ? OR c.description LIKE ?)";
+        sql += " AND (name LIKE ? OR description LIKE ?)";
         const s = `%${filter.search.trim()}%`;
         params.push(s, s);
       }
 
-      sql += `
-        GROUP BY c.id, c.name, c.description, c.icon, c.emoji, c.image, c.image_url, c.sort_order, c.is_active
-        ORDER BY c.sort_order ASC, c.name ASC
-      `;
+      sql += " ORDER BY sort_order ASC, name ASC";
 
-      let rows: Record<string, unknown>[] | null = null;
-      try {
-        rows = await query<Record<string, unknown>[]>(sql, params);
-      } catch (groupErr) {
-        console.warn(
-          "[MySQL] getCategoriesServer complex group query notice, falling back to simple SELECT:",
-          groupErr,
-        );
-        rows = await query<Record<string, unknown>[]>(
-          "SELECT id, name, description, COALESCE(icon, emoji, '🍽️') as icon, COALESCE(image, image_url, '') as image, sort_order, is_active FROM categories WHERE restaurant_id = ? ORDER BY sort_order ASC, name ASC",
-          [tenant.restaurantId],
-        );
-      }
+      const rows = await query<Record<string, unknown>[]>(sql, params);
 
       if (rows && rows.length > 0) {
-        const dbCategories: CategoryRecord[] = rows.map((r) => ({
-          id: String(r.id),
-          name: String(r.name || "Category"),
-          description: String(r.description || ""),
-          icon: String(r.icon || "🍽️"),
-          image: String(r.image || ""),
-          visible: r.is_active !== 0,
-          itemCount: Number(r.item_count || 0),
-        }));
+        let countsMap: Record<string, number> = {};
+        try {
+          const countRows = await query<Record<string, unknown>[]>(
+            "SELECT category, COUNT(*) as cnt FROM food_items WHERE restaurant_id = ? GROUP BY category",
+            [tenant.restaurantId],
+          );
+          if (countRows && countRows.length > 0) {
+            for (const cr of countRows) {
+              const catKey = String(cr.category || "").toLowerCase();
+              countsMap[catKey] = Number(cr.cnt || 0);
+            }
+          }
+        } catch {
+          /* ignore count query error */
+        }
+
+        const dbCategories: CategoryRecord[] = rows.map((r) => {
+          const rId = String(r.id);
+          const rName = String(r.name || "Category");
+          const count = countsMap[rId.toLowerCase()] ?? countsMap[rName.toLowerCase()] ?? 0;
+          return {
+            id: rId,
+            name: rName,
+            description: String(r.description || ""),
+            icon: String(r.icon || r.emoji || "🍽️"),
+            image: String(r.image || r.image_url || ""),
+            visible: r.is_active !== 0 && r.status !== "inactive",
+            itemCount: count,
+          };
+        });
         return dbCategories;
       }
       return [];
@@ -2941,9 +2939,7 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
           "ALTER TABLE categories ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
           "ALTER TABLE categories ADD COLUMN description TEXT NULL",
           "ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL",
-          "ALTER TABLE categories ADD COLUMN emoji VARCHAR(50) NULL",
           "ALTER TABLE categories ADD COLUMN image TEXT NULL",
-          "ALTER TABLE categories ADD COLUMN image_url TEXT NULL",
           "ALTER TABLE categories ADD COLUMN sort_order INT DEFAULT 0",
           "ALTER TABLE categories ADD COLUMN is_active TINYINT(1) DEFAULT 1",
           "ALTER TABLE categories MODIFY COLUMN id VARCHAR(255) NOT NULL",
@@ -2962,7 +2958,7 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
 
       // Check category package limit
       const existingCategories = await query<Record<string, unknown>[]>(
-        "SELECT id FROM categories WHERE restaurant_id = ?",
+        "SELECT id FROM categories WHERE (restaurant_id = ? OR restaurant_id = 0)",
         [tenant.restaurantId],
       );
       const existingIds = new Set((existingCategories || []).map((c) => String(c.id)));
@@ -2987,6 +2983,7 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
               `INSERT INTO categories (id, restaurant_id, name, description, icon, image, sort_order, is_active)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                ON DUPLICATE KEY UPDATE
+                 restaurant_id = VALUES(restaurant_id),
                  name = VALUES(name),
                  description = VALUES(description),
                  icon = VALUES(icon),
@@ -3006,21 +3003,24 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
             );
           } catch (insertErr) {
             console.warn("[MySQL] Primary categories insert notice, trying fallback:", insertErr);
-            await conn.execute(
-              `INSERT INTO categories (id, restaurant_id, name, description, emoji)
-               VALUES (?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE
-                 name = VALUES(name),
-                 description = VALUES(description),
-                 emoji = VALUES(emoji)`,
-              [
-                c.id || crypto.randomUUID(),
-                tenant.restaurantId,
-                sanitizeText(c.name),
-                sanitizeText(c.description || ""),
-                sanitizeText(c.icon || "🍽️"),
-              ],
-            );
+            try {
+              await conn.execute(
+                `INSERT INTO categories (id, restaurant_id, name, description)
+                 VALUES (?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                   restaurant_id = VALUES(restaurant_id),
+                   name = VALUES(name),
+                   description = VALUES(description)`,
+                [
+                  c.id || crypto.randomUUID(),
+                  tenant.restaurantId,
+                  sanitizeText(c.name),
+                  sanitizeText(c.description || ""),
+                ],
+              );
+            } catch (fbErr) {
+              console.error("[MySQL] Category insert fallback error:", fbErr);
+            }
           }
         }
       });
@@ -3106,7 +3106,7 @@ export const getFoodItemsServer = createServerFn({ method: "GET" })
       : await resolvePrivateTenantContext();
 
     try {
-      let sql = `SELECT * FROM food_items WHERE restaurant_id = ?`;
+      let sql = `SELECT * FROM food_items WHERE (restaurant_id = ? OR restaurant_id = 0)`;
       const params: unknown[] = [tenant.restaurantId];
 
       if (filter.category && filter.category !== "all") {
@@ -3114,7 +3114,7 @@ export const getFoodItemsServer = createServerFn({ method: "GET" })
         params.push(filter.category, `%${filter.category}%`);
       }
       if (filter.availableOnly) {
-        sql += ` AND (available = 1 OR available IS NULL) AND (out_of_stock = 0 OR out_of_stock IS NULL)`;
+        sql += ` AND (available = 1 OR available IS NULL OR is_available = 1 OR is_available IS NULL) AND (out_of_stock = 0 OR out_of_stock IS NULL)`;
       }
       if (filter.isPopular) {
         sql += ` AND popular = 1`;
@@ -3141,12 +3141,12 @@ export const getFoodItemsServer = createServerFn({ method: "GET" })
             String(r.name || "")
               .toLowerCase()
               .replace(/[^a-z0-9]+/g, "-"),
-          category: String(r.category || "General"),
+          category: String(r.category || r.category_id || "General"),
           price: Number(r.price || 0),
           discountPrice: r.discount_price ? Number(r.discount_price) : null,
-          shortDescription: String(r.short_description || ""),
-          longDescription: String(r.long_description || ""),
-          image: String(r.image_url || ""),
+          shortDescription: String(r.short_description || r.description || ""),
+          longDescription: String(r.long_description || r.description || ""),
+          image: String(r.image || r.image_url || ""),
           gallery: [],
           view360: "",
           prepTime: Number(r.prep_time || 15),
@@ -3168,7 +3168,7 @@ export const getFoodItemsServer = createServerFn({ method: "GET" })
           vegetarian: Boolean(r.vegetarian),
           halal: r.halal !== 0,
           outOfStock: Boolean(r.out_of_stock),
-          available: r.is_available !== 0,
+          available: r.is_available !== 0 && r.available !== 0,
           sortOrder: Number(r.sort_order || idx),
         }));
         return dbItems;
@@ -3252,61 +3252,86 @@ export const saveFoodItemsServer = createServerFn({ method: "POST" })
         for (let idx = 0; idx < items.length; idx++) {
           const item = items[idx];
           const sanitizedName = sanitizeText(item.name);
-          await conn.execute(
-            `INSERT INTO food_items (
-              id, restaurant_id, category, name, slug, short_description, long_description,
-              image_url, price, discount_price, prep_time, calories, ingredients, allergens,
-              spicy_level, best_seller, popular, chef_choice, vegetarian, halal, out_of_stock,
-              is_available, sort_order
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-              category = VALUES(category),
-              name = VALUES(name),
-              slug = VALUES(slug),
-              short_description = VALUES(short_description),
-              long_description = VALUES(long_description),
-              image_url = VALUES(image_url),
-              price = VALUES(price),
-              discount_price = VALUES(discount_price),
-              prep_time = VALUES(prep_time),
-              calories = VALUES(calories),
-              ingredients = VALUES(ingredients),
-              allergens = VALUES(allergens),
-              spicy_level = VALUES(spicy_level),
-              best_seller = VALUES(best_seller),
-              popular = VALUES(popular),
-              chef_choice = VALUES(chef_choice),
-              vegetarian = VALUES(vegetarian),
-              halal = VALUES(halal),
-              out_of_stock = VALUES(out_of_stock),
-              is_available = VALUES(is_available),
-              sort_order = VALUES(sort_order)`,
-            [
-              item.id || crypto.randomUUID(),
-              tenant.restaurantId,
-              sanitizeText(item.category || "General"),
-              sanitizedName,
-              item.slug || sanitizedName.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-              sanitizeText(item.shortDescription || ""),
-              sanitizeText(item.longDescription || ""),
-              item.image || "",
-              item.price || 0,
-              item.discountPrice ?? null,
-              item.prepTime || 15,
-              item.calories || 0,
-              JSON.stringify((item.ingredients || []).map((i) => sanitizeText(i))),
-              JSON.stringify((item.allergens || []).map((a) => sanitizeText(a))),
-              item.spicyLevel || 0,
-              item.bestSeller ? 1 : 0,
-              item.popular ? 1 : 0,
-              item.chefChoice ? 1 : 0,
-              item.vegetarian ? 1 : 0,
-              item.halal !== false ? 1 : 0,
-              item.outOfStock ? 1 : 0,
-              item.available !== false ? 1 : 0,
-              idx,
-            ],
-          );
+          try {
+            await conn.execute(
+              `INSERT INTO food_items (
+                id, restaurant_id, category, name, slug, short_description, long_description,
+                image_url, price, discount_price, prep_time, calories, ingredients, allergens,
+                spicy_level, best_seller, popular, chef_choice, vegetarian, halal, out_of_stock,
+                is_available, sort_order
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON DUPLICATE KEY UPDATE
+                restaurant_id = VALUES(restaurant_id),
+                category = VALUES(category),
+                name = VALUES(name),
+                slug = VALUES(slug),
+                short_description = VALUES(short_description),
+                long_description = VALUES(long_description),
+                image_url = VALUES(image_url),
+                price = VALUES(price),
+                discount_price = VALUES(discount_price),
+                prep_time = VALUES(prep_time),
+                calories = VALUES(calories),
+                ingredients = VALUES(ingredients),
+                allergens = VALUES(allergens),
+                spicy_level = VALUES(spicy_level),
+                best_seller = VALUES(best_seller),
+                popular = VALUES(popular),
+                chef_choice = VALUES(chef_choice),
+                vegetarian = VALUES(vegetarian),
+                halal = VALUES(halal),
+                out_of_stock = VALUES(out_of_stock),
+                is_available = VALUES(is_available),
+                sort_order = VALUES(sort_order)`,
+              [
+                item.id || crypto.randomUUID(),
+                tenant.restaurantId,
+                sanitizeText(item.category || "General"),
+                sanitizedName,
+                item.slug || sanitizedName.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+                sanitizeText(item.shortDescription || ""),
+                sanitizeText(item.longDescription || ""),
+                item.image || "",
+                item.price || 0,
+                item.discountPrice ?? null,
+                item.prepTime || 15,
+                item.calories || 0,
+                JSON.stringify((item.ingredients || []).map((i) => sanitizeText(i))),
+                JSON.stringify((item.allergens || []).map((a) => sanitizeText(a))),
+                item.spicyLevel || 0,
+                item.bestSeller ? 1 : 0,
+                item.popular ? 1 : 0,
+                item.chefChoice ? 1 : 0,
+                item.vegetarian ? 1 : 0,
+                item.halal !== false ? 1 : 0,
+                item.outOfStock ? 1 : 0,
+                item.available !== false ? 1 : 0,
+                idx,
+              ],
+            );
+          } catch (insertErr) {
+            console.warn("[MySQL] Primary food_items insert notice, trying fallback:", insertErr);
+            try {
+              await conn.execute(
+                `INSERT INTO food_items (id, restaurant_id, category, name, price)
+                 VALUES (?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                   restaurant_id = VALUES(restaurant_id),
+                   category = VALUES(category),
+                   name = VALUES(name),
+                   price = VALUES(price)`,
+                [
+                  item.id || crypto.randomUUID(),
+                  tenant.restaurantId,
+                  sanitizeText(item.category || "General"),
+                  sanitizedName,
+                  item.price || 0,
+                ],
+              );
+            } catch (fbErr) {
+              console.error("[MySQL] Food item secondary fallback failed:", fbErr);
+            }
+          }
         }
       });
       return { success: true, items };
