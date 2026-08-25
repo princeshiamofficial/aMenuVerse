@@ -1,5 +1,5 @@
-// server.js - Hostinger / cPanel Entry Point Wrapper for aMenuVerse
-// This wrapper allows Hostinger Node.js selector to point directly to "server.js"
+// app.js - Hostinger / cPanel Entry Point Wrapper for aMenuVerse
+// This wrapper allows Hostinger Node.js selector / PM2 to point directly to "app.js"
 
 import path from "node:path";
 import { pathToFileURL } from "node:url";

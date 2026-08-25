@@ -45,7 +45,7 @@ export default defineConfig(({ command }) => ({
           specifiers: ["server-only"],
         },
       },
-      server: { entry: "server" },
+      server: { entry: "./src/server.ts" },
     }),
     ...(command === "build" ? [nitro()] : []),
     react(),
