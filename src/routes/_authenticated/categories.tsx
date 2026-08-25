@@ -3,6 +3,7 @@ import { memo, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import {
   getCategoriesServer,
   saveCategoriesServer,
+  deleteCategoryServer,
   getTenantSubscriptionServer,
   getCurrentUser,
 } from "@/lib/db-queries.server";
@@ -500,12 +501,12 @@ function CategoriesPage() {
 
   const confirmDelete = async () => {
     if (!deleteId) return;
-    const updatedList = items.filter((c) => c.id !== deleteId);
-    setItems(updatedList);
+    const targetId = deleteId;
+    setItems((prev) => prev.filter((c) => c.id !== targetId));
     setDeleteId(null);
 
     try {
-      await saveCategoriesServer({ data: updatedList });
+      await deleteCategoryServer({ data: { id: targetId } });
       toast.success("Category deleted from DB");
     } catch {
       toast.success("Category deleted");

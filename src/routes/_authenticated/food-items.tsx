@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import {
   getFoodItemsServer,
   saveFoodItemsServer,
+  deleteFoodItemServer,
   getCategoriesServer,
   getTenantSubscriptionServer,
   getCurrentUser,
@@ -371,12 +372,12 @@ function FoodItemsPage() {
 
   const confirmDelete = async () => {
     if (!deleteId) return;
-    const updatedList = items.filter((i) => i.id !== deleteId);
-    setItems(updatedList);
+    const targetId = deleteId;
+    setItems((prev) => prev.filter((i) => i.id !== targetId));
     setDeleteId(null);
 
     try {
-      await saveFoodItemsServer({ data: updatedList });
+      await deleteFoodItemServer({ data: { id: targetId } });
       toast.success("Food item deleted from DB");
     } catch {
       toast.success("Food item deleted");

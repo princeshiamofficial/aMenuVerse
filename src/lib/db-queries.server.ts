@@ -2872,13 +2872,18 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
       }
 
       await transaction(async (conn) => {
-        await conn.execute("DELETE FROM categories WHERE restaurant_id = ?", [tenant.restaurantId]);
-
         for (let idx = 0; idx < categories.length; idx++) {
           const c = categories[idx];
           await conn.execute(
             `INSERT INTO categories (id, restaurant_id, name, description, icon, image, sort_order, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+               name = VALUES(name),
+               description = VALUES(description),
+               icon = VALUES(icon),
+               image = VALUES(image),
+               sort_order = VALUES(sort_order),
+               is_active = VALUES(is_active)`,
             [
               c.id || crypto.randomUUID(),
               tenant.restaurantId,
@@ -2897,6 +2902,18 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
       console.error("[MySQL] saveCategoriesServer query error:", err);
       throw new Error("Failed to save categories in database");
     }
+  });
+
+export const deleteCategoryServer = createServerFn({ method: "POST" })
+  .validator((data: { id: string }) => z.object({ id: z.string() }).parse(data))
+  .handler(async ({ data }) => {
+    await requirePermission("categories:manage");
+    const tenant = await resolvePrivateTenantContext();
+    await query("DELETE FROM categories WHERE id = ? AND restaurant_id = ?", [
+      data.id,
+      tenant.restaurantId,
+    ]);
+    return { success: true };
   });
 
 const ZFoodItemSchema = z
@@ -3064,8 +3081,6 @@ export const saveFoodItemsServer = createServerFn({ method: "POST" })
       }
 
       await transaction(async (conn) => {
-        await conn.execute("DELETE FROM food_items WHERE restaurant_id = ?", [tenant.restaurantId]);
-
         for (let idx = 0; idx < items.length; idx++) {
           const item = items[idx];
           const sanitizedName = sanitizeText(item.name);
@@ -3075,7 +3090,29 @@ export const saveFoodItemsServer = createServerFn({ method: "POST" })
               image_url, price, discount_price, prep_time, calories, ingredients, allergens,
               spicy_level, best_seller, popular, chef_choice, vegetarian, halal, out_of_stock,
               is_available, sort_order
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              category = VALUES(category),
+              name = VALUES(name),
+              slug = VALUES(slug),
+              short_description = VALUES(short_description),
+              long_description = VALUES(long_description),
+              image_url = VALUES(image_url),
+              price = VALUES(price),
+              discount_price = VALUES(discount_price),
+              prep_time = VALUES(prep_time),
+              calories = VALUES(calories),
+              ingredients = VALUES(ingredients),
+              allergens = VALUES(allergens),
+              spicy_level = VALUES(spicy_level),
+              best_seller = VALUES(best_seller),
+              popular = VALUES(popular),
+              chef_choice = VALUES(chef_choice),
+              vegetarian = VALUES(vegetarian),
+              halal = VALUES(halal),
+              out_of_stock = VALUES(out_of_stock),
+              is_available = VALUES(is_available),
+              sort_order = VALUES(sort_order)`,
             [
               item.id || crypto.randomUUID(),
               tenant.restaurantId,
@@ -3109,6 +3146,18 @@ export const saveFoodItemsServer = createServerFn({ method: "POST" })
       console.error("[MySQL] saveFoodItemsServer query error:", err);
       throw new Error("Failed to save food items in database");
     }
+  });
+
+export const deleteFoodItemServer = createServerFn({ method: "POST" })
+  .validator((data: { id: string }) => z.object({ id: z.string() }).parse(data))
+  .handler(async ({ data }) => {
+    await requirePermission("food_items:manage");
+    const tenant = await resolvePrivateTenantContext();
+    await query("DELETE FROM food_items WHERE id = ? AND restaurant_id = ?", [
+      data.id,
+      tenant.restaurantId,
+    ]);
+    return { success: true };
   });
 
 // =========================================================
