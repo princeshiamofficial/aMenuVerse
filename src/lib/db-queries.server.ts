@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { PermissionKey } from "./permissions";
-import { RESTAURANTS } from "./restaurants-data";
+import { RESTAURANTS, type Restaurant } from "./restaurants-data";
 import { toISODateString, isTimeInWindow, decodeTableToken, encodeTableToken } from "./utils";
 
 // Lazy server module loaders (prevents Node/mysql2/ioredis modules from leaking into client Vite bundle graph)
@@ -377,7 +377,8 @@ export const getRestaurantData = createServerFn({ method: "GET" })
     // 3. Fetch active categories, food items, and profile from DB for this specific tenant
     const serverCategories = await getCategoriesServer({ data: username });
     const serverItems = await getFoodItemsServer({ data: username });
-    const profile = ((await getRestaurantProfile({ data: username })) || {}) as Record<string, any>;
+    const profile = ((await getRestaurantProfile({ data: username })) ||
+      {}) as Record<string, unknown>;
     const rawCategories = serverCategories || [];
     const rawItems = serverItems || [];
 
@@ -488,14 +489,14 @@ export const getRestaurantData = createServerFn({ method: "GET" })
       phone: String(profile.phone || restaurant.phone || ""),
       operatingHours: String(profile.openingHours || "Open Daily"),
       isVerified: profile.isVerified !== undefined ? Boolean(profile.isVerified) : true,
-      appearance: profile.appearance || {
+      appearance: (profile.appearance as Restaurant["appearance"]) || {
         themeColor: "amber",
         menuLayout: "cards",
         fontFamily: "sans",
       },
-      menuLayout: profile.appearance?.menuLayout || "cards",
-      themeColor: profile.appearance?.themeColor || "amber",
-      fontFamily: profile.appearance?.fontFamily || "sans",
+      menuLayout: (profile.appearance as Restaurant["appearance"])?.menuLayout || "cards",
+      themeColor: (profile.appearance as Restaurant["appearance"])?.themeColor || "amber",
+      fontFamily: (profile.appearance as Restaurant["appearance"])?.fontFamily || "sans",
       branches: (branches || []).map((b) => ({
         id: String(b.id || ""),
         name: String(b.name || ""),
@@ -4378,11 +4379,8 @@ export const savePromotionsServer = createServerFn({ method: "POST" })
 // =========================================================
 
 export const getPublicActivePromotionsServer = createServerFn({ method: "GET" })
-  .validator(
-    (data: { restaurantSlug: string; branchId?: string }) =>
-      z
-        .object({ restaurantSlug: z.string(), branchId: z.string().optional() })
-        .parse(data),
+  .validator((data: { restaurantSlug: string; branchId?: string }) =>
+    z.object({ restaurantSlug: z.string(), branchId: z.string().optional() }).parse(data),
   )
   .handler(async ({ data }) => {
     try {

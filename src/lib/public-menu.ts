@@ -100,7 +100,7 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
 
   if (dbProfile) {
     if (dbProfile.appearance) {
-      baseData.appearance = dbProfile.appearance as any;
+      baseData.appearance = dbProfile.appearance as Restaurant["appearance"];
     }
     if (dbProfile.name && typeof dbProfile.name === "string" && dbProfile.name.trim()) {
       if (

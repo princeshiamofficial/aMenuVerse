@@ -946,7 +946,7 @@ export function PublicRestaurantView({
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [popupPromo?.id]);
+  }, [popupPromo]);
 
   const handleClosePromoPopup = () => {
     setPromoPopupOpen(false);
