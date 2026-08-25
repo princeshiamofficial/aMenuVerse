@@ -3284,11 +3284,27 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
           await conn.execute("DELETE FROM branch_tables WHERE branch_id = ?", [branchId]);
         }
 
+        let bSlug = branchId;
+        try {
+          const bRow = await query<Record<string, unknown>[]>(
+            "SELECT name FROM branches WHERE id = ? AND restaurant_id = ? LIMIT 1",
+            [branchId, tenant.restaurantId],
+          );
+          if (bRow && bRow.length > 0 && bRow[0].name) {
+            bSlug = String(bRow[0].name)
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-|-$/g, "");
+          }
+        } catch {
+          /* fallback */
+        }
+
         for (let idx = 0; idx < tables.length; idx++) {
           const t = tables[idx];
           const tableId =
             t.id.startsWith(branchId) || t.id.length > 15 ? t.id : `${branchId}-${t.id}`;
-          const qrToken = encodeTableToken(branchId, t.tableNo);
+          const qrToken = encodeTableToken(bSlug || branchId, t.tableNo);
           try {
             await conn.execute(
               `INSERT INTO branch_tables (id, restaurant_id, branch_id, table_no, zone, sort_order, qr_token) 
@@ -3352,46 +3368,17 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
 
       let rows: Record<string, unknown>[] = [];
 
-      // 1. Search by exact qr_token token in MySQL branch_tables
+      // 1. Strict exact match by qr_token or table id in MySQL branch_tables
       if (data.token) {
         rows = await query<Record<string, unknown>[]>(
           "SELECT id, branch_id, table_no, zone, qr_token FROM branch_tables WHERE (qr_token = ? OR id = ?) AND restaurant_id = ? LIMIT 1",
           [data.token, data.token, tenant.restaurantId],
         );
-      }
-
-      // 2. Search by tableId
-      if ((!rows || rows.length === 0) && data.tableId) {
+      } else if (data.tableId) {
         rows = await query<Record<string, unknown>[]>(
           "SELECT id, branch_id, table_no, zone, qr_token FROM branch_tables WHERE id = ? AND restaurant_id = ? LIMIT 1",
           [data.tableId, tenant.restaurantId],
         );
-      }
-
-      // 3. Match tenant table_no from token decoding or parameters
-      if (!rows || rows.length === 0) {
-        const decoded = data.token ? decodeTableToken(data.token) : null;
-        const targetTableNo = data.tableNo || decoded?.tableNo;
-
-        if (targetTableNo) {
-          const cleanNo = targetTableNo.trim();
-          const numVal = parseInt(cleanNo, 10);
-          const noFormatted = !isNaN(numVal) ? String(numVal).padStart(2, "0") : cleanNo;
-
-          rows = await query<Record<string, unknown>[]>(
-            "SELECT id, branch_id, table_no, zone, qr_token FROM branch_tables WHERE (table_no = ? OR table_no = ? OR table_no = ?) AND restaurant_id = ? LIMIT 1",
-            [cleanNo, noFormatted, String(numVal), tenant.restaurantId],
-          );
-
-          // Auto-repair/sync qr_token in MySQL if matching tenant table is found
-          if (rows && rows.length > 0 && data.token) {
-            const tableRowId = String(rows[0].id);
-            query("UPDATE branch_tables SET qr_token = ? WHERE id = ?", [
-              data.token,
-              tableRowId,
-            ]).catch(() => {});
-          }
-        }
       }
 
       if (!rows || rows.length === 0) {
