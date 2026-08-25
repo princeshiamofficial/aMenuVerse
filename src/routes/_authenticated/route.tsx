@@ -11,6 +11,8 @@ import { getCurrentUser, getRestaurantProfile } from "@/lib/db-queries.server";
 import { DashboardShell } from "@/components/menuverse/dashboard-shell";
 import { useRealtime, playChime } from "@/lib/use-realtime";
 
+import { SkeletonDashboard } from "@/components/menuverse/skeletons";
+
 const PAGE_TITLE_MAP: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/restaurant-profile": "Restaurant Profile",
@@ -39,7 +41,13 @@ export const Route = createFileRoute("/_authenticated")({
       token = localStorage.getItem("menuverse_session") || undefined;
     }
     const user = await getCurrentUser({ data: { token } });
-    if (!user) throw redirect({ to: "/auth" });
+
+    if (!user) {
+      if (typeof window !== "undefined") {
+        throw redirect({ to: "/auth" });
+      }
+      return { user: null };
+    }
 
     // Role-Based Access Control (RBAC) path restrictions for tenant roles
     const role = (user.role || "").toLowerCase().trim().replace(/ /g, "_");
@@ -135,9 +143,25 @@ function GlobalRealtimeNotifier({
 }
 
 function AuthenticatedLayout() {
-  const { user } = useRouteContext({ from: "/_authenticated" });
+  const { user: initialUser } = useRouteContext({ from: "/_authenticated" });
+  const [currentUser, setCurrentUser] = useState(initialUser);
+  const [loading, setLoading] = useState(!initialUser);
   const location = useLocation();
   const [restaurantName, setRestaurantName] = useState<string>("MenuVerse");
+
+  useEffect(() => {
+    if (!currentUser && typeof window !== "undefined") {
+      const token = localStorage.getItem("menuverse_session");
+      getCurrentUser({ data: { token: token || undefined } }).then((u) => {
+        if (!u) {
+          window.location.href = "/auth";
+        } else {
+          setCurrentUser(u);
+          setLoading(false);
+        }
+      });
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     async function loadRestaurantName() {
@@ -178,21 +202,25 @@ function AuthenticatedLayout() {
     document.title = `${pageTitle} | ${restaurantName}`;
   }, [location.pathname, restaurantName]);
 
+  if (loading || !currentUser) {
+    return <SkeletonDashboard />;
+  }
+
   return (
     <DashboardShell
-      userId={user?.id ?? ""}
-      userName={user?.full_name ?? ""}
-      userEmail={user?.email ?? ""}
-      userAvatarUrl={user?.avatar_url ?? null}
-      userRole={user?.role ?? "Owner"}
-      userBranch={user?.branch ?? null}
+      userId={currentUser?.id ?? ""}
+      userName={currentUser?.full_name ?? ""}
+      userEmail={currentUser?.email ?? ""}
+      userAvatarUrl={currentUser?.avatar_url ?? null}
+      userRole={currentUser?.role ?? "Owner"}
+      userBranch={currentUser?.branch ?? null}
     >
       <GlobalRealtimeNotifier
         restaurantId={
-          (user as unknown as Record<string, unknown>)?.restaurant_id as string | number | undefined
+          (currentUser as unknown as Record<string, unknown>)?.restaurant_id as string | number | undefined
         }
-        branch={(user as unknown as Record<string, unknown>)?.branch as string | undefined}
-        role={user?.role}
+        branch={(currentUser as unknown as Record<string, unknown>)?.branch as string | undefined}
+        role={currentUser?.role}
       />
       <Outlet />
     </DashboardShell>

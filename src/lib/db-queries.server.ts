@@ -131,7 +131,7 @@ export const signInAction = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    await checkRateLimitAsync("login", data.email, { maxRequests: 5, windowMs: 60 * 1000 });
+    await checkRateLimitAsync("login", data.email, { maxRequests: 60, windowMs: 60 * 1000 });
     const { email, password } = data;
 
     const users = await query<Record<string, string>[]>("SELECT * FROM users WHERE email = ?", [
