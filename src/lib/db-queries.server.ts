@@ -1330,10 +1330,11 @@ export const createRestaurantServer = createServerFn({ method: "POST" })
 
     const cleanSlug = data.slug.toLowerCase().trim().replace(/\s+/g, "-");
     const res = await query<import("mysql2/promise").ResultSetHeader>(
-      `INSERT INTO restaurants (name, slug, cuisine, location, plan, status, logo_url)
-       VALUES (?, ?, ?, ?, ?, ?, '/default-logo.png')`,
+      `INSERT INTO restaurants (name, slug, username, cuisine, location, plan, status, logo_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, '/default-logo.png')`,
       [
         data.name,
+        cleanSlug,
         cleanSlug,
         data.cuisine || "Gourmet Kitchen",
         data.location || "Main Location",
@@ -1374,10 +1375,13 @@ export const updateRestaurantDetailsServer = createServerFn({ method: "POST" })
     await requireAuth();
     await requirePermission("platform:manage_restaurants");
 
+    const cleanSlug = data.slug ? data.slug.toLowerCase().trim().replace(/\s+/g, "-") : null;
+
     await query(
       `UPDATE restaurants SET
         name = COALESCE(?, name),
         slug = COALESCE(?, slug),
+        username = COALESCE(?, username),
         cuisine = COALESCE(?, cuisine),
         location = COALESCE(?, location),
         plan = COALESCE(?, plan),
@@ -1385,7 +1389,8 @@ export const updateRestaurantDetailsServer = createServerFn({ method: "POST" })
        WHERE id = ?`,
       [
         data.name || null,
-        data.slug ? data.slug.toLowerCase().trim().replace(/\s+/g, "-") : null,
+        cleanSlug,
+        cleanSlug,
         data.cuisine || null,
         data.location || null,
         data.plan || null,

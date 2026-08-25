@@ -303,16 +303,45 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     }
   }
 
-  // Add 'plan' and 'is_verified' columns to restaurants if missing
-  try {
-    await pool.query("ALTER TABLE restaurants ADD COLUMN plan VARCHAR(50) DEFAULT 'Starter'");
-  } catch {
-    /* Column already exists */
+  // Ensure all restaurants table columns exist across legacy schemas
+  const restaurantColumnAlters = [
+    "ALTER TABLE restaurants ADD COLUMN slug VARCHAR(255) NULL",
+    "ALTER TABLE restaurants ADD COLUMN username VARCHAR(255) NULL",
+    "ALTER TABLE restaurants ADD COLUMN plan VARCHAR(50) DEFAULT 'Starter'",
+    "ALTER TABLE restaurants ADD COLUMN is_verified TINYINT(1) DEFAULT 1",
+    "ALTER TABLE restaurants ADD COLUMN about TEXT NULL",
+    "ALTER TABLE restaurants ADD COLUMN facilities TEXT NULL",
+    "ALTER TABLE restaurants ADD COLUMN prep_time VARCHAR(100) NULL",
+    "ALTER TABLE restaurants ADD COLUMN rating VARCHAR(100) NULL",
+    "ALTER TABLE restaurants ADD COLUMN operating_hours VARCHAR(255) NULL",
+    "ALTER TABLE restaurants ADD COLUMN theme_color VARCHAR(50) DEFAULT 'amber'",
+    "ALTER TABLE restaurants ADD COLUMN menu_layout VARCHAR(50) DEFAULT 'cards'",
+    "ALTER TABLE restaurants ADD COLUMN font_family VARCHAR(50) DEFAULT 'sans'",
+    "ALTER TABLE restaurants ADD COLUMN logo_url TEXT NULL",
+    "ALTER TABLE restaurants ADD COLUMN cover_url TEXT NULL",
+    "ALTER TABLE restaurants ADD COLUMN cuisine VARCHAR(255) NULL",
+    "ALTER TABLE restaurants ADD COLUMN location TEXT NULL",
+    "ALTER TABLE restaurants ADD COLUMN phone VARCHAR(50) NULL",
+    "ALTER TABLE restaurants ADD COLUMN status VARCHAR(50) DEFAULT 'active'",
+  ];
+  for (const alter of restaurantColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column already exists */
+    }
   }
+
+  // Ensure slug and username are synced for all restaurants
   try {
-    await pool.query("ALTER TABLE restaurants ADD COLUMN is_verified TINYINT(1) DEFAULT 1");
+    await pool.query(
+      "UPDATE restaurants SET slug = COALESCE(NULLIF(slug, ''), username) WHERE slug IS NULL OR slug = ''",
+    );
+    await pool.query(
+      "UPDATE restaurants SET username = COALESCE(NULLIF(username, ''), slug) WHERE username IS NULL OR username = ''",
+    );
   } catch {
-    /* Column already exists */
+    /* ignore */
   }
 
   // Ensure all users table columns exist across legacy schemas
@@ -337,7 +366,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   // Add 'branch_id' column to pos_orders if missing
   try {
-    await pool.execute(
+    await pool.query(
       "ALTER TABLE pos_orders ADD COLUMN branch_id VARCHAR(255) AFTER restaurant_id",
     );
   } catch {
@@ -346,14 +375,14 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   // Add 'qr_token' and 'status' columns to branch_tables if missing
   try {
-    await pool.execute(
+    await pool.query(
       "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL AFTER sort_order",
     );
   } catch {
     /* Column already exists */
   }
   try {
-    await pool.execute(
+    await pool.query(
       "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
     );
   } catch {
@@ -362,28 +391,28 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   // Add 'branch_name', 'branch_id', 'created_by_role', 'created_by_user_id' to promotions if missing
   try {
-    await pool.execute(
+    await pool.query(
       "ALTER TABLE promotions ADD COLUMN branch_name VARCHAR(255) DEFAULT 'all' AFTER show_popup",
     );
   } catch {
     /* Column already exists */
   }
   try {
-    await pool.execute(
+    await pool.query(
       "ALTER TABLE promotions ADD COLUMN branch_id VARCHAR(255) DEFAULT 'all' AFTER branch_name",
     );
   } catch {
     /* Column already exists */
   }
   try {
-    await pool.execute(
+    await pool.query(
       "ALTER TABLE promotions ADD COLUMN created_by_role VARCHAR(50) DEFAULT 'owner' AFTER branch_id",
     );
   } catch {
     /* Column already exists */
   }
   try {
-    await pool.execute(
+    await pool.query(
       "ALTER TABLE promotions ADD COLUMN created_by_user_id VARCHAR(255) AFTER created_by_role",
     );
   } catch {
