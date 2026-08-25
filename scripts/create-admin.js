@@ -65,6 +65,21 @@ async function main() {
   });
 
   try {
+    // Skip bootstrapping if user accounts already exist in the database
+    try {
+      const [existingUsers] = await connection.query(
+        "SELECT COUNT(*) AS total FROM users",
+      );
+      const userCount = existingUsers && existingUsers[0] ? Number(existingUsers[0].total) : 0;
+      if (userCount > 0) {
+        console.log(`✅ Found ${userCount} existing user account(s) in database.`);
+        console.log("ℹ️ Database and admin accounts already exist. Skipping seed creation.");
+        return;
+      }
+    } catch {
+      /* Table users might not exist yet, continue to create schemas & admin */
+    }
+
     // 1. Create all 5 default Restaurants so all public URLs work
     const restaurantsData = [
       {
