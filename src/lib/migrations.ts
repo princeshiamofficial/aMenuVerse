@@ -29,6 +29,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       rating VARCHAR(100),
       plan VARCHAR(50) DEFAULT 'Starter',
       status VARCHAR(50) DEFAULT 'active',
+      is_verified TINYINT(1) DEFAULT 1,
       theme_color VARCHAR(50) DEFAULT 'amber',
       menu_layout VARCHAR(50) DEFAULT 'cards',
       font_family VARCHAR(50) DEFAULT 'sans',
@@ -302,9 +303,14 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     }
   }
 
-  // Add 'plan' column to restaurants if missing
+  // Add 'plan' and 'is_verified' columns to restaurants if missing
   try {
-    await pool.execute("ALTER TABLE restaurants ADD COLUMN plan VARCHAR(50) DEFAULT 'Starter'");
+    await pool.query("ALTER TABLE restaurants ADD COLUMN plan VARCHAR(50) DEFAULT 'Starter'");
+  } catch {
+    /* Column already exists */
+  }
+  try {
+    await pool.query("ALTER TABLE restaurants ADD COLUMN is_verified TINYINT(1) DEFAULT 1");
   } catch {
     /* Column already exists */
   }
@@ -323,7 +329,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
   ];
   for (const alter of userColumnAlters) {
     try {
-      await pool.execute(alter);
+      await pool.query(alter);
     } catch {
       /* Column already exists */
     }

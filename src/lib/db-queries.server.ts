@@ -565,12 +565,6 @@ export const getRestaurantData = createServerFn({ method: "GET" })
 
 export const getAdminRestaurantsServer = createServerFn({ method: "GET" }).handler(async () => {
   try {
-    try {
-      await query("ALTER TABLE restaurants ADD COLUMN is_verified TINYINT(1) DEFAULT 1;");
-    } catch {
-      /* ignore if column exists */
-    }
-
     const rows = await query<Record<string, unknown>[]>(
       `SELECT 
         r.id,

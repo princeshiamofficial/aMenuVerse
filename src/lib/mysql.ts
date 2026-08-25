@@ -87,8 +87,11 @@ export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValu
   }
 
   const connectionPool = getPool();
+  const isDDL = /^\s*(ALTER|CREATE|DROP|TRUNCATE|RENAME)\b/i.test(sql);
   try {
-    const [rows] = await connectionPool.execute(sql, params);
+    const [rows] = isDDL
+      ? await connectionPool.query(sql, params)
+      : await connectionPool.execute(sql, params);
     return rows as T;
   } catch (err: unknown) {
     const mysqlErr = err as { errno?: number; code?: string };
@@ -104,7 +107,9 @@ export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValu
       );
       globalForMysql.__mysql_tables_initialized__ = false;
       await ensureAllTablesExist();
-      const [retryRows] = await connectionPool.execute(sql, params);
+      const [retryRows] = isDDL
+        ? await connectionPool.query(sql, params)
+        : await connectionPool.execute(sql, params);
       return retryRows as T;
     }
     throw err;
