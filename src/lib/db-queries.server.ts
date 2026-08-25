@@ -817,6 +817,16 @@ export const placeOrderAction = createServerFn({ method: "POST" })
     let resolvedBranchName = "";
 
     try {
+      if (tableNumber || resolvedBranchId) {
+        const tRows = await query<Record<string, unknown>[]>(
+          "SELECT branch_id FROM branch_tables WHERE restaurant_id = ? AND (qr_token = ? OR id = ? OR (table_no = ? AND branch_id IS NOT NULL)) LIMIT 1",
+          [tenant.restaurantId, resolvedBranchId || "", resolvedBranchId || "", tableNumber || ""],
+        );
+        if (tRows && tRows.length > 0 && tRows[0].branch_id) {
+          resolvedBranchId = String(tRows[0].branch_id);
+        }
+      }
+
       const bRows = await query<Record<string, unknown>[]>(
         "SELECT id, name, is_default FROM branches WHERE restaurant_id = ? ORDER BY is_default DESC, created_at ASC",
         [tenant.restaurantId],
@@ -833,21 +843,7 @@ export const placeOrderAction = createServerFn({ method: "POST" })
               .toLowerCase()
               .trim();
             const bSlug = bName.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-            const parts = bName.split(/\s+/).filter(Boolean);
-            const initials =
-              parts.length >= 2
-                ? (parts[0][0] + parts[1][0]).toLowerCase()
-                : bName.slice(0, 2).toLowerCase();
-            return (
-              bId === target ||
-              bName === target ||
-              bSlug === target ||
-              bSlug.startsWith(target) ||
-              initials === target ||
-              bName.includes(target) ||
-              target.includes(bSlug) ||
-              target.includes(initials)
-            );
+            return bId === target || bName === target || bSlug === target;
           });
         }
         if (!match) {
@@ -3570,8 +3566,8 @@ export const getOrdersServer = createServerFn({ method: "GET" })
         const idents = await resolveBranchIdentifiers(tenant.restaurantId, filter.branchId);
         const branchClauses: string[] = [];
         for (const ident of idents) {
-          branchClauses.push("branch_id = ?", "branch_id LIKE ?", "notes LIKE ?");
-          params.push(ident, `%${ident}%`, `%${ident}%`);
+          branchClauses.push("branch_id = ?");
+          params.push(ident);
         }
         if (branchClauses.length > 0) {
           sql += ` AND (${branchClauses.join(" OR ")})`;
@@ -3581,8 +3577,8 @@ export const getOrdersServer = createServerFn({ method: "GET" })
         for (const b of assignedInfo.branches) {
           const idents = await resolveBranchIdentifiers(tenant.restaurantId, b.id || b.name);
           for (const ident of idents) {
-            branchClauses.push("branch_id = ?", "branch_id LIKE ?", "notes LIKE ?");
-            params.push(ident, `%${ident}%`, `%${ident}%`);
+            branchClauses.push("branch_id = ?");
+            params.push(ident);
           }
         }
         if (branchClauses.length > 0) {
@@ -3737,8 +3733,8 @@ export const getOrderStatusCountsServer = createServerFn({ method: "GET" })
         const idents = await resolveBranchIdentifiers(tenant.restaurantId, filter.branchId);
         const branchClauses: string[] = [];
         for (const ident of idents) {
-          branchClauses.push("branch_id = ?", "branch_id LIKE ?", "notes LIKE ?");
-          params.push(ident, `%${ident}%`, `%${ident}%`);
+          branchClauses.push("branch_id = ?");
+          params.push(ident);
         }
         if (branchClauses.length > 0) {
           sql += ` AND (${branchClauses.join(" OR ")})`;
@@ -3748,8 +3744,8 @@ export const getOrderStatusCountsServer = createServerFn({ method: "GET" })
         for (const b of assignedInfo.branches) {
           const idents = await resolveBranchIdentifiers(tenant.restaurantId, b.id || b.name);
           for (const ident of idents) {
-            branchClauses.push("branch_id = ?", "branch_id LIKE ?", "notes LIKE ?");
-            params.push(ident, `%${ident}%`, `%${ident}%`);
+            branchClauses.push("branch_id = ?");
+            params.push(ident);
           }
         }
         if (branchClauses.length > 0) {
