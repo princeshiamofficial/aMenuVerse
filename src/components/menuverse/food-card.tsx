@@ -57,14 +57,11 @@ export function FoodCard({
     "M 16,0 H 224 A 16 16 0 0 1 240,16 V 226 A 20 20 0 0 1 220,246 H 152 A 24 24 0 0 0 128,270 V 278 A 22 22 0 0 1 106,300 H 16 A 16 16 0 0 1 0,284 V 16 A 16 16 0 0 1 16,0 Z";
   const pathD = qtyInCart > 0 ? expandedPath : standardPath;
 
-  const hasDesc = Boolean(description && description.trim());
-
   return (
     <article
       onClick={onClick}
       className={cn(
-        "group relative flex w-full sm:w-60 flex-col justify-between bg-transparent p-0 filter drop-shadow-[0_8px_20px_rgba(15,23,42,0.05)] transition-all duration-300 hover:drop-shadow-[0_12px_26px_rgba(15,23,42,0.1)]",
-        hasDesc ? "h-66 sm:h-74" : "h-[215px] sm:h-[240px]",
+        "group relative flex w-full sm:w-60 h-70 sm:h-75 flex-col justify-between bg-transparent p-0 filter drop-shadow-[0_8px_20px_rgba(15,23,42,0.05)] transition duration-300 hover:drop-shadow-[0_12px_26px_rgba(15,23,42,0.1)]",
         onClick && "cursor-pointer",
         !available && "opacity-75",
         className,
@@ -83,12 +80,7 @@ export function FoodCard({
       {/* Card Content Wrapper */}
       <div className="relative z-10 w-full h-full flex flex-col justify-between">
         {/* Image Panel */}
-        <div
-          className={cn(
-            "relative w-full rounded-[14px] overflow-hidden bg-linear-to-b from-[#b8c2cc] via-[#7d8c9b] to-[#202938] flex items-center justify-center p-0 transition-all duration-300",
-            hasDesc ? "h-36 sm:h-44" : "h-34 sm:h-38",
-          )}
-        >
+        <div className="relative w-full h-38.75 sm:h-45 rounded-[14px] overflow-hidden bg-linear-to-b from-[#b8c2cc] via-[#7d8c9b] to-[#202938] flex items-center justify-center p-0">
           {image ? (
             <BlobImg
               src={image}
@@ -121,12 +113,12 @@ export function FoodCard({
         </div>
 
         {/* Body Area */}
-        <div className="p-3 flex flex-col overflow-hidden flex-1 justify-start text-left">
+        <div className="p-3.5 flex flex-col overflow-hidden flex-1 justify-start text-left">
           <h3 className="text-sm font-bold text-gray-900 tracking-tight leading-snug truncate w-full">
             {name}
           </h3>
 
-          {hasDesc && (
+          {description && (
             <p className="mt-0.5 text-gray-500 leading-normal line-clamp-2 text-[10.5px] pr-0">
               <span className="float-right w-0 h-4.25 pointer-events-none" />
               <span
@@ -138,31 +130,32 @@ export function FoodCard({
               {description}
             </p>
           )}
+        </div>
 
-          <div
-            className={cn(
-              "mt-1 flex items-baseline gap-1.5 transition-all duration-300 flex-wrap",
-              qtyInCart > 0 ? "pr-19.5 sm:pr-25.5" : "pr-8.5 sm:pr-11",
-            )}
-          >
-            {discountPrice != null && discountPrice < price ? (
-              <>
-                <span className="text-xs font-semibold text-red-500 line-through decoration-red-500 font-mono">
-                  {activeSymbol}
-                  {price.toFixed(2)}
-                </span>
-                <span className="text-[15px] font-bold text-gray-900 tracking-tight">
-                  {activeSymbol}
-                  {discountPrice.toFixed(2)}
-                </span>
-              </>
-            ) : (
-              <span className="text-[15px] font-bold text-gray-900 tracking-tight">
+        {/* Price — bottom-left, sits inside pocket area row */}
+        <div
+          className={cn(
+            "absolute bottom-0 left-0 z-20 h-12 sm:h-13.5 flex items-center pl-3.5 transition-all duration-300",
+            qtyInCart > 0 ? "pr-0" : "pr-0",
+          )}
+        >
+          {discountPrice != null && discountPrice < price ? (
+            <div className="flex flex-col leading-none">
+              <span className="text-[10px] font-semibold text-red-500 line-through decoration-red-500 font-mono">
                 {activeSymbol}
                 {price.toFixed(2)}
               </span>
-            )}
-          </div>
+              <span className="text-[15px] font-bold text-gray-900 tracking-tight">
+                {activeSymbol}
+                {discountPrice.toFixed(2)}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[15px] font-bold text-gray-900 tracking-tight">
+              {activeSymbol}
+              {price.toFixed(2)}
+            </span>
+          )}
         </div>
 
         {/* Pocket Cutout & Action Button */}

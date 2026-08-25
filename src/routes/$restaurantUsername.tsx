@@ -2500,11 +2500,9 @@ export function PublicRestaurantView({
                                 <h4 className="text-sm sm:text-base font-bold text-neutral-900 truncate">
                                   {item.name}
                                 </h4>
-                                {item.description && (
-                                  <p className="text-[11px] sm:text-xs text-neutral-500 font-semibold leading-relaxed mt-1 line-clamp-2">
-                                    {item.description}
-                                  </p>
-                                )}
+                                <p className="text-[11px] sm:text-xs text-neutral-500 font-semibold leading-relaxed mt-1 line-clamp-2">
+                                  {item.description}
+                                </p>
                               </div>
                             </div>
                           </div>
