@@ -103,7 +103,6 @@ interface StaffMember {
   avatarUrl?: string;
 }
 
-const BRANCHES = ["Dhanmondi Branch", "Gulshan Branch", "Uttara Branch"];
 const SHIFTS = ["Morning (6AM–2PM)", "Afternoon (2PM–10PM)", "Night (10PM–6AM)", "Full Day"];
 
 const AVATAR_PRESETS = [
@@ -277,7 +276,7 @@ const EMPTY_FORM: Omit<StaffMember, "id"> = {
   phone: "",
   password: "",
   role: "Waiter",
-  branch: BRANCHES[0],
+  branch: "",
   status: "active",
   shift: SHIFTS[0],
   joinDate: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
