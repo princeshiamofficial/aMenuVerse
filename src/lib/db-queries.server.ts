@@ -5468,21 +5468,44 @@ export const saveStaffServer = createServerFn({ method: "POST" })
       const sanitizedShift = sanitizeText(s.shift || "Full Day");
       const sanitizedAvatar = s.avatarUrl && !s.avatarUrl.startsWith("blob:") ? s.avatarUrl : null;
 
-      // Check if user exists across the users table by ID or email
-      const existingUser = await query<Record<string, unknown>[]>(
-        "SELECT id, email, role, branch FROM users WHERE id = ? OR email = ? LIMIT 1",
-        [s.id || "", sanitizedEmail],
+      // Check if user exists across the users table by email
+      const existingByEmail = await query<Record<string, unknown>[]>(
+        "SELECT id, email, role, branch FROM users WHERE email = ? LIMIT 1",
+        [sanitizedEmail],
       );
 
-      if (existingUser && existingUser.length > 0 && !isTenantOwner) {
-        const existingRole = String(existingUser[0].role || "").toLowerCase();
+      // Check if this is an update to an existing user record
+      const isExistingUser = s.id
+        ? await query<Record<string, unknown>[]>(
+            "SELECT id, email, role, branch FROM users WHERE id = ? LIMIT 1",
+            [s.id],
+          )
+        : [];
+
+      if (existingByEmail && existingByEmail.length > 0) {
+        const existingUserId = String(existingByEmail[0].id);
+        // If creating new staff or email belongs to a different user
+        if (
+          !s.id ||
+          (isExistingUser && isExistingUser.length === 0) ||
+          existingUserId !== String(s.id)
+        ) {
+          throw new Error("User already exists with this email address");
+        }
+      }
+
+      const targetExisting =
+        isExistingUser && isExistingUser.length > 0 ? isExistingUser : existingByEmail;
+
+      if (targetExisting && targetExisting.length > 0 && !isTenantOwner) {
+        const existingRole = String(targetExisting[0].role || "").toLowerCase();
         if (existingRole === "owner" || existingRole === "super_admin") {
           throw new Error("Forbidden: Managers cannot modify Owner accounts.");
         }
       }
 
-      if (existingUser && existingUser.length > 0) {
-        const userId = String(existingUser[0].id);
+      if (targetExisting && targetExisting.length > 0) {
+        const userId = String(targetExisting[0].id);
         if (s.password && s.password.trim().length >= 6) {
           const passHash = await hashPassword(s.password.trim());
           await query(
