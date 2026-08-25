@@ -556,23 +556,23 @@ function CategoriesPage() {
 
   return (
     <div
-      className="-m-6 md:-m-8 p-6 md:p-8 min-h-screen space-y-6"
+      className="-m-6 md:-m-8 p-4 sm:p-6 md:p-8 min-h-screen space-y-6"
       style={{ backgroundColor: "#EEEFF2" }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-full max-w-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="relative w-full sm:w-80 max-w-full">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder="Search categories…"
-            className="pl-10 bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 shadow-xs focus-visible:ring-amber-500 h-10"
+            className="pl-10 bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 shadow-xs focus-visible:ring-amber-500 h-10 w-full"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto sm:ml-auto">
           <Button
             onClick={openCreate}
-            className="gradient-warm text-primary-foreground shadow-elegant shrink-0"
+            className="gradient-warm text-primary-foreground shadow-elegant w-full sm:w-auto justify-center shrink-0"
           >
             <Plus className="mr-1 h-4 w-4" /> Add category
           </Button>
@@ -702,7 +702,7 @@ function SortableRow({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "border flex flex-col justify-between rounded-2xl p-4 shadow-xs transition hover:shadow-md relative overflow-hidden",
+        "border flex flex-col justify-between rounded-2xl p-3.5 sm:p-4 shadow-xs transition hover:shadow-md relative overflow-hidden",
         isDragging && "shadow-xl border-primary/40 ring-2 ring-primary/20 bg-white z-50",
         isDisabledByLimit
           ? "bg-amber-500/5 border-amber-300/80 opacity-80"
@@ -711,8 +711,8 @@ function SortableRow({
             : "bg-white border-gray-100",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <button
             type="button"
             aria-label="Drag to reorder"
@@ -726,11 +726,11 @@ function SortableRow({
           >
             <GripVertical className="h-4 w-4" />
           </button>
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-amber-50/80 text-2xl shadow-2xs border border-amber-100/60">
-            <AppleEmoji emoji={category.icon} size={24} />
+          <div className="grid h-10 w-10 sm:h-12 sm:w-12 shrink-0 place-items-center rounded-xl bg-amber-50/80 text-xl sm:text-2xl shadow-2xs border border-amber-100/60">
+            <AppleEmoji emoji={category.icon} size={22} />
           </div>
-          <div className="min-w-0">
-            <h3 className="font-display text-base font-bold text-gray-900 truncate">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-sm sm:text-base font-bold text-gray-900 truncate">
               {category.name}
             </h3>
             <p className="text-xs text-gray-500 truncate mt-0.5">
@@ -741,7 +741,7 @@ function SortableRow({
         {isDisabledByLimit ? (
           <Badge
             variant="outline"
-            className="border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-400 font-medium text-[10px]"
+            className="border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-400 font-medium text-[10px] shrink-0"
           >
             Plan Limit Exceeded (Disabled)
           </Badge>

@@ -61,7 +61,7 @@ export function FoodCard({
     <article
       onClick={onClick}
       className={cn(
-        "group relative flex w-full sm:w-60 h-70 sm:h-75 flex-col justify-between bg-transparent p-0 filter drop-shadow-[0_8px_20px_rgba(15,23,42,0.05)] transition duration-300 hover:drop-shadow-[0_12px_26px_rgba(15,23,42,0.1)]",
+        "group relative flex w-full sm:w-60 h-68 sm:h-75 flex-col justify-between bg-transparent p-0 filter drop-shadow-[0_8px_20px_rgba(15,23,42,0.05)] transition duration-300 hover:drop-shadow-[0_12px_26px_rgba(15,23,42,0.1)]",
         onClick && "cursor-pointer",
         !available && "opacity-75",
         className,
@@ -80,7 +80,7 @@ export function FoodCard({
       {/* Card Content Wrapper */}
       <div className="relative z-10 w-full h-full flex flex-col justify-between">
         {/* Image Panel */}
-        <div className="relative w-full h-38.75 sm:h-45 rounded-[14px] overflow-hidden bg-linear-to-b from-[#b8c2cc] via-[#7d8c9b] to-[#202938] flex items-center justify-center p-0">
+        <div className="relative w-full h-36 sm:h-45 rounded-[14px] overflow-hidden bg-linear-to-b from-[#b8c2cc] via-[#7d8c9b] to-[#202938] flex items-center justify-center p-0">
           {image ? (
             <BlobImg
               src={image}
@@ -113,13 +113,13 @@ export function FoodCard({
         </div>
 
         {/* Body Area */}
-        <div className="p-3.5 flex flex-col overflow-hidden flex-1 justify-start text-left">
-          <h3 className="text-sm font-bold text-gray-900 tracking-tight leading-snug truncate w-full">
+        <div className="p-2.5 sm:p-3.5 flex flex-col overflow-hidden flex-1 justify-start text-left">
+          <h3 className="text-xs sm:text-sm font-bold text-gray-900 tracking-tight leading-snug truncate w-full">
             {name}
           </h3>
 
           {description && (
-            <p className="mt-0.5 text-gray-500 leading-normal line-clamp-2 text-[10.5px] pr-0">
+            <p className="mt-0.5 text-gray-500 leading-normal line-clamp-2 text-[9.5px] sm:text-[10.5px] pr-0">
               <span className="float-right w-0 h-4.25 pointer-events-none" />
               <span
                 className={cn(
@@ -133,23 +133,23 @@ export function FoodCard({
 
           <div
             className={cn(
-              "mt-2.5 flex items-baseline gap-1.5 transition-all duration-300 flex-wrap",
-              qtyInCart > 0 ? "pr-19.5 sm:pr-25.5" : "pr-8.5 sm:pr-11",
+              "mt-2 sm:mt-2.5 flex items-baseline gap-1 sm:gap-1.5 transition-all duration-300 flex-wrap",
+              qtyInCart > 0 ? "pr-16 sm:pr-25.5" : "pr-7 sm:pr-11",
             )}
           >
             {discountPrice != null && discountPrice < price ? (
               <>
-                <span className="text-xs font-semibold text-red-500 line-through decoration-red-500 font-mono">
+                <span className="text-[10px] sm:text-xs font-semibold text-red-500 line-through decoration-red-500 font-mono">
                   {activeSymbol}
                   {price.toFixed(2)}
                 </span>
-                <span className="text-[15px] font-bold text-gray-900 tracking-tight">
+                <span className="text-xs sm:text-[15px] font-bold text-gray-900 tracking-tight">
                   {activeSymbol}
                   {discountPrice.toFixed(2)}
                 </span>
               </>
             ) : (
-              <span className="text-[15px] font-bold text-gray-900 tracking-tight">
+              <span className="text-xs sm:text-[15px] font-bold text-gray-900 tracking-tight">
                 {activeSymbol}
                 {price.toFixed(2)}
               </span>
