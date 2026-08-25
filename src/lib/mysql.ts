@@ -6,37 +6,7 @@ const globalForMysql = globalThis as unknown as {
   __mysql_pool__?: mysql.Pool;
   __mysql_tables_initialized__?: boolean;
   __mysql_migration_promise__?: Promise<void> | null;
-  __mysql_db_checked__?: boolean;
 };
-
-/**
- * Ensures the target database exists before pool initialization (idempotent).
- */
-async function ensureDatabaseExists(): Promise<void> {
-  if (globalForMysql.__mysql_db_checked__) return;
-  const host = process.env.MYSQL_HOST || "localhost";
-  const port = process.env.MYSQL_PORT ? parseInt(process.env.MYSQL_PORT, 10) : 3306;
-  const user = process.env.MYSQL_USER || "root";
-  const password = process.env.MYSQL_PASSWORD || "";
-  const database = process.env.MYSQL_DATABASE || "amenuverse";
-
-  try {
-    const tempConn = await mysql.createConnection({
-      host,
-      port,
-      user,
-      password,
-    });
-    await tempConn.query(
-      `CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
-    );
-    await tempConn.end();
-    globalForMysql.__mysql_db_checked__ = true;
-  } catch (err) {
-    // If permissions do not allow database creation or remote host restricts, proceed to pool creation
-    globalForMysql.__mysql_db_checked__ = true;
-  }
-}
 
 /**
  * Idempotently executes database migrations and ensures all tables, indexes, and seeds exist.
@@ -50,7 +20,6 @@ export async function ensureAllTablesExist(): Promise<void> {
 
   globalForMysql.__mysql_migration_promise__ = (async () => {
     try {
-      await ensureDatabaseExists();
       const pool = getPool();
       await runDatabaseMigrations(pool);
       globalForMysql.__mysql_tables_initialized__ = true;
