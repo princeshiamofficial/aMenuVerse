@@ -500,6 +500,8 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NULL",
     "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(50) NULL",
     "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(50) NULL",
+    "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL DEFAULT ''",
+    "ALTER TABLE branch_tables MODIFY COLUMN name VARCHAR(255) NULL DEFAULT ''",
     "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(100) DEFAULT 'MAIN ROOM'",
     "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
     "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL",

@@ -3380,21 +3380,32 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
           /* fallback */
         }
 
+        try {
+          const pool = await getPool();
+          await pool.query(
+            "ALTER TABLE branch_tables MODIFY COLUMN name VARCHAR(255) NULL DEFAULT ''",
+          );
+        } catch {
+          /* ignore */
+        }
+
         for (let idx = 0; idx < tables.length; idx++) {
           const t = tables[idx];
           const tableId =
             t.id.startsWith(branchId) || t.id.length > 15 ? t.id : `${branchId}-${t.id}`;
           const qrToken = encodeTableToken(bSlug || branchId, t.tableNo);
+          const tableNameVal = `Table ${t.tableNo}`;
           try {
             await conn.execute(
-              `INSERT INTO branch_tables (id, restaurant_id, branch_id, table_no, zone, sort_order, qr_token) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
+              `INSERT INTO branch_tables (id, restaurant_id, branch_id, table_no, name, zone, sort_order, qr_token) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), name = VALUES(name), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
               [
                 tableId,
                 tenant.restaurantId,
                 branchId,
                 t.tableNo,
+                tableNameVal,
                 t.zone || "MAIN ROOM",
                 idx,
                 qrToken,
@@ -3402,10 +3413,10 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
             );
           } catch {
             await conn.execute(
-              `INSERT INTO branch_tables (id, branch_id, table_no, zone, sort_order, qr_token) 
-               VALUES (?, ?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
-              [tableId, branchId, t.tableNo, t.zone || "MAIN ROOM", idx, qrToken],
+              `INSERT INTO branch_tables (id, branch_id, table_no, name, zone, sort_order, qr_token) 
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), name = VALUES(name), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
+              [tableId, branchId, t.tableNo, tableNameVal, t.zone || "MAIN ROOM", idx, qrToken],
             );
           }
         }

@@ -177,6 +177,46 @@ async function autoHealMissingColumn(
 }
 
 /**
+ * Modifies a column with no default value to allow NULL or empty default when ER_NO_DEFAULT_FOR_FIELD is encountered.
+ */
+async function autoHealMissingDefault(
+  sql: string,
+  errorMsg: string,
+  pool: mysql.Pool,
+): Promise<boolean> {
+  const colMatch = errorMsg.match(/Field '([^']+)' doesn't have a default value/i);
+  if (!colMatch) return false;
+  const missingField = colMatch[1];
+
+  const tableMatch = sql.match(
+    /\b(?:INSERT\s+INTO|UPDATE|FROM|JOIN|INTO)\s+[`"]?([a-zA-Z0-9_]+)[`"]?/i,
+  );
+  if (!tableMatch) return false;
+  const tableName = tableMatch[1];
+
+  console.log(
+    `[MySQL Self-Healing] Modifying non-default column '${missingField}' in table '${tableName}' to allow NULL/DEFAULT...`,
+  );
+
+  try {
+    await pool.query(
+      `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${missingField}\` VARCHAR(255) NULL DEFAULT ''`,
+    );
+    console.log(
+      `[MySQL Self-Healing] Successfully updated column '${missingField}' in '${tableName}' to have a default value.`,
+    );
+    return true;
+  } catch {
+    try {
+      await pool.query(`ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${missingField}\` TEXT NULL`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/**
  * Helper to run a parameterized query with automatic table & column creation & retry fallback.
  */
 export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValues): Promise<T> {
@@ -210,7 +250,22 @@ export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValu
       }
     }
 
-    // 2. If table doesn't exist (1146 / ER_NO_SUCH_TABLE), auto-create database schema & retry seamlessly
+    // 2. If column doesn't have a default value (1364 / ER_NO_DEFAULT_FOR_FIELD), auto-modify column to have default and retry
+    if (
+      mysqlErr?.errno === 1364 ||
+      mysqlErr?.code === "ER_NO_DEFAULT_FOR_FIELD" ||
+      errMessage.includes("doesn't have a default value")
+    ) {
+      const healedDefault = await autoHealMissingDefault(sql, errMessage, connectionPool);
+      if (healedDefault) {
+        const [retryRows] = isDDL
+          ? await connectionPool.query(sql, params)
+          : await connectionPool.execute(sql, params);
+        return retryRows as T;
+      }
+    }
+
+    // 3. If table doesn't exist (1146 / ER_NO_SUCH_TABLE), auto-create database schema & retry seamlessly
     if (
       mysqlErr?.errno === 1146 ||
       mysqlErr?.code === "ER_NO_SUCH_TABLE" ||
