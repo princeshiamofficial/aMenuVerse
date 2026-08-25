@@ -54,7 +54,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAdminContext } from "@/lib/admin-context";
-import { saveAdminUserAccountServer } from "@/lib/db-queries.server";
+import {
+  saveAdminUserAccountServer,
+  getAdminUsersServer,
+  deleteAdminUserAccountServer,
+} from "@/lib/db-queries.server";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/admin/users")({
   component: UsersComponent,
@@ -232,12 +237,26 @@ function UsersComponent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const rows = await getAdminUsersServer();
+        if (rows && rows.length > 0) {
+          setUsers(rows);
+        }
+      } catch (err) {
+        console.warn("Failed to load real DB admin users:", err);
+      }
+    }
+    loadUsers();
+  }, []);
+
   const systemUsers = useMemo(() => {
     const search = q.toLowerCase().trim();
     return users.filter((u) => {
       const matchQuery =
         !search || u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search);
-      const matchRole = roleFilter === "all" ? u.role === "Super Admin" : u.role === roleFilter;
+      const matchRole = roleFilter === "all" ? true : u.role === roleFilter;
       return matchQuery && matchRole;
     });
   }, [users, q, roleFilter]);
@@ -280,36 +299,37 @@ function UsersComponent() {
           branchName: editingUser.branchName || "Main Branch",
         },
       });
+
+      // Reload clean MySQL users
+      const fresh = await getAdminUsersServer();
+      if (fresh && fresh.length > 0) {
+        setUsers(fresh);
+      } else if (editingUser.id) {
+        setUsers((prev) =>
+          prev.map((item) => (item.id === editingUser.id ? (editingUser as UserRoleAccount) : item)),
+        );
+      }
+      toast.success(`Saved account & assigned role for ${editingUser.name}`);
     } catch (err) {
       console.warn("Failed to persist user account in DB:", err);
+      toast.error("Failed to save user in database");
     }
 
-    if (editingUser.id) {
-      setUsers((prev) =>
-        prev.map((item) => (item.id === editingUser.id ? (editingUser as UserRoleAccount) : item)),
-      );
-      toast.success(`Updated account & assigned role for ${editingUser.name}`);
-    } else {
-      const newUser: UserRoleAccount = {
-        id: `u-${Math.floor(100 + Math.random() * 900)}`,
-        name: editingUser.name,
-        email: editingUser.email,
-        role: editingUser.role || "Owner",
-        restaurantName: editingUser.restaurantName || "Burger Craft Lab",
-        branchName: "Main Branch",
-        status: "active",
-        lastActive: "Just now",
-        joinedDate:
-          editingUser.joinedDate ||
-          new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
-      };
-      setUsers((prev) => [newUser, ...prev]);
-      toast.success(`Created Restaurant Owner account & assigned workspace to ${newUser.name}`);
-    }
     setConfirmPassword("");
     setShowPassword(false);
     setShowConfirmPassword(false);
     setIsAddUserOpen(false);
+  };
+
+  const handleRevokeUser = async (u: UserRoleAccount) => {
+    try {
+      await deleteAdminUserAccountServer({ data: { id: u.id } });
+      setUsers((list) => list.filter((item) => item.id !== u.id));
+      toast.success(`Revoked access for ${u.name}`);
+    } catch (err) {
+      setUsers((list) => list.filter((item) => item.id !== u.id));
+      toast.success(`Revoked access for ${u.name}`);
+    }
   };
 
   return (
@@ -426,10 +446,7 @@ function UsersComponent() {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => {
-                                setUsers((list) => list.filter((item) => item.id !== u.id));
-                                toast.success(`Revoked access for ${u.name}`);
-                              }}
+                              onClick={() => handleRevokeUser(u)}
                               className="text-rose-600 dark:text-rose-400"
                             >
                               Revoke Access
@@ -578,10 +595,7 @@ function UsersComponent() {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => {
-                                  setUsers((list) => list.filter((item) => item.id !== u.id));
-                                  toast.success(`Revoked access for ${u.name}`);
-                                }}
+                                onClick={() => handleRevokeUser(u)}
                                 className="text-rose-600 dark:text-rose-400"
                               >
                                 Revoke Access

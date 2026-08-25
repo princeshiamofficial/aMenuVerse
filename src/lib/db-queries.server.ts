@@ -5446,6 +5446,85 @@ export const saveAdminUserAccountServer = createServerFn({ method: "POST" })
     }
   });
 
+export const getAdminUsersServer = createServerFn({ method: "GET" }).handler(async () => {
+  await requireAuth();
+  await requirePermission("platform:manage_system_users");
+
+  try {
+    const rows = await query<Record<string, unknown>[]>(
+      `SELECT 
+        u.id,
+        COALESCE(u.full_name, u.name, 'User') AS name,
+        u.email,
+        COALESCE(u.phone, '') AS phone,
+        COALESCE(ur.role, u.role, 'owner') AS role,
+        COALESCE(r.name, u.branch, 'Main Location') AS restaurant_name,
+        COALESCE(u.branch, 'Main Branch') AS branch_name,
+        COALESCE(u.status, 'active') AS status,
+        COALESCE(DATE_FORMAT(u.created_at, '%b %Y'), 'Recent') AS joined_date
+       FROM users u
+       LEFT JOIN user_roles ur ON ur.user_id = u.id
+       LEFT JOIN restaurants r ON r.id = COALESCE(ur.restaurant_id, u.restaurant_id)
+       ORDER BY u.created_at DESC`,
+    );
+
+    if (rows && rows.length > 0) {
+      return rows.map((u) => {
+        const rawRole = String(u.role || "").toLowerCase().replace(/_/g, " ").trim();
+        const roleDisplay =
+          rawRole === "super admin" || rawRole === "admin"
+            ? "Super Admin"
+            : rawRole === "owner"
+              ? "Owner"
+              : rawRole === "manager"
+                ? "Manager"
+                : rawRole === "cashier"
+                  ? "Cashier"
+                  : rawRole === "chef"
+                    ? "Chef"
+                    : rawRole === "waiter"
+                      ? "Waiter"
+                      : rawRole === "host"
+                        ? "Host"
+                        : "Owner";
+
+        return {
+          id: String(u.id),
+          name: String(u.name || "User"),
+          email: String(u.email || ""),
+          phone: String(u.phone || ""),
+          role: roleDisplay as "Super Admin" | "Owner" | "Manager" | "Cashier" | "Chef" | "Waiter" | "Host",
+          restaurantName: String(u.restaurant_name || "All Restaurants (Global)"),
+          branchName: String(u.branch_name || "Main Branch"),
+          status: (String(u.status || "active") === "suspended" ? "suspended" : "active") as "active" | "invited" | "suspended",
+          lastActive: "Just now",
+          joinedDate: String(u.joined_date || "Recent"),
+        };
+      });
+    }
+  } catch (err) {
+    console.error("[getAdminUsersServer Error]", err);
+  }
+
+  return [];
+});
+
+export const deleteAdminUserAccountServer = createServerFn({ method: "POST" })
+  .validator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    await requireAuth();
+    await requirePermission("platform:manage_system_users");
+
+    try {
+      await query("DELETE FROM user_roles WHERE user_id = ?", [data.id]);
+      await query("DELETE FROM users WHERE id = ?", [data.id]);
+      return { success: true };
+    } catch (err) {
+      console.error("[deleteAdminUserAccountServer Error]", err);
+      throw new Error("Failed to delete user account");
+    }
+  });
+
 // =========================================================
 // QR SCAN & MENU VIEW ANALYTICS MYSQL SERVER FUNCTIONS
 // =========================================================
