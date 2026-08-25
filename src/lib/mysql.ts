@@ -107,7 +107,77 @@ export function getPool(): mysql.Pool {
 }
 
 /**
- * Helper to run a parameterized query with automatic table creation & retry fallback.
+ * Auto-creates a missing column in the target table on the fly when ER_BAD_FIELD_ERROR / Unknown column is encountered.
+ */
+async function autoHealMissingColumn(
+  sql: string,
+  errorMsg: string,
+  pool: mysql.Pool,
+): Promise<boolean> {
+  const colMatch = errorMsg.match(/Unknown column '([^']+)'/i);
+  if (!colMatch) return false;
+  const missingCol = colMatch[1];
+
+  // Detect table name from query
+  const tableMatch = sql.match(
+    /\b(?:INSERT\s+INTO|UPDATE|FROM|JOIN|INTO)\s+[`"]?([a-zA-Z0-9_]+)[`"]?/i,
+  );
+  if (!tableMatch) return false;
+  const tableName = tableMatch[1];
+
+  console.log(
+    `[MySQL Self-Healing] Auto-creating missing column '${missingCol}' in table '${tableName}'...`,
+  );
+
+  let colType = "VARCHAR(255) NULL";
+  if (
+    /_(?:json|metadata|details|description|intro|about|facilities|lines_json|options_json)\b/i.test(
+      missingCol,
+    )
+  ) {
+    colType = "JSON NULL";
+  } else if (/_(?:url|image|photo|cover|logo|token)\b/i.test(missingCol)) {
+    colType = "TEXT NULL";
+  } else if (
+    /^(?:price|subtotal|total|discount|tax|amount|percent)\b/i.test(missingCol) ||
+    /_(?:price|total|amount|rate|percent)\b/i.test(missingCol)
+  ) {
+    colType = "DECIMAL(10,2) NOT NULL DEFAULT 0";
+  } else if (
+    /^(?:is_|has_)\b/i.test(missingCol) ||
+    /_(?:verified|enabled|active|default|indexed)\b/i.test(missingCol)
+  ) {
+    colType = "TINYINT(1) NOT NULL DEFAULT 0";
+  } else if (
+    /_(?:count|number|order|sort|qty|quantity|prep_time)\b/i.test(missingCol) ||
+    missingCol === "id" ||
+    missingCol === "restaurant_id" ||
+    missingCol === "branch_id"
+  ) {
+    colType = "VARCHAR(255) NULL";
+  }
+
+  try {
+    await pool.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${missingCol}\` ${colType}`);
+    console.log(
+      `[MySQL Self-Healing] Successfully auto-created column '${missingCol}' in '${tableName}'.`,
+    );
+    return true;
+  } catch {
+    try {
+      await pool.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${missingCol}\` TEXT NULL`);
+      console.log(
+        `[MySQL Self-Healing] Successfully auto-created column '${missingCol}' (TEXT) in '${tableName}'.`,
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/**
+ * Helper to run a parameterized query with automatic table & column creation & retry fallback.
  */
 export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValues): Promise<T> {
   if (!globalForMysql.__mysql_tables_initialized__) {
@@ -122,8 +192,25 @@ export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValu
       : await connectionPool.execute(sql, params);
     return rows as T;
   } catch (err: unknown) {
-    const mysqlErr = err as { errno?: number; code?: string };
-    // If table or column doesn't exist (1146 / 1054), auto-create database schema & retry seamlessly
+    const mysqlErr = err as { errno?: number; code?: string; message?: string };
+    const errMessage = String(mysqlErr?.message || "");
+
+    // 1. If column doesn't exist (1054 / ER_BAD_FIELD_ERROR / Unknown column), auto-create column on the fly and retry
+    if (
+      mysqlErr?.errno === 1054 ||
+      mysqlErr?.code === "ER_BAD_FIELD_ERROR" ||
+      errMessage.includes("Unknown column")
+    ) {
+      const healed = await autoHealMissingColumn(sql, errMessage, connectionPool);
+      if (healed) {
+        const [retryRows] = isDDL
+          ? await connectionPool.query(sql, params)
+          : await connectionPool.execute(sql, params);
+        return retryRows as T;
+      }
+    }
+
+    // 2. If table doesn't exist (1146 / ER_NO_SUCH_TABLE), auto-create database schema & retry seamlessly
     if (
       mysqlErr?.errno === 1146 ||
       mysqlErr?.code === "ER_NO_SUCH_TABLE" ||
