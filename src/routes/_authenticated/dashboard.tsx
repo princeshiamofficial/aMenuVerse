@@ -244,7 +244,7 @@ function Dashboard() {
       }
 
       try {
-        const dbOrders = await getOrdersServer();
+        const dbOrders = await getOrdersServer({ data: {} });
         if (dbOrders && Array.isArray(dbOrders)) {
           setOrders(dbOrders);
         }

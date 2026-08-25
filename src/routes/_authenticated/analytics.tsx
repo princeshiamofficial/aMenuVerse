@@ -195,7 +195,7 @@ function AnalyticsPage() {
       }
 
       try {
-        const orders = await getOrdersServer();
+        const orders = await getOrdersServer({ data: {} });
         if (orders && Array.isArray(orders)) setDbOrders(orders as Record<string, unknown>[]);
       } catch {
         /* ignore */

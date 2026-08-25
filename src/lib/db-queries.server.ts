@@ -3825,7 +3825,43 @@ export const getOrdersServer = createServerFn({ method: "GET" })
     }
 
     try {
-      let sql = "SELECT * FROM pos_orders WHERE restaurant_id = ?";
+      try {
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE pos_orders CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+          "ALTER TABLE pos_orders ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE pos_orders ADD COLUMN branch_id VARCHAR(255) NULL",
+          "ALTER TABLE pos_orders ADD COLUMN order_number INT DEFAULT 1",
+          "ALTER TABLE pos_orders ADD COLUMN type VARCHAR(50) DEFAULT 'dine-in'",
+          "ALTER TABLE pos_orders ADD COLUMN status VARCHAR(50) DEFAULT 'pending'",
+          "ALTER TABLE pos_orders ADD COLUMN table_number VARCHAR(50) NULL",
+          "ALTER TABLE pos_orders ADD COLUMN customer_name VARCHAR(255) NULL",
+          "ALTER TABLE pos_orders ADD COLUMN phone VARCHAR(50) NULL",
+          "ALTER TABLE pos_orders ADD COLUMN notes TEXT NULL",
+          "ALTER TABLE pos_orders ADD COLUMN lines_json LONGTEXT NULL",
+          "ALTER TABLE pos_orders ADD COLUMN subtotal DECIMAL(10,2) DEFAULT 0",
+          "ALTER TABLE pos_orders ADD COLUMN discount_type VARCHAR(20) DEFAULT 'amount'",
+          "ALTER TABLE pos_orders ADD COLUMN discount_value DECIMAL(10,2) DEFAULT 0",
+          "ALTER TABLE pos_orders ADD COLUMN discount_amount DECIMAL(10,2) DEFAULT 0",
+          "ALTER TABLE pos_orders ADD COLUMN tax DECIMAL(10,2) DEFAULT 0",
+          "ALTER TABLE pos_orders ADD COLUMN total DECIMAL(10,2) DEFAULT 0",
+          "ALTER TABLE pos_orders ADD COLUMN prep_time_minutes INT NULL",
+          "ALTER TABLE pos_orders ADD COLUMN prep_started_at TIMESTAMP NULL",
+          "ALTER TABLE pos_orders ADD COLUMN estimated_prep_minutes INT NULL",
+          "ALTER TABLE pos_orders MODIFY COLUMN id VARCHAR(255) NOT NULL",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
+      let sql = "SELECT * FROM pos_orders WHERE (restaurant_id = ? OR restaurant_id = 0)";
       const params: unknown[] = [tenant.restaurantId];
 
       if (filter.branchId && filter.branchId !== "all") {
@@ -3992,7 +4028,8 @@ export const getOrderStatusCountsServer = createServerFn({ method: "GET" })
     }
 
     try {
-      let sql = "SELECT status, COUNT(*) as cnt FROM pos_orders WHERE restaurant_id = ?";
+      let sql =
+        "SELECT status, COUNT(*) as cnt FROM pos_orders WHERE (restaurant_id = ? OR restaurant_id = 0)";
       const params: unknown[] = [tenant.restaurantId];
 
       if (filter.branchId && filter.branchId !== "all") {

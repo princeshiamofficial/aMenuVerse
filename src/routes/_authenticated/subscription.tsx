@@ -327,7 +327,7 @@ function SubscriptionPage() {
 
     async function loadOrderCount() {
       try {
-        const rows = await getOrdersServer();
+        const rows = await getOrdersServer({ data: {} });
         if (Array.isArray(rows)) {
           const now = new Date();
           const thisMonth = rows.filter((o: Record<string, unknown>) => {

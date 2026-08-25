@@ -411,8 +411,8 @@ function OrdersPage() {
 
       try {
         const [dbOrders, dbCounts] = await Promise.all([
-          getOrdersServer(),
-          getOrderStatusCountsServer(),
+          getOrdersServer({ data: {} }),
+          getOrderStatusCountsServer({ data: {} }),
         ]);
         if (dbOrders && Array.isArray(dbOrders)) {
           setOrders(dbOrders as unknown as Order[]);

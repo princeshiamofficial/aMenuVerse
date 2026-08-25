@@ -164,7 +164,7 @@ function POSPage() {
     if (!editOrderId) return;
     async function loadOrderToEdit() {
       try {
-        const dbOrders = await getOrdersServer();
+        const dbOrders = await getOrdersServer({ data: {} });
         if (dbOrders && Array.isArray(dbOrders)) {
           const found = (dbOrders as unknown as Order[]).find(
             (o) => o.id === editOrderId || String(o.number) === editOrderId,
@@ -349,7 +349,7 @@ function POSPage() {
       }
 
       try {
-        const existingOrders = await getOrdersServer();
+        const existingOrders = await getOrdersServer({ data: {} });
         if (existingOrders && Array.isArray(existingOrders) && existingOrders.length > 0) {
           const maxNum = Math.max(...existingOrders.map((o) => o.number || 0));
           setCounter(maxNum + 1);
