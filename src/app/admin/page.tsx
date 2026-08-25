@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { 
+import {
   LayoutGrid,
   Store,
   Users,
@@ -84,7 +84,7 @@ export default function AdminPage() {
     branches: 0,
     menuItems: 0,
     orders: 0,
-    revenue: 0
+    revenue: 0,
   });
 
   // Data States
@@ -137,7 +137,10 @@ export default function AdminPage() {
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => {
-        if (data.authenticated && (data.user.restaurantId === null || data.user.role === "system_admin")) {
+        if (
+          data.authenticated &&
+          (data.user.restaurantId === null || data.user.role === "system_admin")
+        ) {
           setAdminName(data.user.name);
           setAdminEmail(data.user.email);
           setIsCheckingAuth(false);
@@ -301,10 +304,10 @@ export default function AdminPage() {
       operating_hours: restHours,
       facilities: restFacilities,
       image: restImage,
-      logo_image: restLogoImage
+      logo_image: restLogoImage,
     };
 
-    const url = editingRestaurant 
+    const url = editingRestaurant
       ? `/api/admin/restaurants/${editingRestaurant.id}`
       : "/api/admin/restaurants";
     const method = editingRestaurant ? "PUT" : "POST";
@@ -314,7 +317,7 @@ export default function AdminPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       setIsLoading(false);
@@ -335,7 +338,7 @@ export default function AdminPage() {
 
   // Delete Restaurant
   const handleDeleteRestaurant = async (id: number) => {
-    const target = restaurants.find(r => r.id === id);
+    const target = restaurants.find((r) => r.id === id);
     if (!target) return;
 
     if (deleteConfirmSlug.toLowerCase().trim() !== target.username.toLowerCase().trim()) {
@@ -383,7 +386,7 @@ export default function AdminPage() {
       role: userRole,
       restaurantId: userRestId === "null" ? null : parseInt(userRestId, 10),
       status: userStatus,
-      avatar: userAvatar
+      avatar: userAvatar,
     };
 
     const url = editingUser ? `/api/admin/users/${editingUser.id}` : "/api/admin/users";
@@ -394,7 +397,7 @@ export default function AdminPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       setIsLoading(false);
@@ -439,22 +442,24 @@ export default function AdminPage() {
   const filteredRestaurants = useMemo(() => {
     if (!searchQuery) return restaurants;
     const q = searchQuery.toLowerCase();
-    return restaurants.filter(r => 
-      r.name.toLowerCase().includes(q) ||
-      r.username.toLowerCase().includes(q) ||
-      r.cuisine.toLowerCase().includes(q) ||
-      r.location.toLowerCase().includes(q)
+    return restaurants.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.username.toLowerCase().includes(q) ||
+        r.cuisine.toLowerCase().includes(q) ||
+        r.location.toLowerCase().includes(q),
     );
   }, [restaurants, searchQuery]);
 
   const filteredUsers = useMemo(() => {
     if (!searchQuery) return users;
     const q = searchQuery.toLowerCase();
-    return users.filter(u => 
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.role.toLowerCase().includes(q) ||
-      (u.restaurantName && u.restaurantName.toLowerCase().includes(q))
+    return users.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.role.toLowerCase().includes(q) ||
+        (u.restaurantName && u.restaurantName.toLowerCase().includes(q)),
     );
   }, [users, searchQuery]);
 
@@ -463,7 +468,9 @@ export default function AdminPage() {
       <div className="min-h-screen bg-deep-emerald-950 flex flex-col items-center justify-center text-white font-sans">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium tracking-wide text-neutral-400">Verifying administrative access...</p>
+          <p className="text-sm font-medium tracking-wide text-neutral-400">
+            Verifying administrative access...
+          </p>
         </div>
       </div>
     );
@@ -485,9 +492,7 @@ export default function AdminPage() {
             <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white font-black text-lg shadow-md shadow-emerald-500/20">
               M
             </div>
-            <span className="text-[19px] font-bold tracking-[-0.02em] text-white">
-              MenuVerse
-            </span>
+            <span className="text-[19px] font-bold tracking-[-0.02em] text-white">MenuVerse</span>
           </div>
           <span className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest pl-11">
             System Control
@@ -497,7 +502,10 @@ export default function AdminPage() {
         {/* Sidebar Nav */}
         <nav className="flex-1 px-4 py-6 flex flex-col gap-2">
           <button
-            onClick={() => { setActiveTab("overview"); setSearchQuery(""); }}
+            onClick={() => {
+              setActiveTab("overview");
+              setSearchQuery("");
+            }}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-xs font-semibold leading-none cursor-pointer ${
               activeTab === "overview"
                 ? "bg-emerald-800 text-white shadow-lg shadow-emerald-900/30"
@@ -507,9 +515,12 @@ export default function AdminPage() {
             <LayoutGrid className="w-4 h-4 shrink-0" />
             Overview Dashboard
           </button>
-          
+
           <button
-            onClick={() => { setActiveTab("restaurants"); setSearchQuery(""); }}
+            onClick={() => {
+              setActiveTab("restaurants");
+              setSearchQuery("");
+            }}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-xs font-semibold leading-none cursor-pointer ${
               activeTab === "restaurants"
                 ? "bg-emerald-800 text-white shadow-lg shadow-emerald-900/30"
@@ -521,7 +532,10 @@ export default function AdminPage() {
           </button>
 
           <button
-            onClick={() => { setActiveTab("users"); setSearchQuery(""); }}
+            onClick={() => {
+              setActiveTab("users");
+              setSearchQuery("");
+            }}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-xs font-semibold leading-none cursor-pointer ${
               activeTab === "users"
                 ? "bg-emerald-800 text-white shadow-lg shadow-emerald-900/30"
@@ -562,9 +576,7 @@ export default function AdminPage() {
             <h1 className="text-lg font-bold text-slate-800 tracking-tight capitalize">
               {activeTab === "overview" ? "Dashboard Stats" : activeTab}
             </h1>
-            <p className="text-[11px] font-semibold text-slate-400">
-              Global Platform Control Area
-            </p>
+            <p className="text-[11px] font-semibold text-slate-400">Global Platform Control Area</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -579,7 +591,10 @@ export default function AdminPage() {
                   className="bg-transparent border-none outline-none text-xs font-semibold w-full text-slate-700 placeholder-slate-400"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1 cursor-pointer">
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1 cursor-pointer"
+                  >
                     Clear
                   </button>
                 )}
@@ -600,7 +615,10 @@ export default function AdminPage() {
             </button>
 
             {activeTab === "restaurants" && (
-              <Button onClick={() => openRestaurantModal()} className="h-[38px] flex items-center gap-2">
+              <Button
+                onClick={() => openRestaurantModal()}
+                className="h-[38px] flex items-center gap-2"
+              >
                 <Plus className="w-3.5 h-3.5" />
                 New Tenant
               </Button>
@@ -617,41 +635,40 @@ export default function AdminPage() {
 
         {/* Content Wrapper */}
         <div className="p-8 flex-1 min-w-0">
-          
           {/* TAB: OVERVIEW */}
           {activeTab === "overview" && (
             <div className="flex flex-col gap-8">
               {/* Stats Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <StatsCard 
+                <StatsCard
                   label="Total Restaurants"
                   value={String(stats.restaurants)}
                   icon={StoreIcon}
                   iconColorClass="text-indigo-500"
                   iconBgClass="bg-indigo-50"
                 />
-                <StatsCard 
+                <StatsCard
                   label="Total Branches"
                   value={String(stats.branches)}
                   icon={Layers}
                   iconColorClass="text-teal-500"
                   iconBgClass="bg-teal-50"
                 />
-                <StatsCard 
+                <StatsCard
                   label="Menu Items Listed"
                   value={String(stats.menuItems)}
                   icon={Utensils}
                   iconColorClass="text-amber-500"
                   iconBgClass="bg-amber-50"
                 />
-                <StatsCard 
+                <StatsCard
                   label="Total Orders Received"
                   value={String(stats.orders)}
                   icon={ShoppingBag}
                   iconColorClass="text-rose-500"
                   iconBgClass="bg-rose-50"
                 />
-                <StatsCard 
+                <StatsCard
                   label="Platform Revenue"
                   value={`$${stats.revenue.toFixed(2)}`}
                   icon={DollarSign}
@@ -669,21 +686,33 @@ export default function AdminPage() {
                   </h3>
                   <div className="space-y-4 text-xs font-semibold text-slate-600">
                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex gap-3">
-                      <div className="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">1</div>
+                      <div className="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                        1
+                      </div>
                       <p>
-                        <strong>Global Multi-Tenant Routing</strong>: Each tenant (restaurant) is isolated using its own slug. A tenant user belongs only to their respective restaurant ID.
+                        <strong>Global Multi-Tenant Routing</strong>: Each tenant (restaurant) is
+                        isolated using its own slug. A tenant user belongs only to their respective
+                        restaurant ID.
                       </p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex gap-3">
-                      <div className="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">2</div>
+                      <div className="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                        2
+                      </div>
                       <p>
-                        <strong>System Administation Privilege</strong>: Global admins are created with a null restaurant association. Only they have credentials to invoke CRUD actions on restaurants and create new restaurant managers.
+                        <strong>System Administation Privilege</strong>: Global admins are created
+                        with a null restaurant association. Only they have credentials to invoke
+                        CRUD actions on restaurants and create new restaurant managers.
                       </p>
                     </div>
                     <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex gap-3">
-                      <div className="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">3</div>
+                      <div className="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                        3
+                      </div>
                       <p>
-                        <strong>Cache Eviction</strong>: Modifying or deleting a restaurant automatically evicts its profile and branch list details from the Redis database cache.
+                        <strong>Cache Eviction</strong>: Modifying or deleting a restaurant
+                        automatically evicts its profile and branch list details from the Redis
+                        database cache.
                       </p>
                     </div>
                   </div>
@@ -697,7 +726,7 @@ export default function AdminPage() {
                     <p className="text-[11px] font-semibold text-slate-400 mb-6">
                       Connected Services Info
                     </p>
-                    
+
                     <div className="space-y-4">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                         <span className="text-xs font-bold text-slate-500">MySQL Database</span>
@@ -707,7 +736,9 @@ export default function AdminPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <span className="text-xs font-bold text-slate-500">Redis Cache Storage</span>
+                        <span className="text-xs font-bold text-slate-500">
+                          Redis Cache Storage
+                        </span>
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-100">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           ONLINE
@@ -763,15 +794,25 @@ export default function AdminPage() {
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-3">
                               {rest.logo_image ? (
-                                <Image src={rest.logo_image} alt={rest.name} width={32} height={32} className="w-8 h-8 rounded-lg object-cover border border-slate-200" />
+                                <Image
+                                  src={rest.logo_image}
+                                  alt={rest.name}
+                                  width={32}
+                                  height={32}
+                                  className="w-8 h-8 rounded-lg object-cover border border-slate-200"
+                                />
                               ) : (
-                                <div className={`w-8 h-8 rounded-lg bg-linear-to-br ${rest.logo_bg || 'from-emerald-500 to-teal-600'} flex items-center justify-center font-bold text-white text-xs`}>
+                                <div
+                                  className={`w-8 h-8 rounded-lg bg-linear-to-br ${rest.logo_bg || "from-emerald-500 to-teal-600"} flex items-center justify-center font-bold text-white text-xs`}
+                                >
                                   {rest.logo}
                                 </div>
                               )}
                               <div>
                                 <p className="font-bold text-slate-800 text-[13px]">{rest.name}</p>
-                                <p className="text-[10px] text-slate-400">{rest.location || "No location set"}</p>
+                                <p className="text-[10px] text-slate-400">
+                                  {rest.location || "No location set"}
+                                </p>
                               </div>
                             </div>
                           </td>
@@ -850,7 +891,13 @@ export default function AdminPage() {
                             <td className="py-4 px-6">
                               <div className="flex items-center gap-3">
                                 {user.avatar ? (
-                                  <Image src={user.avatar} alt={user.name} width={32} height={32} className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+                                  <Image
+                                    src={user.avatar}
+                                    alt={user.name}
+                                    width={32}
+                                    height={32}
+                                    className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                                  />
                                 ) : (
                                   <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-bold flex items-center justify-center text-[10px] uppercase">
                                     {user.name.slice(0, 2)}
@@ -858,7 +905,12 @@ export default function AdminPage() {
                                 )}
                                 <div>
                                   <p className="font-bold text-slate-800 text-[13px]">
-                                    {user.name} {isSelf && <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded ml-1">You</span>}
+                                    {user.name}{" "}
+                                    {isSelf && (
+                                      <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded ml-1">
+                                        You
+                                      </span>
+                                    )}
                                   </p>
                                 </div>
                               </div>
@@ -880,18 +932,26 @@ export default function AdminPage() {
                               {user.restaurantId === null ? (
                                 <span className="text-slate-400 italic">Platform (Global)</span>
                               ) : (
-                                <span className="font-medium text-slate-700">{user.restaurantName || `Restaurant ID: ${user.restaurantId}`}</span>
+                                <span className="font-medium text-slate-700">
+                                  {user.restaurantName || `Restaurant ID: ${user.restaurantId}`}
+                                </span>
                               )}
                             </td>
                             <td className="py-4 px-6">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                                user.status === "Active"
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                  : user.status === "Banned"
-                                  ? "bg-red-50 text-red-700 border-red-100"
-                                  : "bg-amber-50 text-amber-700 border-amber-100"
-                              }`}>
-                                {user.status === "Active" ? <UserCheck className="w-2.5 h-2.5" /> : <UserX className="w-2.5 h-2.5" />}
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                                  user.status === "Active"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                    : user.status === "Banned"
+                                      ? "bg-red-50 text-red-700 border-red-100"
+                                      : "bg-amber-50 text-amber-700 border-amber-100"
+                                }`}
+                              >
+                                {user.status === "Active" ? (
+                                  <UserCheck className="w-2.5 h-2.5" />
+                                ) : (
+                                  <UserX className="w-2.5 h-2.5" />
+                                )}
                                 {user.status}
                               </span>
                             </td>
@@ -931,7 +991,6 @@ export default function AdminPage() {
               </div>
             </div>
           )}
-
         </div>
       </main>
 
@@ -943,7 +1002,10 @@ export default function AdminPage() {
               <h2 className="text-base font-bold text-slate-800 tracking-tight">
                 {editingRestaurant ? "Edit Restaurant Profile" : "Create New Restaurant"}
               </h2>
-              <button onClick={() => setIsRestaurantModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button
+                onClick={() => setIsRestaurantModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -951,7 +1013,9 @@ export default function AdminPage() {
             <form onSubmit={handleSaveRestaurant} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Restaurant Name</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Restaurant Name
+                  </label>
                   <input
                     type="text"
                     required
@@ -963,7 +1027,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Username Slug (URL)</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Username Slug (URL)
+                  </label>
                   <div className="relative flex items-center">
                     <span className="absolute left-4 text-xs font-bold text-slate-400">/</span>
                     <input
@@ -978,7 +1044,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cuisine</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Cuisine
+                  </label>
                   <input
                     type="text"
                     value={restCuisine}
@@ -989,7 +1057,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Price Tier</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Price Tier
+                  </label>
                   <select
                     value={restPrice}
                     onChange={(e) => setRestPrice(e.target.value)}
@@ -1003,7 +1073,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Estimated Prep Time</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Estimated Prep Time
+                  </label>
                   <input
                     type="text"
                     value={restTime}
@@ -1014,7 +1086,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Phone
+                  </label>
                   <input
                     type="text"
                     value={restPhone}
@@ -1025,7 +1099,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Location Address</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Location Address
+                  </label>
                   <input
                     type="text"
                     value={restLocation}
@@ -1036,7 +1112,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Operating Hours</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Operating Hours
+                  </label>
                   <input
                     type="text"
                     value={restHours}
@@ -1047,7 +1125,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Facilities (Comma Separated)</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Facilities (Comma Separated)
+                  </label>
                   <input
                     type="text"
                     value={restFacilities}
@@ -1058,7 +1138,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Banner Image URL</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Banner Image URL
+                  </label>
                   <input
                     type="url"
                     value={restImage}
@@ -1069,7 +1151,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 col-span-2">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Logo Image URL</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Logo Image URL
+                  </label>
                   <input
                     type="url"
                     value={restLogoImage}
@@ -1088,9 +1172,7 @@ export default function AdminPage() {
                 >
                   Cancel
                 </button>
-                <Button type="submit">
-                  {isLoading ? "Saving..." : "Save Restaurant"}
-                </Button>
+                <Button type="submit">{isLoading ? "Saving..." : "Save Restaurant"}</Button>
               </div>
             </form>
           </div>
@@ -1105,14 +1187,19 @@ export default function AdminPage() {
               <h2 className="text-base font-bold text-slate-800 tracking-tight">
                 {editingUser ? "Edit Account Profile" : "Create Administrative User"}
               </h2>
-              <button onClick={() => setIsUserModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button
+                onClick={() => setIsUserModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveUser} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Full Name</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Full Name
+                </label>
                 <input
                   type="text"
                   required
@@ -1124,7 +1211,9 @@ export default function AdminPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email Address</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Email Address
+                </label>
                 <input
                   type="email"
                   required
@@ -1137,7 +1226,12 @@ export default function AdminPage() {
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Password {editingUser && <span className="text-[9px] text-slate-400 uppercase font-medium">(Leave blank to keep unchanged)</span>}
+                  Password{" "}
+                  {editingUser && (
+                    <span className="text-[9px] text-slate-400 uppercase font-medium">
+                      (Leave blank to keep unchanged)
+                    </span>
+                  )}
                 </label>
                 <input
                   type="password"
@@ -1150,7 +1244,9 @@ export default function AdminPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Role Designation</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Role Designation
+                </label>
                 <select
                   value={userRole}
                   onChange={(e) => setUserRole(e.target.value)}
@@ -1164,7 +1260,9 @@ export default function AdminPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Associated Tenant / Restaurant</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Associated Tenant / Restaurant
+                </label>
                 <select
                   value={userRestId}
                   onChange={(e) => setUserRestId(e.target.value)}
@@ -1180,7 +1278,9 @@ export default function AdminPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Status
+                </label>
                 <select
                   value={userStatus}
                   onChange={(e) => setUserStatus(e.target.value)}
@@ -1193,7 +1293,9 @@ export default function AdminPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avatar Image URL</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Avatar Image URL
+                </label>
                 <input
                   type="url"
                   value={userAvatar}
@@ -1211,9 +1313,7 @@ export default function AdminPage() {
                 >
                   Cancel
                 </button>
-                <Button type="submit">
-                  {isLoading ? "Saving..." : "Save User"}
-                </Button>
+                <Button type="submit">{isLoading ? "Saving..." : "Save User"}</Button>
               </div>
             </form>
           </div>
@@ -1228,11 +1328,17 @@ export default function AdminPage() {
               Are you absolutely sure?
             </h3>
             <p className="text-xs font-semibold text-slate-500 leading-relaxed mb-4">
-              This action is <strong className="text-red-600 uppercase font-bold">permanent</strong> and will delete the restaurant, all its branches, tables, menu items, and related order history.
+              This action is <strong className="text-red-600 uppercase font-bold">permanent</strong>{" "}
+              and will delete the restaurant, all its branches, tables, menu items, and related
+              order history.
             </p>
             <div className="flex flex-col gap-2 mb-6">
               <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Type the restaurant slug <span className="font-mono font-black text-slate-700 bg-slate-100 border border-slate-200/50 px-1 py-0.5 rounded">{(restaurants.find(r => r.id === deletingRestaurantId))?.username}</span> to confirm:
+                Type the restaurant slug{" "}
+                <span className="font-mono font-black text-slate-700 bg-slate-100 border border-slate-200/50 px-1 py-0.5 rounded">
+                  {restaurants.find((r) => r.id === deletingRestaurantId)?.username}
+                </span>{" "}
+                to confirm:
               </label>
               <input
                 type="text"
@@ -1255,9 +1361,19 @@ export default function AdminPage() {
               </button>
               <button
                 onClick={() => handleDeleteRestaurant(deletingRestaurantId)}
-                disabled={deleteConfirmSlug.toLowerCase().trim() !== (restaurants.find(r => r.id === deletingRestaurantId))?.username.toLowerCase().trim()}
+                disabled={
+                  deleteConfirmSlug.toLowerCase().trim() !==
+                  restaurants
+                    .find((r) => r.id === deletingRestaurantId)
+                    ?.username.toLowerCase()
+                    .trim()
+                }
                 className={`px-4 py-2 rounded-xl text-xs font-bold text-white transition-all ${
-                  deleteConfirmSlug.toLowerCase().trim() === (restaurants.find(r => r.id === deletingRestaurantId))?.username.toLowerCase().trim()
+                  deleteConfirmSlug.toLowerCase().trim() ===
+                  restaurants
+                    .find((r) => r.id === deletingRestaurantId)
+                    ?.username.toLowerCase()
+                    .trim()
                     ? "bg-red-600 hover:bg-red-700 cursor-pointer active:scale-95"
                     : "bg-red-400/50 cursor-not-allowed"
                 }`}
@@ -1277,7 +1393,8 @@ export default function AdminPage() {
               Confirm User Deletion
             </h3>
             <p className="text-xs font-semibold text-slate-500 leading-relaxed mb-6">
-              Are you sure you want to delete this administrative user? This account will instantly lose system and tenant panel access.
+              Are you sure you want to delete this administrative user? This account will instantly
+              lose system and tenant panel access.
             </p>
             <div className="flex justify-end gap-3">
               <button

@@ -30,7 +30,7 @@ export default function ImageUploader({
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        
+
         // Limit file size to 10MB
         if (file.size > 10 * 1024 * 1024) {
           throw new Error(`File "${file.name}" must be under 10MB`);
@@ -39,10 +39,13 @@ export default function ImageUploader({
         const formData = new FormData();
         formData.append("image", file);
 
-        const response = await fetch("https://api.imgbb.com/1/upload?key=61035b18442b2c9815d6945f6f7bccd2", {
-          method: "POST",
-          body: formData,
-        });
+        const response = await fetch(
+          "https://api.imgbb.com/1/upload?key=61035b18442b2c9815d6945f6f7bccd2",
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
 
         if (!response.ok) {
           throw new Error(`Failed to upload "${file.name}".`);
@@ -111,18 +114,20 @@ export default function ImageUploader({
     };
   }, []);
 
-  const hasHeightClass = buttonClassName?.split(" ").some(c => c.startsWith("h-") || c.startsWith("py-"));
+  const hasHeightClass = buttonClassName
+    ?.split(" ")
+    .some((c) => c.startsWith("h-") || c.startsWith("py-"));
   const heightClass = hasHeightClass ? "" : "h-10";
 
   return (
     <div className={className}>
-      <label 
+      <label
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`flex items-center justify-center gap-2 px-4 rounded-xl border border-dashed cursor-pointer transition-all duration-200 ${
-          isDragging 
-            ? "border-[#ff7a00] bg-orange-50/20" 
+          isDragging
+            ? "border-[#ff7a00] bg-orange-50/20"
             : "border-slate-350 hover:border-[#ff7a00] hover:bg-orange-50/10"
         } ${heightClass} ${buttonClassName || ""}`}
       >
@@ -139,7 +144,9 @@ export default function ImageUploader({
         ) : (
           <>
             <Upload className="w-4 h-4 text-slate-405 group-hover:text-[#ff7a00]" />
-            <span className="text-[11px] font-bold text-slate-500 hover:text-slate-800">{label}</span>
+            <span className="text-[11px] font-bold text-slate-500 hover:text-slate-800">
+              {label}
+            </span>
           </>
         )}
         <input

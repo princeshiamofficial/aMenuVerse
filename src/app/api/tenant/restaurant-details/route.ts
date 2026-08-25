@@ -1,28 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
-import { invalidateTenantCache } from '@/lib/redis';
+import { NextRequest, NextResponse } from "next/server";
+import { query } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import { invalidateTenantCache } from "@/lib/redis";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
     if (!user || !user.restaurantId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const restaurants = await query<Record<string, unknown>[]>(
-      'SELECT * FROM restaurants WHERE id = ?',
-      [user.restaurantId]
+      "SELECT * FROM restaurants WHERE id = ?",
+      [user.restaurantId],
     );
 
     if (restaurants.length === 0) {
-      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
+      return NextResponse.json({ error: "Restaurant not found" }, { status: 404 });
     }
 
     return NextResponse.json(restaurants[0]);
   } catch (err) {
-    console.error('Tenant details GET error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Tenant details GET error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -30,12 +30,12 @@ export async function PUT(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
     if (!user || !user.restaurantId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
-    console.log('Incoming PUT Body:', body);
-    
+    console.log("Incoming PUT Body:", body);
+
     // Map camelCase or snake_case parameters safely, defaulting undefined to null
     const name = body.name ?? null;
     const cuisine = body.cuisine ?? null;
@@ -53,11 +53,11 @@ export async function PUT(req: NextRequest) {
     const facilities = body.facilities ?? null;
     const introText = body.introText ?? body.intro_text ?? null;
     const descriptionText = body.descriptionText ?? body.description_text ?? null;
-    const primaryColor = body.primaryColor ?? body.primary_color ?? '#ff7a00';
-    const fontFamily = body.fontFamily ?? body.font_family ?? 'Outfit';
-    const layoutType = body.layoutType ?? body.layout_type ?? 'grid';
+    const primaryColor = body.primaryColor ?? body.primary_color ?? "#ff7a00";
+    const fontFamily = body.fontFamily ?? body.font_family ?? "Outfit";
+    const layoutType = body.layoutType ?? body.layout_type ?? "grid";
     let offerSlides = body.offerSlides ?? body.offer_slides ?? null;
-    if (offerSlides !== null && typeof offerSlides !== 'string') {
+    if (offerSlides !== null && typeof offerSlides !== "string") {
       offerSlides = JSON.stringify(offerSlides);
     }
 
@@ -70,13 +70,28 @@ export async function PUT(req: NextRequest) {
         offer_slides = ?
        WHERE id = ?`,
       [
-        name, cuisine, rating, reviews, price, time, location,
-        logo, logoBg, image, logoImage, phone, operatingHours,
-        facilities, introText, descriptionText,
-        primaryColor, fontFamily, layoutType,
+        name,
+        cuisine,
+        rating,
+        reviews,
+        price,
+        time,
+        location,
+        logo,
+        logoBg,
+        image,
+        logoImage,
+        phone,
+        operatingHours,
+        facilities,
+        introText,
+        descriptionText,
+        primaryColor,
+        fontFamily,
+        layoutType,
         offerSlides,
-        user.restaurantId
-      ]
+        user.restaurantId,
+      ],
     );
 
     // Invalidate Redis cache for this tenant
@@ -84,9 +99,9 @@ export async function PUT(req: NextRequest) {
       await invalidateTenantCache(user.restaurantUsername);
     }
 
-    return NextResponse.json({ success: true, message: 'Details updated successfully' });
+    return NextResponse.json({ success: true, message: "Details updated successfully" });
   } catch (err) {
-    console.error('Tenant details PUT error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Tenant details PUT error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

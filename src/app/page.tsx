@@ -15,7 +15,7 @@ import {
   ShoppingCart,
   CreditCard,
   TrendingUp,
-  Users
+  Users,
 } from "lucide-react";
 
 // Explore recommendations section mock data showing popular dishes
@@ -25,20 +25,24 @@ import {
 const FAQ_ITEMS = [
   {
     question: "What is this website about?",
-    answer: "This website is a digital food menu platform that allows you to browse local restaurants, explore their curated food recommendations, view menus, and seamlessly scan QR codes to access table-side services."
+    answer:
+      "This website is a digital food menu platform that allows you to browse local restaurants, explore their curated food recommendations, view menus, and seamlessly scan QR codes to access table-side services.",
   },
   {
     question: "Is the information always accurate?",
-    answer: "Yes, we work directly with restaurant owners to keep prices, descriptions, locations, and menus updated in real-time."
+    answer:
+      "Yes, we work directly with restaurant owners to keep prices, descriptions, locations, and menus updated in real-time.",
   },
   {
     question: "How can I suggest a new restaurant to be added?",
-    answer: "You can reach out to our team via the contact details provided in the footer or tap 'Contact Us' to submit a restaurant recommendation."
+    answer:
+      "You can reach out to our team via the contact details provided in the footer or tap 'Contact Us' to submit a restaurant recommendation.",
   },
   {
     question: "Do I need to sign up to use the website?",
-    answer: "No, you can browse restaurants and view menus completely anonymously without creating an account. Sign-up is optional."
-  }
+    answer:
+      "No, you can browse restaurants and view menus completely anonymously without creating an account. Sign-up is optional.",
+  },
 ];
 
 export default function Home() {
@@ -91,10 +95,12 @@ export default function Home() {
   const [scanResultToast, setScanResultToast] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-
   const playBeep = () => {
     try {
-      const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const audioCtx = new (
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      )();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
       oscillator.connect(gainNode);
@@ -116,7 +122,8 @@ export default function Home() {
     if (isScanning) {
       let stream: MediaStream | null = null;
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        navigator.mediaDevices
+          .getUserMedia({ video: { facingMode: "environment" } })
           .then((s) => {
             stream = s;
             if (videoRef.current) {
@@ -133,7 +140,12 @@ export default function Home() {
         playBeep();
 
         // Pick a random restaurant name to search
-        const randomRestaurants = ["Burger Craft Lab", "La Dolce Vita", "Sakura Sushi Bar", "The Spicy Wok"];
+        const randomRestaurants = [
+          "Burger Craft Lab",
+          "La Dolce Vita",
+          "Sakura Sushi Bar",
+          "The Spicy Wok",
+        ];
         const chosen = randomRestaurants[Math.floor(Math.random() * randomRestaurants.length)];
 
         setSearchQuery(chosen);
@@ -149,7 +161,7 @@ export default function Home() {
       return () => {
         clearTimeout(timer);
         if (stream) {
-          stream.getTracks().forEach(track => track.stop());
+          stream.getTracks().forEach((track) => track.stop());
         }
       };
     }
@@ -164,7 +176,7 @@ export default function Home() {
       if (firstChild) {
         const itemWidth = firstChild.offsetWidth;
         const gap = parseInt(window.getComputedStyle(container).gap) || 24;
-        const scrollAmount = direction === "left" ? -(itemWidth + gap) : (itemWidth + gap);
+        const scrollAmount = direction === "left" ? -(itemWidth + gap) : itemWidth + gap;
         container.scrollBy({ left: scrollAmount, behavior: "smooth" });
       }
     }
@@ -298,7 +310,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans antialiased text-neutral-900 transition-colors duration-300">
-
       {/* Floating Premium Header sitting above the hero section (Sticky & Overlay) */}
       <div className="sticky top-0 w-full h-0 z-50">
         <Header />
@@ -306,7 +317,6 @@ export default function Home() {
 
       {/* Main Container */}
       <main className="flex-1 w-full pb-0 relative z-10">
-
         {/* Luxury Hero Card - Full Width (40% Shorter Height on Mobile) */}
         <div className="relative w-full h-[280px] md:h-[600px] overflow-hidden bg-zinc-200 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
           {/* Hero Background Image - premium_living_room.png */}
@@ -321,127 +331,129 @@ export default function Home() {
 
         {/* Breathtaking Curated Storefront Grid - Overlapping the Hero Section */}
         <div className="max-w-7xl mx-auto px-4 md:px-6 -mt-24 md:-mt-28 pb-12 relative z-20 bg-white rounded-[32px] p-3 md:p-5 border border-neutral-100 shadow-[0_25px_60px_rgba(0,0,0,0.03)] flex flex-col gap-3 md:gap-5">
-
           {/* Store Sub-header with Search Bar */}
           <div className="flex flex-col items-center md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-neutral-100">
-              <div className="flex items-center justify-between md:justify-start gap-4 w-full md:w-auto order-2 md:order-1">
-                <h2 className="text-2xl md:text-[32px] font-medium tracking-tight text-neutral-950 font-sans truncate">
-                  Popular Restaurants
-                </h2>
-              </div>
-
-              {/* Elegant Search Container */}
-              <form onSubmit={handleSearchSubmit} className="flex items-center justify-center md:justify-start gap-3 w-full md:w-auto order-1 md:order-2">
-                <div className="relative flex items-center bg-neutral-50 border border-neutral-200/80 rounded-xl px-5 py-2.5 w-full md:w-[320px] transition-all duration-300 focus-within:border-neutral-400 focus-within:bg-white shadow-sm h-[42px]">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-4 h-4 text-neutral-400 mr-2.5 shrink-0"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                  <input
-                    type="text"
-                    placeholder="Search on MenuVerse"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-transparent border-none outline-none text-sm w-full text-neutral-800 placeholder-neutral-400 font-medium"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsScanning(true)}
-                  className="bg-deep-emerald-950 hover:bg-deep-emerald-850 text-white rounded-xl w-[42px] h-[42px] flex items-center justify-center transition-all duration-200 active:scale-95 shadow-sm shrink-0"
-                  title="Scan QR Code"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-6 h-6 text-white"
-                  >
-                    {/* Outer brackets */}
-                    <path d="M3 8V5a2 2 0 0 1 2-2h3" />
-                    <path d="M16 3h3a2 2 0 0 1 2 2v3" />
-                    <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-                    <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-
-                    {/* Finder Patterns Outer Borders */}
-                    {/* Top Left */}
-                    <rect x="5.5" y="5.5" width="5.5" height="5.5" rx="1.2" strokeWidth="1.8" />
-                    {/* Top Right */}
-                    <rect x="13" y="5.5" width="5.5" height="5.5" rx="1.2" strokeWidth="1.8" />
-                    {/* Bottom Left */}
-                    <rect x="5.5" y="13" width="5.5" height="5.5" rx="1.2" strokeWidth="1.8" />
-
-                    {/* Inner Solid Components & Data Grid */}
-                    <g fill="currentColor" stroke="none">
-                      {/* Finder Top Left Inner */}
-                      <rect x="7.25" y="7.25" width="2" height="2" rx="0.5" />
-                      {/* Finder Top Right Inner */}
-                      <rect x="14.75" y="7.25" width="2" height="2" rx="0.5" />
-                      {/* Finder Bottom Left Inner */}
-                      <rect x="7.25" y="14.75" width="2" height="2" rx="0.5" />
-
-                      {/* Bottom Right Pixel Matrix */}
-                      <rect x="13" y="13" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="13" y="15" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="13" y="17.5" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="14.5" y="14.25" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="14.5" y="16.25" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="16" y="13" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="16" y="15.25" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="17.5" y="14" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="17.5" y="16" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="16" y="17.5" width="1.2" height="1.2" rx="0.3" />
-                      <rect x="17.5" y="17.5" width="1.2" height="1.2" rx="0.3" />
-                    </g>
-                  </svg>
-                </button>
-              </form>
+            <div className="flex items-center justify-between md:justify-start gap-4 w-full md:w-auto order-2 md:order-1">
+              <h2 className="text-2xl md:text-[32px] font-medium tracking-tight text-neutral-950 font-sans truncate">
+                Popular Restaurants
+              </h2>
             </div>
+
+            {/* Elegant Search Container */}
+            <form
+              onSubmit={handleSearchSubmit}
+              className="flex items-center justify-center md:justify-start gap-3 w-full md:w-auto order-1 md:order-2"
+            >
+              <div className="relative flex items-center bg-neutral-50 border border-neutral-200/80 rounded-xl px-5 py-2.5 w-full md:w-[320px] transition-all duration-300 focus-within:border-neutral-400 focus-within:bg-white shadow-sm h-[42px]">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4 h-4 text-neutral-400 mr-2.5 shrink-0"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search on MenuVerse"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-transparent border-none outline-none text-sm w-full text-neutral-800 placeholder-neutral-400 font-medium"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsScanning(true)}
+                className="bg-deep-emerald-950 hover:bg-deep-emerald-850 text-white rounded-xl w-[42px] h-[42px] flex items-center justify-center transition-all duration-200 active:scale-95 shadow-sm shrink-0"
+                title="Scan QR Code"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-6 h-6 text-white"
+                >
+                  {/* Outer brackets */}
+                  <path d="M3 8V5a2 2 0 0 1 2-2h3" />
+                  <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                  <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                  <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+
+                  {/* Finder Patterns Outer Borders */}
+                  {/* Top Left */}
+                  <rect x="5.5" y="5.5" width="5.5" height="5.5" rx="1.2" strokeWidth="1.8" />
+                  {/* Top Right */}
+                  <rect x="13" y="5.5" width="5.5" height="5.5" rx="1.2" strokeWidth="1.8" />
+                  {/* Bottom Left */}
+                  <rect x="5.5" y="13" width="5.5" height="5.5" rx="1.2" strokeWidth="1.8" />
+
+                  {/* Inner Solid Components & Data Grid */}
+                  <g fill="currentColor" stroke="none">
+                    {/* Finder Top Left Inner */}
+                    <rect x="7.25" y="7.25" width="2" height="2" rx="0.5" />
+                    {/* Finder Top Right Inner */}
+                    <rect x="14.75" y="7.25" width="2" height="2" rx="0.5" />
+                    {/* Finder Bottom Left Inner */}
+                    <rect x="7.25" y="14.75" width="2" height="2" rx="0.5" />
+
+                    {/* Bottom Right Pixel Matrix */}
+                    <rect x="13" y="13" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="13" y="15" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="13" y="17.5" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="14.5" y="14.25" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="14.5" y="16.25" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="16" y="13" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="16" y="15.25" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="17.5" y="14" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="17.5" y="16" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="16" y="17.5" width="1.2" height="1.2" rx="0.3" />
+                    <rect x="17.5" y="17.5" width="1.2" height="1.2" rx="0.3" />
+                  </g>
+                </svg>
+              </button>
+            </form>
+          </div>
 
           {/* Popular Restaurants Grid */}
           <div className="w-full">
-              {filteredRestaurants.length === 0 ? (
-                <div className="text-center py-20 bg-neutral-50 rounded-2xl border border-neutral-100 flex flex-col items-center justify-center gap-4">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-12 h-12 text-neutral-300"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                  <span className="text-neutral-400 text-sm font-semibold">
-                    No restaurants found matching your search.
-                  </span>
-                </div>
-              ) : (
-                <div
-                  ref={restaurantScrollRef}
-                  onScroll={handleRestaurantScroll}
-                  className="flex gap-1.5 md:gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-2 w-full"
+            {filteredRestaurants.length === 0 ? (
+              <div className="text-center py-20 bg-neutral-50 rounded-2xl border border-neutral-100 flex flex-col items-center justify-center gap-4">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-12 h-12 text-neutral-300"
                 >
-                  {[...filteredRestaurants, ...filteredRestaurants, ...filteredRestaurants].map((restaurant, idx) => (
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <span className="text-neutral-400 text-sm font-semibold">
+                  No restaurants found matching your search.
+                </span>
+              </div>
+            ) : (
+              <div
+                ref={restaurantScrollRef}
+                onScroll={handleRestaurantScroll}
+                className="flex gap-1.5 md:gap-3 overflow-x-auto scrollbar-none snap-x snap-mandatory pb-2 w-full"
+              >
+                {[...filteredRestaurants, ...filteredRestaurants, ...filteredRestaurants].map(
+                  (restaurant, idx) => (
                     <Link
                       key={`${restaurant.id}-${idx}`}
                       href={`/${restaurant.username}`}
                       className="shrink-0 w-[calc((100%-6px)/1.5)] sm:w-[calc((100%-12px)/2.2)] md:w-[calc((100%-24px)/2.7)] snap-start flex flex-col bg-white rounded-xl border border-neutral-100/80 shadow-[0_12px_36px_rgba(0,0,0,0.03)] overflow-hidden transition-all duration-300 hover:shadow-[0_24px_60px_rgba(0,0,0,0.07)] hover:-translate-y-1 group cursor-pointer"
                     >
-
                       {/* Restaurant Image Box with overlay badges */}
                       <div className="relative w-full aspect-[2.8/1] bg-neutral-100">
                         <div className="absolute inset-0 rounded-t-xl overflow-hidden">
@@ -456,7 +468,6 @@ export default function Home() {
                             <div className="absolute inset-0 bg-linear-to-t from-black/25 via-transparent to-transparent opacity-60" />
                           </div>
                         </div>
-
                       </div>
 
                       {/* Restaurant Info Section (Aligned exactly to screenshot) */}
@@ -491,7 +502,9 @@ export default function Home() {
                                 <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
                                 <circle cx="12" cy="10" r="3" />
                               </svg>
-                              <span className="truncate text-neutral-450">{restaurant.location}</span>
+                              <span className="truncate text-neutral-450">
+                                {restaurant.location}
+                              </span>
                             </div>
 
                             {/* Rating stars & number */}
@@ -531,7 +544,9 @@ export default function Home() {
                                         strokeLinejoin="round"
                                       >
                                         <defs>
-                                          <linearGradient id={`half-star-pop-${restaurant.id}-${starIdx}`}>
+                                          <linearGradient
+                                            id={`half-star-pop-${restaurant.id}-${starIdx}`}
+                                          >
                                             <stop offset="50%" stopColor="#f59e0b" />
                                             <stop offset="50%" stopColor="transparent" />
                                           </linearGradient>
@@ -577,29 +592,29 @@ export default function Home() {
                         </div>
                       </div>
                     </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+                  ),
+                )}
+              </div>
+            )}
+          </div>
 
           {/* All Restaurants section */}
           <div className="flex flex-col gap-3 sm:gap-4 w-full">
-
             {/* Restaurants Header Row */}
             <div className="flex items-center gap-3 sm:gap-4">
               <h3 className="text-xl sm:text-[24px] md:text-[28px] font-medium tracking-tight text-neutral-950 font-sans truncate whitespace-nowrap">
                 Restaurants
               </h3>
               <div className="flex-1 h-[2px] bg-neutral-200/80"></div>
-              <Link 
+              <Link
                 href="/restaurants"
                 className="text-sm sm:text-base font-semibold text-neutral-500 hover:text-neutral-950 transition-colors duration-200 flex items-center gap-1 sm:gap-1.5 whitespace-nowrap shrink-0"
               >
                 <span>See more</span>
-                <svg 
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
+                <svg
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={2.5}
                 >
@@ -616,7 +631,6 @@ export default function Home() {
                   href={`/${restaurant.username}`}
                   className="flex flex-col bg-white rounded-xl border border-neutral-100/80 shadow-[0_12px_36px_rgba(0,0,0,0.03)] overflow-hidden transition-all duration-300 hover:shadow-[0_24px_60px_rgba(0,0,0,0.07)] hover:-translate-y-1 group cursor-pointer"
                 >
-
                   {/* Restaurant Image Box with overlay badges */}
                   <div className="relative w-full aspect-[2.8/1] bg-neutral-100">
                     <div className="absolute inset-0 rounded-t-xl overflow-hidden">
@@ -631,7 +645,6 @@ export default function Home() {
                         <div className="absolute inset-0 bg-linear-to-t from-black/25 via-transparent to-transparent opacity-60" />
                       </div>
                     </div>
-
                   </div>
 
                   {/* Restaurant Info Section (Aligned exactly to screenshot) */}
@@ -706,7 +719,9 @@ export default function Home() {
                                     strokeLinejoin="round"
                                   >
                                     <defs>
-                                      <linearGradient id={`half-star-all-${restaurant.id}-${starIdx}`}>
+                                      <linearGradient
+                                        id={`half-star-all-${restaurant.id}-${starIdx}`}
+                                      >
                                         <stop offset="50%" stopColor="#f59e0b" />
                                         <stop offset="50%" stopColor="transparent" />
                                       </linearGradient>
@@ -754,7 +769,6 @@ export default function Home() {
                 </Link>
               ))}
             </div>
-
           </div>
 
           {/* How It Works Section */}
@@ -771,19 +785,44 @@ export default function Home() {
 
             {/* Cards Grid */}
             <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 w-full px-2 sm:px-6 md:px-0">
-
               {/* Curved bezier connecting lines (visible on desktop) */}
               <div className="hidden lg:block absolute top-[20%] left-[28%] w-[10%] z-10 pointer-events-none">
                 <svg className="w-full text-emerald-500/20" viewBox="0 0 100 20" fill="none">
-                  <path d="M 5,10 C 35,2 65,18 95,10" stroke="currentColor" strokeWidth="2" strokeDasharray="6,4" strokeLinecap="round" />
-                  <path d="M 88,4 L 96,10 L 88,16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  <path
+                    d="M 5,10 C 35,2 65,18 95,10"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeDasharray="6,4"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M 88,4 L 96,10 L 88,16"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
                 </svg>
               </div>
 
               <div className="hidden lg:block absolute top-[20%] left-[62%] w-[10%] z-10 pointer-events-none">
                 <svg className="w-full text-emerald-500/20" viewBox="0 0 100 20" fill="none">
-                  <path d="M 5,10 C 35,2 65,18 95,10" stroke="currentColor" strokeWidth="2" strokeDasharray="6,4" strokeLinecap="round" />
-                  <path d="M 88,4 L 96,10 L 88,16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                  <path
+                    d="M 5,10 C 35,2 65,18 95,10"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeDasharray="6,4"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M 88,4 L 96,10 L 88,16"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
                 </svg>
               </div>
 
@@ -803,26 +842,47 @@ export default function Home() {
                   Owner Adds Menu
                 </h4>
                 <p className="text-xs sm:text-sm text-neutral-500 font-semibold leading-relaxed mb-6">
-                  Set up your digital menus with details, categories, descriptions, and premium images in minutes.
+                  Set up your digital menus with details, categories, descriptions, and premium
+                  images in minutes.
                 </p>
 
                 {/* Bottom checklist box */}
                 <div className="w-full mt-auto bg-neutral-50/80 rounded-2xl p-4 flex flex-col gap-3 border border-neutral-100/50 group-hover:bg-emerald-50/30 group-hover:border-emerald-100/20 transition-all duration-300">
                   <div className="flex items-center gap-2.5 text-left">
                     <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </div>
-                    <span className="text-xs text-neutral-700 font-bold">Quick setup dashboard</span>
+                    <span className="text-xs text-neutral-700 font-bold">
+                      Quick setup dashboard
+                    </span>
                   </div>
                   <div className="flex items-center gap-2.5 text-left">
                     <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </div>
-                    <span className="text-xs text-neutral-700 font-bold">Real-time price editing</span>
+                    <span className="text-xs text-neutral-700 font-bold">
+                      Real-time price editing
+                    </span>
                   </div>
                 </div>
               </div>
@@ -843,26 +903,47 @@ export default function Home() {
                   Customers Scan & Order
                 </h4>
                 <p className="text-xs sm:text-sm text-neutral-500 font-semibold leading-relaxed mb-6">
-                  Diners scan the unique QR code on their table to browse menus, select items, and place orders directly.
+                  Diners scan the unique QR code on their table to browse menus, select items, and
+                  place orders directly.
                 </p>
 
                 {/* Bottom checklist box */}
                 <div className="w-full mt-auto bg-neutral-50/80 rounded-2xl p-4 flex flex-col gap-3 border border-neutral-100/50 group-hover:bg-emerald-50/30 group-hover:border-emerald-100/20 transition-all duration-300">
                   <div className="flex items-center gap-2.5 text-left">
                     <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </div>
-                    <span className="text-xs text-neutral-700 font-bold">Instant load, no app install</span>
+                    <span className="text-xs text-neutral-700 font-bold">
+                      Instant load, no app install
+                    </span>
                   </div>
                   <div className="flex items-center gap-2.5 text-left">
                     <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </div>
-                    <span className="text-xs text-neutral-700 font-bold">Seamless table attribution</span>
+                    <span className="text-xs text-neutral-700 font-bold">
+                      Seamless table attribution
+                    </span>
                   </div>
                 </div>
               </div>
@@ -883,30 +964,50 @@ export default function Home() {
                   Kitchen Prepares in Real-time
                 </h4>
                 <p className="text-xs sm:text-sm text-neutral-500 font-semibold leading-relaxed mb-6">
-                  Orders are instantly dispatched to the kitchen dashboard for real-time preparation tracking.
+                  Orders are instantly dispatched to the kitchen dashboard for real-time preparation
+                  tracking.
                 </p>
 
                 {/* Bottom checklist box */}
                 <div className="w-full mt-auto bg-neutral-50/80 rounded-2xl p-4 flex flex-col gap-3 border border-neutral-100/50 group-hover:bg-emerald-50/30 group-hover:border-emerald-100/20 transition-all duration-300">
                   <div className="flex items-center gap-2.5 text-left">
                     <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </div>
-                    <span className="text-xs text-neutral-700 font-bold">Real-time status tracking</span>
+                    <span className="text-xs text-neutral-700 font-bold">
+                      Real-time status tracking
+                    </span>
                   </div>
                   <div className="flex items-center gap-2.5 text-left">
                     <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </div>
-                    <span className="text-xs text-neutral-700 font-bold">Reduced human order errors</span>
+                    <span className="text-xs text-neutral-700 font-bold">
+                      Reduced human order errors
+                    </span>
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
 
@@ -924,7 +1025,6 @@ export default function Home() {
 
             {/* Features Flex Layout */}
             <div className="flex flex-col md:flex-row md:flex-wrap w-full px-2 sm:px-6 md:px-0">
-
               {/* Feature 1: Real-time Kitchen Display */}
               <div className="flex gap-4 items-start w-full md:w-1/2 lg:w-1/3 text-left group px-4 py-5 md:px-6 md:py-6 lg:px-8 lg:py-8 md:border-r lg:border-r border-black/15">
                 <div className="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-50/70 text-rose-500 shrink-0 transition-transform duration-300 group-hover:scale-105">
@@ -935,11 +1035,18 @@ export default function Home() {
                     Real-time Kitchen Display
                   </h4>
                   <p className="text-[14px] sm:text-[14.5px] text-neutral-500 font-medium leading-[1.65] mt-2">
-                    Instantly route table orders to kitchen display systems. Track preparation status, reduce latency, and ensure kitchen-front alignment without paper tickets.
+                    Instantly route table orders to kitchen display systems. Track preparation
+                    status, reduce latency, and ensure kitchen-front alignment without paper
+                    tickets.
                   </p>
-                  <a href="#" className="mt-3 flex items-center gap-1.5 text-sm font-bold text-rose-600 hover:text-rose-700 transition-colors cursor-pointer group/link w-fit">
+                  <a
+                    href="#"
+                    className="mt-3 flex items-center gap-1.5 text-sm font-bold text-rose-600 hover:text-rose-700 transition-colors cursor-pointer group/link w-fit"
+                  >
                     <span>See more</span>
-                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">→</span>
+                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">
+                      →
+                    </span>
                   </a>
                 </div>
               </div>
@@ -957,11 +1064,18 @@ export default function Home() {
                     Digital Menu Management
                   </h4>
                   <p className="text-[14px] sm:text-[14.5px] text-neutral-500 font-medium leading-[1.65] mt-2">
-                    Update pricing, categories, and item availability in real-time. Create beautiful, item-level tags and highlight chef specials or seasonal options easily.
+                    Update pricing, categories, and item availability in real-time. Create
+                    beautiful, item-level tags and highlight chef specials or seasonal options
+                    easily.
                   </p>
-                  <a href="#" className="mt-3 flex items-center gap-1.5 text-sm font-bold text-orange-600 hover:text-orange-700 transition-colors cursor-pointer group/link w-fit">
+                  <a
+                    href="#"
+                    className="mt-3 flex items-center gap-1.5 text-sm font-bold text-orange-600 hover:text-orange-700 transition-colors cursor-pointer group/link w-fit"
+                  >
                     <span>See more</span>
-                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">→</span>
+                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">
+                      →
+                    </span>
                   </a>
                 </div>
               </div>
@@ -979,11 +1093,18 @@ export default function Home() {
                     Online Ordering System
                   </h4>
                   <p className="text-[14px] sm:text-[14.5px] text-neutral-500 font-medium leading-[1.65] mt-2">
-                    Provide a clean, fast table-side ordering screen directly through customers&apos; web browsers. Supports modifiers, order summaries, and custom requests.
+                    Provide a clean, fast table-side ordering screen directly through
+                    customers&apos; web browsers. Supports modifiers, order summaries, and custom
+                    requests.
                   </p>
-                  <a href="#" className="mt-3 flex items-center gap-1.5 text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer group/link w-fit">
+                  <a
+                    href="#"
+                    className="mt-3 flex items-center gap-1.5 text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer group/link w-fit"
+                  >
                     <span>See more</span>
-                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">→</span>
+                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">
+                      →
+                    </span>
                   </a>
                 </div>
               </div>
@@ -1001,11 +1122,17 @@ export default function Home() {
                     Secure Payments (bKash)
                   </h4>
                   <p className="text-[14px] sm:text-[14.5px] text-neutral-500 font-medium leading-[1.65] mt-2">
-                    Enable fast and secure table-side checkout. Seamless integration with local channels like bKash, card networks, and other digital wallets.
+                    Enable fast and secure table-side checkout. Seamless integration with local
+                    channels like bKash, card networks, and other digital wallets.
                   </p>
-                  <a href="#" className="mt-3 flex items-center gap-1.5 text-sm font-bold text-pink-600 hover:text-pink-700 transition-colors cursor-pointer group/link w-fit">
+                  <a
+                    href="#"
+                    className="mt-3 flex items-center gap-1.5 text-sm font-bold text-pink-600 hover:text-pink-700 transition-colors cursor-pointer group/link w-fit"
+                  >
                     <span>See more</span>
-                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">→</span>
+                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">
+                      →
+                    </span>
                   </a>
                 </div>
               </div>
@@ -1023,11 +1150,18 @@ export default function Home() {
                     Sales Analytics
                   </h4>
                   <p className="text-[14px] sm:text-[14.5px] text-neutral-500 font-medium leading-[1.65] mt-2">
-                    Access live dashboard analytics. Monitor revenue trends, identify high-performing dishes, and analyze customer behaviors to maximize peak hour sales.
+                    Access live dashboard analytics. Monitor revenue trends, identify
+                    high-performing dishes, and analyze customer behaviors to maximize peak hour
+                    sales.
                   </p>
-                  <a href="#" className="mt-3 flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors cursor-pointer group/link w-fit">
+                  <a
+                    href="#"
+                    className="mt-3 flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors cursor-pointer group/link w-fit"
+                  >
                     <span>See more</span>
-                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">→</span>
+                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">
+                      →
+                    </span>
                   </a>
                 </div>
               </div>
@@ -1045,17 +1179,21 @@ export default function Home() {
                     Staff Management
                   </h4>
                   <p className="text-[14px] sm:text-[14.5px] text-neutral-500 font-medium leading-[1.65] mt-2">
-                    Manage roles, permissions, shifts, and table assignments for chefs, waiters, and cashiers. Ensure seamless daily operations.
+                    Manage roles, permissions, shifts, and table assignments for chefs, waiters, and
+                    cashiers. Ensure seamless daily operations.
                   </p>
-                  <a href="#" className="mt-3 flex items-center gap-1.5 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors cursor-pointer group/link w-fit">
+                  <a
+                    href="#"
+                    className="mt-3 flex items-center gap-1.5 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors cursor-pointer group/link w-fit"
+                  >
                     <span>See more</span>
-                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">→</span>
+                    <span className="transform group-hover:translate-x-1 transition-transform duration-300 select-none">
+                      →
+                    </span>
                   </a>
                 </div>
               </div>
-
             </div>
-
           </div>
 
           {/* Testimonials Section */}
@@ -1078,7 +1216,15 @@ export default function Home() {
                   className="w-10 h-10 rounded-full border border-neutral-200/80 hover:border-neutral-400 hover:bg-neutral-50 flex items-center justify-center text-neutral-600 active:scale-95 transition-all duration-250 shadow-sm"
                   aria-label="Previous Testimonial"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <line x1="19" y1="12" x2="5" y2="12" />
                     <polyline points="12 19 5 12 12 5" />
                   </svg>
@@ -1088,7 +1234,15 @@ export default function Home() {
                   className="w-10 h-10 rounded-full border border-neutral-200/80 hover:border-neutral-400 hover:bg-neutral-50 flex items-center justify-center text-neutral-600 active:scale-95 transition-all duration-250 shadow-sm"
                   aria-label="Next Testimonial"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <line x1="5" y1="12" x2="19" y2="12" />
                     <polyline points="12 5 19 12 12 19" />
                   </svg>
@@ -1114,7 +1268,9 @@ export default function Home() {
                   </div>
                   {/* Quote */}
                   <p className="text-xs sm:text-[13px] text-neutral-600 font-semibold italic leading-relaxed line-clamp-3">
-                    &quot;Since transitioning to digital QR menus, our table turnover rate increased by 25%. On busy Friday afternoons, customers scan and order instantly, reducing order delays to zero.&quot;
+                    &quot;Since transitioning to digital QR menus, our table turnover rate increased
+                    by 25%. On busy Friday afternoons, customers scan and order instantly, reducing
+                    order delays to zero.&quot;
                   </p>
                 </div>
                 {/* Author Info */}
@@ -1129,8 +1285,12 @@ export default function Home() {
                     />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-neutral-950 truncate">Tasnim Rahman</span>
-                    <span className="text-[10px] font-semibold text-emerald-600 truncate">General Manager, Sultan&apos;s Dine</span>
+                    <span className="text-xs font-bold text-neutral-950 truncate">
+                      Tasnim Rahman
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-600 truncate">
+                      General Manager, Sultan&apos;s Dine
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1148,7 +1308,9 @@ export default function Home() {
                   </div>
                   {/* Quote */}
                   <p className="text-xs sm:text-[13px] text-neutral-600 font-semibold italic leading-relaxed line-clamp-3">
-                    &quot;Our younger demographic loves the table-side checkout. The bKash integration makes payments frictionless, and the kitchen display prepares orders in real-time.&quot;
+                    &quot;Our younger demographic loves the table-side checkout. The bKash
+                    integration makes payments frictionless, and the kitchen display prepares orders
+                    in real-time.&quot;
                   </p>
                 </div>
                 {/* Author Info */}
@@ -1163,8 +1325,12 @@ export default function Home() {
                     />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-neutral-950 truncate">Zubair Siddique</span>
-                    <span className="text-[10px] font-semibold text-emerald-600 truncate">Co-founder, Takeout Banani</span>
+                    <span className="text-xs font-bold text-neutral-950 truncate">
+                      Zubair Siddique
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-600 truncate">
+                      Co-founder, Takeout Banani
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1182,7 +1348,8 @@ export default function Home() {
                   </div>
                   {/* Quote */}
                   <p className="text-xs sm:text-[13px] text-neutral-600 font-semibold italic leading-relaxed line-clamp-3">
-                    &quot;Updating prices and sold-out items across multiple branches used to take hours. Now, we manage everything from one unified web dashboard instantly.&quot;
+                    &quot;Updating prices and sold-out items across multiple branches used to take
+                    hours. Now, we manage everything from one unified web dashboard instantly.&quot;
                   </p>
                 </div>
                 {/* Author Info */}
@@ -1197,8 +1364,12 @@ export default function Home() {
                     />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-neutral-950 truncate">Salman Faruq</span>
-                    <span className="text-[10px] font-semibold text-emerald-600 truncate">Director, Chillox Gulshan</span>
+                    <span className="text-xs font-bold text-neutral-950 truncate">
+                      Salman Faruq
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-600 truncate">
+                      Director, Chillox Gulshan
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1216,7 +1387,9 @@ export default function Home() {
                   </div>
                   {/* Quote */}
                   <p className="text-xs sm:text-[13px] text-neutral-600 font-semibold italic leading-relaxed line-clamp-3">
-                    &quot;With massive crowds during weekend evening hours, the automated order dispatch directly to the kitchen display has minimized preparation errors completely.&quot;
+                    &quot;With massive crowds during weekend evening hours, the automated order
+                    dispatch directly to the kitchen display has minimized preparation errors
+                    completely.&quot;
                   </p>
                 </div>
                 {/* Author Info */}
@@ -1231,12 +1404,15 @@ export default function Home() {
                     />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-neutral-950 truncate">Sohail Ahmed</span>
-                    <span className="text-[10px] font-semibold text-emerald-600 truncate">Operations Head, Kacchi Bhai</span>
+                    <span className="text-xs font-bold text-neutral-950 truncate">
+                      Sohail Ahmed
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-600 truncate">
+                      Operations Head, Kacchi Bhai
+                    </span>
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
 
@@ -1273,15 +1449,19 @@ export default function Home() {
                         strokeWidth="2.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className={`w-4 h-4 text-neutral-450 transition-transform duration-300 shrink-0 ${isOpen ? "rotate-180" : ""
-                          }`}
+                        className={`w-4 h-4 text-neutral-450 transition-transform duration-300 shrink-0 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
                       >
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </button>
                     <div
-                      className={`grid transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? "grid-rows-[1fr] opacity-100 pb-5 sm:pb-6" : "grid-rows-[0fr] opacity-0"
-                        }`}
+                      className={`grid transition-all duration-300 ease-in-out overflow-hidden ${
+                        isOpen
+                          ? "grid-rows-[1fr] opacity-100 pb-5 sm:pb-6"
+                          : "grid-rows-[0fr] opacity-0"
+                      }`}
                     >
                       <div className="overflow-hidden">
                         <p className="text-xs sm:text-sm text-neutral-500 font-medium leading-relaxed">
@@ -1294,7 +1474,6 @@ export default function Home() {
               })}
             </div>
           </div>
-
         </div>
 
         {/* Premium Minimalist Footer Section */}
@@ -1305,19 +1484,28 @@ export default function Home() {
         {/* simulated QR code scanner modal */}
         {isScanning && (
           <div className="fixed inset-0 bg-deep-emerald-950/70 backdrop-blur-md z-100 flex items-center justify-center p-4">
-            <style dangerouslySetInnerHTML={{
-              __html: `
+            <style
+              dangerouslySetInnerHTML={{
+                __html: `
             @keyframes qrcodescan {
               0% { top: 0%; }
               50% { top: 100%; }
               100% { top: 0%; }
             }
-          `}} />
+          `,
+              }}
+            />
             <div className="bg-white rounded-3xl p-6 max-w-sm w-full flex flex-col gap-6 shadow-[0_25px_60px_rgba(0,0,0,0.15)] border border-neutral-100 text-center animate-in fade-in zoom-in duration-300">
               {/* Modal Header */}
               <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
                 <h3 className="text-lg font-black text-neutral-950 tracking-tight font-sans flex items-center gap-2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className="w-6 h-6 text-neutral-800">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    className="w-6 h-6 text-neutral-800"
+                  >
                     {/* Outer brackets */}
                     <path d="M3 8V5a2 2 0 0 1 2-2h3" />
                     <path d="M16 3h3a2 2 0 0 1 2 2v3" />
@@ -1361,7 +1549,13 @@ export default function Home() {
                   onClick={() => setIsScanning(false)}
                   className="w-8 h-8 rounded-full border border-neutral-100 flex items-center justify-center text-neutral-400 hover:text-neutral-900 active:scale-95 transition-all duration-200"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    className="w-4 h-4"
+                  >
                     <line x1="18" y1="6" x2="6" y2="18" />
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
@@ -1370,7 +1564,6 @@ export default function Home() {
 
               {/* Viewfinder Box */}
               <div className="relative aspect-square w-full bg-deep-emerald-950 rounded-2xl overflow-hidden flex items-center justify-center border border-deep-emerald-800 shadow-inner">
-
                 {/* Scanline laser */}
                 <div
                   className="absolute left-0 w-full h-0.5 bg-emerald-500 shadow-[0_0_10px_#10b981] z-25"
@@ -1394,16 +1587,22 @@ export default function Home() {
 
                 {/* simulated scan graphic overlay in case camera not yet accepted */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center bg-black/40 z-10 select-none pointer-events-none">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="w-16 h-16 text-white/20 animate-pulse">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    className="w-16 h-16 text-white/20 animate-pulse"
+                  >
                     <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
                     <path d="M12 6v6l4 2" />
                   </svg>
                   <span className="text-[11px] font-bold text-neutral-400/80 uppercase tracking-widest leading-relaxed">
-                    Connecting camera...<br />
+                    Connecting camera...
+                    <br />
                     Hold QR Code steady
                   </span>
                 </div>
-
               </div>
 
               {/* Hint caption */}
@@ -1421,9 +1620,7 @@ export default function Home() {
             <span className="text-[13.5px] font-bold font-sans">{scanResultToast}</span>
           </div>
         )}
-
       </main>
-
     </div>
   );
 }

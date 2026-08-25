@@ -6,12 +6,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;
 }
 
-export default function Button({ 
-  children, 
-  className = "", 
-  onClick,
-  ...props 
-}: ButtonProps) {
+export default function Button({ children, className = "", onClick, ...props }: ButtonProps) {
   const [animate, setAnimate] = useState(false);
   const timeoutRef = useRef<number | null>(null);
 
@@ -26,7 +21,7 @@ export default function Button({
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     const el = e.currentTarget;
-    
+
     // Synchronously reset and restart CSS animation via DOM reflow
     el.classList.remove("animate");
     void el.offsetWidth;
@@ -37,7 +32,7 @@ export default function Button({
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = window.setTimeout(() => {
       setAnimate(false);
     }, 600);
@@ -48,12 +43,12 @@ export default function Button({
   };
 
   return (
-    <button 
+    <button
       onClick={handleClick}
       className={cn(
         "btn-bubble px-6 py-3 rounded-lg border-none text-white cursor-pointer bg-[#ff7a00] hover:bg-[#e56d00] transition-all duration-200 active:scale-95 text-xs font-bold leading-none select-none font-sans shadow-sm hover:shadow-md",
         animate && "animate",
-        className
+        className,
       )}
       {...props}
     >
@@ -63,4 +58,3 @@ export default function Button({
     </button>
   );
 }
-

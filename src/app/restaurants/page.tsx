@@ -131,8 +131,6 @@ export default function RestaurantsPage() {
 
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-10 flex flex-col gap-8 md:gap-12">
-        
-
         {/* Search & Categories Bar Container */}
         <div className="flex flex-col gap-4 w-full">
           {/* Search Row */}
@@ -140,11 +138,17 @@ export default function RestaurantsPage() {
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-950 self-start sm:self-center">
               All Restaurants
             </h2>
-            
+
             {/* Elegant Search Input & Standalone QR Button */}
             <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
               <div className="relative flex items-center bg-white border border-neutral-200/80 rounded-2xl px-5 py-2.5 w-full sm:w-[320px] transition-all duration-300 focus-within:border-neutral-400 shadow-sm h-[46px]">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-[18px] h-[18px] text-neutral-450 mr-3 shrink-0">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  className="w-[18px] h-[18px] text-neutral-450 mr-3 shrink-0"
+                >
                   <circle cx="11" cy="11" r="8" />
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
@@ -235,12 +239,19 @@ export default function RestaurantsPage() {
         {/* Directory Grid */}
         {filteredRestaurants.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl border border-neutral-150 flex flex-col items-center justify-center gap-4 shadow-sm w-full">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-16 h-16 text-neutral-300">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="w-16 h-16 text-neutral-300"
+            >
               <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z" />
             </svg>
             <h3 className="text-lg font-bold text-neutral-800">No restaurants found</h3>
             <p className="text-xs sm:text-sm text-neutral-500 font-semibold max-w-sm px-6">
-              We couldn&apos;t find any kitchen matching &quot;{searchQuery}&quot; under &quot;{selectedCuisine}&quot;. Try widening your filters.
+              We couldn&apos;t find any kitchen matching &quot;{searchQuery}&quot; under &quot;
+              {selectedCuisine}&quot;. Try widening your filters.
             </p>
           </div>
         ) : (
@@ -339,7 +350,9 @@ export default function RestaurantsPage() {
                                   strokeLinejoin="round"
                                 >
                                   <defs>
-                                    <linearGradient id={`half-star-rest-${restaurant.id}-${starIdx}`}>
+                                    <linearGradient
+                                      id={`half-star-rest-${restaurant.id}-${starIdx}`}
+                                    >
                                       <stop offset="50%" stopColor="#f59e0b" />
                                       <stop offset="50%" stopColor="transparent" />
                                     </linearGradient>
@@ -397,14 +410,17 @@ export default function RestaurantsPage() {
       {/* Simulated Scanner Viewfinder Overlay */}
       {isScanning && (
         <div className="fixed inset-0 bg-deep-emerald-950/70 backdrop-blur-md z-100 flex items-center justify-center p-4">
-          <style dangerouslySetInnerHTML={{
-            __html: `
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
             @keyframes scanlaser {
               0% { top: 0%; }
               50% { top: 100%; }
               100% { top: 0%; }
             }
-          `}} />
+          `,
+            }}
+          />
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full flex flex-col gap-6 shadow-2xl border border-neutral-100 text-center animate-in fade-in zoom-in duration-300">
             <div className="flex justify-between items-center pb-2 border-b border-neutral-100">
               <h3 className="text-lg font-black text-neutral-950 tracking-tight flex items-center gap-2">
@@ -429,11 +445,19 @@ export default function RestaurantsPage() {
               <div className="absolute bottom-4 left-4 w-6 h-6 border-b-4 border-l-4 border-emerald-500 rounded-bl-md" />
               <div className="absolute bottom-4 right-4 w-6 h-6 border-b-4 border-r-4 border-emerald-500 rounded-br-md" />
 
-              <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover opacity-80" />
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 w-full h-full object-cover opacity-80"
+              />
 
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 bg-black/40 z-10">
                 <span className="text-[11px] font-bold text-neutral-300 uppercase tracking-widest leading-relaxed">
-                  Connecting camera...<br />Hold QR steady
+                  Connecting camera...
+                  <br />
+                  Hold QR steady
                 </span>
               </div>
             </div>

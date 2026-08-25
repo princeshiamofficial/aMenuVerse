@@ -301,8 +301,8 @@ systemctl restart lsws
 
 Add these at your DNS provider:
 
-| Type | Name | Value        |
-| ---- | ---- | ------------ |
+| Type | Name | Value         |
+| ---- | ---- | ------------- |
 | A    | `@`  | `YOUR_VPS_IP` |
 | A    | `*`  | `YOUR_VPS_IP` |
 
@@ -369,15 +369,15 @@ pm2 restart amenuverse --update-env
 
 ## Troubleshooting
 
-| Problem                          | Fix                                                                     |
-| -------------------------------- | ----------------------------------------------------------------------- |
-| `502 / 503` from the browser     | Node not running — `pm2 list`, `pm2 logs amenuverse`; confirm port 3000 |
-| Health check DB `ok:false`       | Wrong `.env` MySQL creds, or DB/user not created in CyberPanel          |
-| `curl 127.0.0.1:3000` refused    | App crashed on boot — `pm2 logs amenuverse` (usually a missing env key) |
-| Subdomain shows 404 / wrong site | Missing wildcard `A` record or wildcard child vHost / rewrite rule      |
-| SSL error on subdomains          | Re-issue **wildcard** SSL via the DNS (Cloudflare) challenge            |
-| `.output` missing after clone    | `.output` is git-ignored — run `npm run build`                          |
-| Build killed / OOM               | Add swap, or build locally and upload `.output/` (see Step 8)           |
+| Problem                          | Fix                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| `502 / 503` from the browser     | Node not running — `pm2 list`, `pm2 logs amenuverse`; confirm port 3000   |
+| Health check DB `ok:false`       | Wrong `.env` MySQL creds, or DB/user not created in CyberPanel            |
+| `curl 127.0.0.1:3000` refused    | App crashed on boot — `pm2 logs amenuverse` (usually a missing env key)   |
+| Subdomain shows 404 / wrong site | Missing wildcard `A` record or wildcard child vHost / rewrite rule        |
+| SSL error on subdomains          | Re-issue **wildcard** SSL via the DNS (Cloudflare) challenge              |
+| `.output` missing after clone    | `.output` is git-ignored — run `npm run build`                            |
+| Build killed / OOM               | Add swap, or build locally and upload `.output/` (see Step 8)             |
 | Port 3000 already in use         | `pm2 delete amenuverse`, change `PORT` in `ecosystem.config.cjs`, restart |
 | Redis connection warnings        | Redis is optional — install it (Step 7) or remove `REDIS_URL` from `.env` |
 

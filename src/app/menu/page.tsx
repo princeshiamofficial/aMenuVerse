@@ -7,18 +7,7 @@ import Sidebar from "../components/Sidebar";
 import ImageUploader from "../../../ui/ImageUploader";
 import { EmojiProvider, Emoji } from "react-apple-emojis";
 import emojiData from "react-apple-emojis/src/data.json";
-import {
-  Menu,
-  Bell,
-  Search,
-  Star,
-  Check,
-  Utensils,
-  Plus,
-  Edit,
-  Trash2,
-  X
-} from "lucide-react";
+import { Menu, Bell, Search, Star, Check, Utensils, Plus, Edit, Trash2, X } from "lucide-react";
 
 interface MenuItemWithState {
   id: number;
@@ -51,7 +40,7 @@ const AVAILABLE_MENU_EMOJIS = [
   { name: "meat-on-bone", label: "🍖" },
   { name: "bacon", label: "🥓" },
   { name: "fried-shrimp", label: "🍤" },
-  
+
   // Drinks & Beverages
   { name: "cup-with-straw", label: "🥤" },
   { name: "bubble-tea", label: "🧋" },
@@ -105,7 +94,7 @@ const AVAILABLE_MENU_EMOJIS = [
   { name: "cherries", label: "🍒" },
   { name: "broccoli", label: "🥦" },
   { name: "garlic", label: "🧄" },
-  { name: "onion", label: "🧅" }
+  { name: "onion", label: "🧅" },
 ];
 
 const getCategoryAppleEmojiName = (category: string): string => {
@@ -154,34 +143,38 @@ export default function MenuPage() {
   };
 
   const [items, setItems] = useState<MenuItemWithState[]>([]);
-  const [categoriesList, setCategoriesList] = useState<{ id: string; rawId: number; name: string; emoji?: string }[]>([]);
+  const [categoriesList, setCategoriesList] = useState<
+    { id: string; rawId: number; name: string; emoji?: string }[]
+  >([]);
 
   useEffect(() => {
     fetch("/api/tenant/menu")
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) {
-          setItems(data.map((item: MenuItemWithState) => ({
-            ...item,
-            available: true
-          })));
+          setItems(
+            data.map((item: MenuItemWithState) => ({
+              ...item,
+              available: true,
+            })),
+          );
         }
       })
-      .catch(err => console.error("Error loading menu items:", err));
+      .catch((err) => console.error("Error loading menu items:", err));
 
     fetch("/api/tenant/categories")
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) {
           setCategoriesList(data);
         }
       })
-      .catch(err => console.error("Error loading categories:", err));
+      .catch((err) => console.error("Error loading categories:", err));
   }, []);
 
   // Map categories from categories table
   const categories = React.useMemo(() => {
-    return ["All", ...categoriesList.map(c => c.name)];
+    return ["All", ...categoriesList.map((c) => c.name)];
   }, [categoriesList]);
 
   const triggerToast = (message: string) => {
@@ -190,18 +183,20 @@ export default function MenuPage() {
   };
 
   const toggleAvailability = (itemId: number) => {
-    setItems(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const nextState = !item.available;
-        triggerToast(`"${item.name}" is now marked as ${nextState ? "Available" : "Sold Out"}`);
-        return { ...item, available: nextState };
-      }
-      return item;
-    }));
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === itemId) {
+          const nextState = !item.available;
+          triggerToast(`"${item.name}" is now marked as ${nextState ? "Available" : "Sold Out"}`);
+          return { ...item, available: nextState };
+        }
+        return item;
+      }),
+    );
   };
 
   const togglePopular = async (itemId: number) => {
-    const target = items.find(x => x.id === itemId);
+    const target = items.find((x) => x.id === itemId);
     if (!target) return;
     const nextPopular = !target.popular;
 
@@ -216,19 +211,23 @@ export default function MenuPage() {
           price: target.price,
           image: target.image,
           category: target.category,
-          popular: nextPopular
-        })
+          popular: nextPopular,
+        }),
       });
 
       const data = await response.json();
       if (response.ok && data.success) {
-        setItems(prev => prev.map(item => {
-          if (item.id === itemId) {
-            triggerToast(`"${item.name}" ${nextPopular ? "added to" : "removed from"} Popular Highlights`);
-            return { ...item, popular: nextPopular };
-          }
-          return item;
-        }));
+        setItems((prev) =>
+          prev.map((item) => {
+            if (item.id === itemId) {
+              triggerToast(
+                `"${item.name}" ${nextPopular ? "added to" : "removed from"} Popular Highlights`,
+              );
+              return { ...item, popular: nextPopular };
+            }
+            return item;
+          }),
+        );
       } else {
         triggerToast(data.error || "Failed to update highlights.");
       }
@@ -241,7 +240,9 @@ export default function MenuPage() {
     e.preventDefault();
     if (!menuName || !menuCategory) return;
 
-    const defaultImage = menuImage || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80";
+    const defaultImage =
+      menuImage ||
+      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80";
 
     try {
       const response = await fetch("/api/tenant/menu", {
@@ -253,8 +254,8 @@ export default function MenuPage() {
           price: menuPrice,
           image: defaultImage,
           category: menuCategory,
-          popular: false
-        })
+          popular: false,
+        }),
       });
 
       const data = await response.json();
@@ -268,9 +269,9 @@ export default function MenuPage() {
           category: menuCategory,
           popular: false,
           available: true,
-          emoji: menuEmoji
+          emoji: menuEmoji,
         };
-        setItems(prev => [newItem, ...prev]);
+        setItems((prev) => [newItem, ...prev]);
         triggerToast(`Added "${menuName}" to the menu.`);
       } else {
         triggerToast(data.error || "Failed to add menu item.");
@@ -315,26 +316,28 @@ export default function MenuPage() {
           price: menuPrice,
           image: menuImage,
           category: menuCategory,
-          popular: editingItem.popular
-        })
+          popular: editingItem.popular,
+        }),
       });
 
       const data = await response.json();
       if (response.ok && data.success) {
-        setItems(prev => prev.map(x => {
-          if (x.id === editingItem.id) {
-            return {
-              ...x,
-              name: menuName,
-              price: menuPrice,
-              category: menuCategory,
-              description: menuDescription,
-              image: menuImage,
-              emoji: menuEmoji
-            };
-          }
-          return x;
-        }));
+        setItems((prev) =>
+          prev.map((x) => {
+            if (x.id === editingItem.id) {
+              return {
+                ...x,
+                name: menuName,
+                price: menuPrice,
+                category: menuCategory,
+                description: menuDescription,
+                image: menuImage,
+                emoji: menuEmoji,
+              };
+            }
+            return x;
+          }),
+        );
         triggerToast(`Updated "${menuName}" details.`);
       } else {
         triggerToast(data.error || "Failed to update menu item.");
@@ -349,16 +352,16 @@ export default function MenuPage() {
   };
 
   const handleDeleteItem = async (itemId: number) => {
-    const itemToDelete = items.find(x => x.id === itemId);
+    const itemToDelete = items.find((x) => x.id === itemId);
     if (!itemToDelete) return;
     if (confirm(`Are you sure you want to delete "${itemToDelete.name}" from the menu?`)) {
       try {
         const response = await fetch(`/api/tenant/menu?id=${itemId}`, {
-          method: "DELETE"
+          method: "DELETE",
         });
         const data = await response.json();
         if (response.ok && data.success) {
-          setItems(prev => prev.filter(x => x.id !== itemId));
+          setItems((prev) => prev.filter((x) => x.id !== itemId));
           triggerToast(`Removed "${itemToDelete.name}" from the menu.`);
         } else {
           triggerToast(data.error || "Failed to delete item.");
@@ -369,9 +372,10 @@ export default function MenuPage() {
     }
   };
 
-  const filteredItems: MenuItemWithState[] = items.filter(item => {
+  const filteredItems: MenuItemWithState[] = items.filter((item) => {
     const matchCategory = selectedCategory === "All" || item.category === selectedCategory;
-    const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchSearch =
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCategory && matchSearch;
   });
@@ -379,7 +383,6 @@ export default function MenuPage() {
   return (
     <EmojiProvider data={emojiData}>
       <div className="min-h-screen bg-[#f8fafc] flex text-slate-800 font-sans overflow-hidden">
-
         {/* Desktop Sidebar */}
         <div className="hidden lg:flex h-screen shrink-0">
           <Sidebar
@@ -416,7 +419,6 @@ export default function MenuPage() {
 
         {/* Main Panel */}
         <div className="flex-1 flex flex-col h-screen overflow-y-auto">
-
           {/* Top Navbar */}
           <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10 shrink-0">
             <div className="flex items-center gap-3">
@@ -427,7 +429,9 @@ export default function MenuPage() {
               >
                 <Menu className="w-5 h-5" />
               </button>
-              <h1 className="text-[17px] font-semibold tracking-wide text-slate-800">Menu Settings</h1>
+              <h1 className="text-[17px] font-semibold tracking-wide text-slate-800">
+                Menu Settings
+              </h1>
             </div>
 
             <div className="flex items-center gap-4">
@@ -442,7 +446,9 @@ export default function MenuPage() {
                 <div className="w-8 h-8 rounded-full bg-linear-to-tr from-[#ff7a00] to-amber-500 flex items-center justify-center font-bold text-xs text-white">
                   CH
                 </div>
-                <span className="hidden md:inline text-xs font-semibold text-slate-600">Color Hut Admin</span>
+                <span className="hidden md:inline text-xs font-semibold text-slate-600">
+                  Color Hut Admin
+                </span>
               </div>
             </div>
           </header>
@@ -457,7 +463,6 @@ export default function MenuPage() {
 
           {/* Content Body */}
           <main className="p-6 w-full flex-1 flex flex-col gap-6">
-
             {/* Controls Bar */}
             <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
               {/* Category tabs list */}
@@ -466,13 +471,17 @@ export default function MenuPage() {
                   <button
                     key={idx}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${selectedCategory === cat
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      selectedCategory === cat
                         ? "bg-[#ff7a00] text-white shadow-sm"
                         : "text-slate-550 hover:text-slate-850 bg-white border border-slate-200 hover:bg-slate-100"
-                      }`}
+                    }`}
                   >
                     <span className="w-4 h-4 flex items-center justify-center">
-                      <Emoji name={getCategoryAppleEmojiName(cat)} className="w-full h-full object-contain" />
+                      <Emoji
+                        name={getCategoryAppleEmojiName(cat)}
+                        className="w-full h-full object-contain"
+                      />
                     </span>
                     <span>{cat}</span>
                   </button>
@@ -510,13 +519,14 @@ export default function MenuPage() {
 
             {/* Grid of Dishes */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {filteredItems.map(item => (
+              {filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  className={`bg-white border rounded-2xl p-4 flex gap-4 transition-all duration-200 shadow-sm ${item.available
+                  className={`bg-white border rounded-2xl p-4 flex gap-4 transition-all duration-200 shadow-sm ${
+                    item.available
                       ? "border-slate-200 hover:border-slate-300"
                       : "border-slate-200 bg-slate-50 opacity-70"
-                    }`}
+                  }`}
                 >
                   {/* Product Image */}
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200 flex items-center justify-center">
@@ -545,13 +555,18 @@ export default function MenuPage() {
                   <div className="flex-1 flex flex-col gap-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-col min-w-0 flex-1">
-                        <h3 className={`text-xs font-bold truncate ${item.available ? "text-slate-800" : "text-slate-500"}`} title={item.name}>
+                        <h3
+                          className={`text-xs font-bold truncate ${item.available ? "text-slate-800" : "text-slate-500"}`}
+                          title={item.name}
+                        >
                           {item.name}
                         </h3>
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-xs font-bold text-[#ff7a00]">${item.price.toFixed(2)}</span>
+                        <span className="text-xs font-bold text-[#ff7a00]">
+                          ${item.price.toFixed(2)}
+                        </span>
 
                         <button
                           onClick={() => handleStartEdit(item)}
@@ -581,8 +596,13 @@ export default function MenuPage() {
                         onClick={() => toggleAvailability(item.id)}
                         className="flex items-center gap-1.5 group select-none text-[10px] font-bold"
                       >
-                        <div className={`w-8 h-4.5 rounded-full p-0.5 transition-colors flex ${item.available ? "bg-emerald-500 justify-end" : "bg-slate-350 justify-start"
-                          }`}>
+                        <div
+                          className={`w-8 h-4.5 rounded-full p-0.5 transition-colors flex ${
+                            item.available
+                              ? "bg-emerald-500 justify-end"
+                              : "bg-slate-350 justify-start"
+                          }`}
+                        >
                           <div className="w-3.5 h-3.5 rounded-full bg-white shadow" />
                         </div>
                         <span className={item.available ? "text-emerald-600" : "text-slate-500"}>
@@ -594,24 +614,27 @@ export default function MenuPage() {
                       <button
                         onClick={() => item.available && togglePopular(item.id)}
                         disabled={!item.available}
-                        className={`flex items-center gap-1 text-[10px] font-bold py-1 px-2 rounded-lg border transition-colors ${item.popular
+                        className={`flex items-center gap-1 text-[10px] font-bold py-1 px-2 rounded-lg border transition-colors ${
+                          item.popular
                             ? "bg-amber-50 border-amber-200 text-amber-600"
                             : "bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-800"
-                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        } disabled:opacity-40 disabled:cursor-not-allowed`}
                       >
                         <Star className={`w-3 h-3 ${item.popular ? "fill-amber-400" : ""}`} />
                         <span>Popular</span>
                       </button>
                     </div>
                   </div>
-
                 </div>
               ))}
             </div>
             {/* Add Menu Item Modal */}
             {showAddModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-                <form onSubmit={handleAddItem} className="bg-white border border-slate-200 rounded-2xl p-6 max-w-sm w-full flex flex-col gap-4 text-left shadow-2xl animate-in zoom-in-95 duration-200">
+                <form
+                  onSubmit={handleAddItem}
+                  className="bg-white border border-slate-200 rounded-2xl p-6 max-w-sm w-full flex flex-col gap-4 text-left shadow-2xl animate-in zoom-in-95 duration-200"
+                >
                   <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                     <div>
                       <h3 className="text-sm font-black text-slate-900">Add New Menu Item</h3>
@@ -628,7 +651,9 @@ export default function MenuPage() {
 
                   <div className="flex flex-col gap-3 py-1">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500">Dish Name</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500">
+                        Dish Name
+                      </label>
                       <input
                         type="text"
                         required
@@ -640,7 +665,9 @@ export default function MenuPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500">Dish Emoji Icon</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500">
+                        Dish Emoji Icon
+                      </label>
                       <div className="flex gap-1.5 flex-wrap p-2.5 rounded-xl bg-slate-50 border border-slate-200 max-h-[105px] overflow-y-auto scrollbar-none">
                         {AVAILABLE_MENU_EMOJIS.map((item) => (
                           <button
@@ -648,8 +675,8 @@ export default function MenuPage() {
                             type="button"
                             onClick={() => setMenuEmoji(item.name)}
                             className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all cursor-pointer ${
-                              menuEmoji === item.name 
-                                ? "border-[#ff7a00] bg-orange-50/50 shadow-sm scale-110" 
+                              menuEmoji === item.name
+                                ? "border-[#ff7a00] bg-orange-50/50 shadow-sm scale-110"
                                 : "border-slate-200/60 bg-white hover:border-slate-350 hover:bg-slate-50"
                             }`}
                           >
@@ -663,27 +690,37 @@ export default function MenuPage() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase font-bold text-slate-500">Category</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-500">
+                          Category
+                        </label>
                         <select
                           value={menuCategory}
                           onChange={(e) => setMenuCategory(e.target.value)}
                           className="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#ff7a00] text-slate-800 font-bold"
                         >
-                          {categories.filter(c => c !== "All").map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
+                          {categories
+                            .filter((c) => c !== "All")
+                            .map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
                         </select>
                       </div>
 
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase font-bold text-slate-500">Price ($)</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-500">
+                          Price ($)
+                        </label>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
                           required
                           value={menuPrice || ""}
-                          onChange={(e) => setMenuPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                          onChange={(e) =>
+                            setMenuPrice(Math.max(0, parseFloat(e.target.value) || 0))
+                          }
                           placeholder="0.00"
                           className="w-full text-xs px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#ff7a00] text-[#ff7a00] font-bold"
                         />
@@ -691,7 +728,9 @@ export default function MenuPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500">Image</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500">
+                        Image
+                      </label>
                       <div className="flex h-9">
                         <input
                           type="text"
@@ -700,9 +739,9 @@ export default function MenuPage() {
                           onChange={(e) => setMenuImage(e.target.value)}
                           className="flex-1 h-full text-xs px-3.5 rounded-l-xl rounded-r-none border border-slate-200 border-r-0 focus:outline-none focus:border-[#ff7a00] text-slate-800 font-medium font-mono"
                         />
-                        <ImageUploader 
-                          onUploadSuccess={setMenuImage} 
-                          label="Upload" 
+                        <ImageUploader
+                          onUploadSuccess={setMenuImage}
+                          label="Upload"
                           className="h-full shrink-0"
                           buttonClassName="rounded-l-none h-full text-[10px]"
                         />
@@ -710,7 +749,9 @@ export default function MenuPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500">Description</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500">
+                        Description
+                      </label>
                       <textarea
                         placeholder="Describe the dish ingredients, taste, etc."
                         value={menuDescription}
@@ -743,11 +784,16 @@ export default function MenuPage() {
             {/* Edit Menu Item Modal */}
             {showEditModal && editingItem && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-                <form onSubmit={handleEditItem} className="bg-white border border-slate-200 rounded-2xl p-6 max-w-sm w-full flex flex-col gap-4 text-left shadow-2xl animate-in zoom-in-95 duration-200">
+                <form
+                  onSubmit={handleEditItem}
+                  className="bg-white border border-slate-200 rounded-2xl p-6 max-w-sm w-full flex flex-col gap-4 text-left shadow-2xl animate-in zoom-in-95 duration-200"
+                >
                   <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                     <div>
                       <h3 className="text-sm font-black text-slate-900">Edit Menu Item</h3>
-                      <p className="text-xs text-slate-500">Update dish details in the digital menu</p>
+                      <p className="text-xs text-slate-500">
+                        Update dish details in the digital menu
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -763,7 +809,9 @@ export default function MenuPage() {
 
                   <div className="flex flex-col gap-3 py-1">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500">Dish Name</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500">
+                        Dish Name
+                      </label>
                       <input
                         type="text"
                         required
@@ -775,7 +823,9 @@ export default function MenuPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500">Dish Emoji Icon</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500">
+                        Dish Emoji Icon
+                      </label>
                       <div className="flex gap-1.5 flex-wrap p-2.5 rounded-xl bg-slate-50 border border-slate-200 max-h-[105px] overflow-y-auto scrollbar-none">
                         {AVAILABLE_MENU_EMOJIS.map((item) => (
                           <button
@@ -783,8 +833,8 @@ export default function MenuPage() {
                             type="button"
                             onClick={() => setMenuEmoji(item.name)}
                             className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all cursor-pointer ${
-                              menuEmoji === item.name 
-                                ? "border-[#ff7a00] bg-orange-50/50 shadow-sm scale-110" 
+                              menuEmoji === item.name
+                                ? "border-[#ff7a00] bg-orange-50/50 shadow-sm scale-110"
                                 : "border-slate-200/60 bg-white hover:border-slate-350 hover:bg-slate-50"
                             }`}
                           >
@@ -798,27 +848,37 @@ export default function MenuPage() {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase font-bold text-slate-500">Category</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-500">
+                          Category
+                        </label>
                         <select
                           value={menuCategory}
                           onChange={(e) => setMenuCategory(e.target.value)}
                           className="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#ff7a00] text-slate-800 font-bold"
                         >
-                          {categories.filter(c => c !== "All").map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
+                          {categories
+                            .filter((c) => c !== "All")
+                            .map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
                         </select>
                       </div>
 
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase font-bold text-slate-500">Price ($)</label>
+                        <label className="text-[10px] uppercase font-bold text-slate-500">
+                          Price ($)
+                        </label>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
                           required
                           value={menuPrice || ""}
-                          onChange={(e) => setMenuPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                          onChange={(e) =>
+                            setMenuPrice(Math.max(0, parseFloat(e.target.value) || 0))
+                          }
                           placeholder="0.00"
                           className="w-full text-xs px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#ff7a00] text-[#ff7a00] font-bold"
                         />
@@ -826,7 +886,9 @@ export default function MenuPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500">Image</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500">
+                        Image
+                      </label>
                       <div className="flex h-9">
                         <input
                           type="text"
@@ -835,9 +897,9 @@ export default function MenuPage() {
                           onChange={(e) => setMenuImage(e.target.value)}
                           className="flex-1 h-full text-xs px-3.5 rounded-l-xl rounded-r-none border border-slate-200 border-r-0 focus:outline-none focus:border-[#ff7a00] text-slate-800 font-medium font-mono"
                         />
-                        <ImageUploader 
-                          onUploadSuccess={setMenuImage} 
-                          label="Upload" 
+                        <ImageUploader
+                          onUploadSuccess={setMenuImage}
+                          label="Upload"
                           className="h-full shrink-0"
                           buttonClassName="rounded-l-none h-full text-[10px]"
                         />
@@ -845,7 +907,9 @@ export default function MenuPage() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] uppercase font-bold text-slate-500">Description</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500">
+                        Description
+                      </label>
                       <textarea
                         placeholder="Describe the dish ingredients, taste, etc."
                         value={menuDescription}
@@ -877,10 +941,8 @@ export default function MenuPage() {
                 </form>
               </div>
             )}
-
           </main>
         </div>
-
       </div>
     </EmojiProvider>
   );

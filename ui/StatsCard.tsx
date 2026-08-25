@@ -23,14 +23,14 @@ export default function StatsCard({
     <div
       className={cn(
         "border text-card-foreground group relative overflow-hidden transition-all duration-300 hover:shadow-lg active:scale-95 sm:active:scale-100 bg-white p-4 rounded-xl border-none sm:border border-slate-200/80 shadow-sm sm:shadow-md w-full h-[124px] sm:h-[84px] flex items-center justify-center",
-        className
+        className,
       )}
     >
       {/* Mobile Touch Overlay */}
       <div
         className={cn(
           "absolute inset-0 opacity-[0.03] sm:hidden transition-opacity group-active:opacity-[0.06]",
-          iconBgClass
+          iconBgClass,
         )}
       />
 
@@ -40,7 +40,7 @@ export default function StatsCard({
         <div
           className={cn(
             "p-2.5 sm:p-3 rounded-xl sm:rounded-full transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm sm:shadow-none shrink-0 w-12 h-12 flex items-center justify-center",
-            iconBgClass
+            iconBgClass,
           )}
         >
           <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6", iconColorClass)} />

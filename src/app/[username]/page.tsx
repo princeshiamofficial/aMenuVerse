@@ -28,7 +28,7 @@ import {
   ClipboardList,
   MoreVertical,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 
 interface PageProps {
@@ -36,31 +36,137 @@ interface PageProps {
 }
 
 // Mock reviews data to simulate actual client ratings
-const MOCK_REVIEWS_MAP: { [key: number]: Array<{ author: string; date: string; stars: number; text: string; avatar: string }> } = {
+const MOCK_REVIEWS_MAP: {
+  [key: number]: Array<{
+    author: string;
+    date: string;
+    stars: number;
+    text: string;
+    avatar: string;
+  }>;
+} = {
   1: [
-    { author: "Ariful Islam", date: "2 days ago", stars: 5, text: "The Smoked BBQ Bacon Burger is absolutely massive! The preparation was super fast, and the sauce is stellar.", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80" },
-    { author: "Nusrat Jahan", date: "1 week ago", stars: 5, text: "Great digital ordering experience. Scan, click, and food arrives in minutes. The Truffle Fries are to die for!", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80" },
-    { author: "Tahmid Rahman", date: "3 weeks ago", stars: 4, text: "Solid burgers and fresh Mint Lemonade. Really liked the automated table routing system.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80" }
+    {
+      author: "Ariful Islam",
+      date: "2 days ago",
+      stars: 5,
+      text: "The Smoked BBQ Bacon Burger is absolutely massive! The preparation was super fast, and the sauce is stellar.",
+      avatar:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80",
+    },
+    {
+      author: "Nusrat Jahan",
+      date: "1 week ago",
+      stars: 5,
+      text: "Great digital ordering experience. Scan, click, and food arrives in minutes. The Truffle Fries are to die for!",
+      avatar:
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80",
+    },
+    {
+      author: "Tahmid Rahman",
+      date: "3 weeks ago",
+      stars: 4,
+      text: "Solid burgers and fresh Mint Lemonade. Really liked the automated table routing system.",
+      avatar:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80",
+    },
   ],
   2: [
-    { author: "Sabrina Chowdhury", date: "1 day ago", stars: 5, text: "Hands down the best Truffle Mushroom Pizza in town! Cozy vibes and fast table service.", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&auto=format&fit=crop&q=80" },
-    { author: "Rashedul Amin", date: "5 days ago", stars: 5, text: "Authentic Carbonara. Creamy, rich, and cured pancetta was perfectly crispy. 10/10 recommendation.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80" },
-    { author: "Mariya Sultana", date: "2 weeks ago", stars: 4, text: "Beautiful Margerita and great Tiramisu. Perfect spot for family dinners.", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&auto=format&fit=crop&q=80" }
+    {
+      author: "Sabrina Chowdhury",
+      date: "1 day ago",
+      stars: 5,
+      text: "Hands down the best Truffle Mushroom Pizza in town! Cozy vibes and fast table service.",
+      avatar:
+        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&auto=format&fit=crop&q=80",
+    },
+    {
+      author: "Rashedul Amin",
+      date: "5 days ago",
+      stars: 5,
+      text: "Authentic Carbonara. Creamy, rich, and cured pancetta was perfectly crispy. 10/10 recommendation.",
+      avatar:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80",
+    },
+    {
+      author: "Mariya Sultana",
+      date: "2 weeks ago",
+      stars: 4,
+      text: "Beautiful Margerita and great Tiramisu. Perfect spot for family dinners.",
+      avatar:
+        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&auto=format&fit=crop&q=80",
+    },
   ],
   3: [
-    { author: "Kazi Ashraful", date: "3 days ago", stars: 5, text: "The Dragon Sushi Roll is a work of art. Melt-in-your-mouth eel. Will definitely order again.", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80" },
-    { author: "Sonia Mirza", date: "1 week ago", stars: 5, text: "Phenomenal Tonkotsu Ramen broth. Super rich and deep flavor. Highly clean and premium sushi bar.", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80" },
-    { author: "Adnan Sami", date: "1 month ago", stars: 5, text: "Top notch Japanese food in Banani. Sake was warm and matcha ice cream was extremely premium.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80" }
+    {
+      author: "Kazi Ashraful",
+      date: "3 days ago",
+      stars: 5,
+      text: "The Dragon Sushi Roll is a work of art. Melt-in-your-mouth eel. Will definitely order again.",
+      avatar:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80",
+    },
+    {
+      author: "Sonia Mirza",
+      date: "1 week ago",
+      stars: 5,
+      text: "Phenomenal Tonkotsu Ramen broth. Super rich and deep flavor. Highly clean and premium sushi bar.",
+      avatar:
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80",
+    },
+    {
+      author: "Adnan Sami",
+      date: "1 month ago",
+      stars: 5,
+      text: "Top notch Japanese food in Banani. Sake was warm and matcha ice cream was extremely premium.",
+      avatar:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80",
+    },
   ],
   4: [
-    { author: "Fahim Shahriar", date: "4 days ago", stars: 5, text: "Outstanding Sichuan wontons! The chilli oil is spicy, numbing, and has a sweet tang. Incredible flavor.", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80" },
-    { author: "Anika Bushra", date: "1 week ago", stars: 4, text: "Very tasty Kung Pao chicken and silken mapo tofu. Fast turnaround for lunch hours.", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&auto=format&fit=crop&q=80" },
-    { author: "Imran Hasan", date: "3 weeks ago", stars: 5, text: "Best place for authentic Chinese food lovers. Steamed jasmine rice is extremely fragrant.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80" }
+    {
+      author: "Fahim Shahriar",
+      date: "4 days ago",
+      stars: 5,
+      text: "Outstanding Sichuan wontons! The chilli oil is spicy, numbing, and has a sweet tang. Incredible flavor.",
+      avatar:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&auto=format&fit=crop&q=80",
+    },
+    {
+      author: "Anika Bushra",
+      date: "1 week ago",
+      stars: 4,
+      text: "Very tasty Kung Pao chicken and silken mapo tofu. Fast turnaround for lunch hours.",
+      avatar:
+        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&auto=format&fit=crop&q=80",
+    },
+    {
+      author: "Imran Hasan",
+      date: "3 weeks ago",
+      stars: 5,
+      text: "Best place for authentic Chinese food lovers. Steamed jasmine rice is extremely fragrant.",
+      avatar:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80",
+    },
   ],
   5: [
-    { author: "Niaz Morshed", date: "1 day ago", stars: 5, text: "The Sichuan Chili Chicken is insanely spicy and delicious! Portion size was very good.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80" },
-    { author: "Farhana Yasmin", date: "3 days ago", stars: 5, text: "Extremely delicious dumplings and Yangzhou fried rice. Tastes just like traditional Cantonese style.", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80" }
-  ]
+    {
+      author: "Niaz Morshed",
+      date: "1 day ago",
+      stars: 5,
+      text: "The Sichuan Chili Chicken is insanely spicy and delicious! Portion size was very good.",
+      avatar:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&auto=format&fit=crop&q=80",
+    },
+    {
+      author: "Farhana Yasmin",
+      date: "3 days ago",
+      stars: 5,
+      text: "Extremely delicious dumplings and Yangzhou fried rice. Tastes just like traditional Cantonese style.",
+      avatar:
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&auto=format&fit=crop&q=80",
+    },
+  ],
 };
 
 // Custom SVG Icons (unused)
@@ -89,10 +195,18 @@ const renderFormattedText = (text: string) => {
   const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={index} className="text-neutral-800 font-bold">{part.slice(2, -2)}</strong>;
+      return (
+        <strong key={index} className="text-neutral-800 font-bold">
+          {part.slice(2, -2)}
+        </strong>
+      );
     }
     if (part.startsWith("*") && part.endsWith("*")) {
-      return <strong key={index} className="text-neutral-800 font-bold">{part.slice(1, -1)}</strong>;
+      return (
+        <strong key={index} className="text-neutral-800 font-bold">
+          {part.slice(1, -1)}
+        </strong>
+      );
     }
     return part;
   });
@@ -143,8 +257,6 @@ export default function RestaurantMenuPage({ params }: PageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username]);
 
-
-
   // Load custom branches if any, or default branches from restaurant data
   const allBranches = useMemo(() => {
     if (!restaurant) return [];
@@ -156,11 +268,10 @@ export default function RestaurantMenuPage({ params }: PageProps) {
     const targetBranchId = branchId || (allBranches && allBranches[0]?.id) || "";
     if (!targetBranchId) return restaurant?.location || "";
     const target = targetBranchId.toLowerCase().trim();
-    const b = allBranches.find((x: Branch) => 
-      x.id.toLowerCase().trim() === target || 
-      x.name.toLowerCase().trim() === target
+    const b = allBranches.find(
+      (x: Branch) => x.id.toLowerCase().trim() === target || x.name.toLowerCase().trim() === target,
     );
-    return b ? b.location : (restaurant?.location || "");
+    return b ? b.location : restaurant?.location || "";
   }, [branchId, allBranches, restaurant]);
 
   // Find the selected branch operating hours
@@ -168,11 +279,10 @@ export default function RestaurantMenuPage({ params }: PageProps) {
     const targetBranchId = branchId || (allBranches && allBranches[0]?.id) || "";
     if (!targetBranchId) return restaurant?.operatingHours || "";
     const target = targetBranchId.toLowerCase().trim();
-    const b = allBranches.find((x: Branch) => 
-      x.id.toLowerCase().trim() === target || 
-      x.name.toLowerCase().trim() === target
+    const b = allBranches.find(
+      (x: Branch) => x.id.toLowerCase().trim() === target || x.name.toLowerCase().trim() === target,
     );
-    return b ? b.operatingHours : (restaurant?.operatingHours || "");
+    return b ? b.operatingHours : restaurant?.operatingHours || "";
   }, [branchId, allBranches, restaurant]);
 
   // Find the selected branch phone number
@@ -180,19 +290,18 @@ export default function RestaurantMenuPage({ params }: PageProps) {
     const targetBranchId = branchId || (allBranches && allBranches[0]?.id) || "";
     if (!targetBranchId) return restaurant?.phone || "";
     const target = targetBranchId.toLowerCase().trim();
-    const b = allBranches.find((x: Branch) => 
-      x.id.toLowerCase().trim() === target || 
-      x.name.toLowerCase().trim() === target
+    const b = allBranches.find(
+      (x: Branch) => x.id.toLowerCase().trim() === target || x.name.toLowerCase().trim() === target,
     );
-    return b ? b.phone : (restaurant?.phone || "");
+    return b ? b.phone : restaurant?.phone || "";
   }, [branchId, allBranches, restaurant]);
 
   // Slideshow images for the cover — restaurant cover/offer slides only (no menu item images)
   const slideshowImages = useMemo(() => {
     if (!restaurant) return [];
-    
+
     let slides: string[] | string | undefined = restaurant.offerSlides || restaurant.offer_slides;
-    
+
     if (typeof slides === "string") {
       try {
         slides = JSON.parse(slides);
@@ -200,7 +309,7 @@ export default function RestaurantMenuPage({ params }: PageProps) {
         slides = undefined;
       }
     }
-    
+
     if (typeof slides === "string") {
       try {
         slides = JSON.parse(slides);
@@ -212,10 +321,9 @@ export default function RestaurantMenuPage({ params }: PageProps) {
     if (Array.isArray(slides) && slides.length > 0) {
       return slides as string[];
     }
-    
+
     return restaurant.image ? [restaurant.image] : [];
   }, [restaurant]);
-
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [prevSlide, setPrevSlide] = useState<number | null>(null);
@@ -240,9 +348,6 @@ export default function RestaurantMenuPage({ params }: PageProps) {
     return () => clearInterval(interval);
   }, [slideshowImages, currentSlide]);
 
-
-
-
   // Active Tab state (Facebook profile style: Menu, About, Reviews)
   const [activeTab, setActiveTab] = useState<"menu" | "about" | "reviews" | "orders">("menu");
 
@@ -257,8 +362,20 @@ export default function RestaurantMenuPage({ params }: PageProps) {
   const [cart, setCart] = useState<{ [key: number]: number }>({});
   const [isCartExpanded, setIsCartExpanded] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
-  const [actionToast, setActionToast] = useState<{ text: string; subText: string; type: "success" | "error" | "info" } | null>(null);
-  const [orders, setOrders] = useState<Array<{ id: string; items: Array<{ item: MenuItem; quantity: number }>; time: string; status: string; total: number }>>([]);
+  const [actionToast, setActionToast] = useState<{
+    text: string;
+    subText: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+  const [orders, setOrders] = useState<
+    Array<{
+      id: string;
+      items: Array<{ item: MenuItem; quantity: number }>;
+      time: string;
+      status: string;
+      total: number;
+    }>
+  >([]);
   const [isCategoriesSticky, setIsCategoriesSticky] = useState(false);
   const [isMenuDropdownOpen, setIsMenuDropdownOpen] = useState(false);
 
@@ -282,17 +399,20 @@ export default function RestaurantMenuPage({ params }: PageProps) {
 
   // Trigger Toast notifications
   const triggerToast = (msg: string, subText?: string, type?: "success" | "error" | "info") => {
-    const isError = msg.toLowerCase().includes("fail") || msg.toLowerCase().includes("error") || msg.toLowerCase().includes("invalid");
+    const isError =
+      msg.toLowerCase().includes("fail") ||
+      msg.toLowerCase().includes("error") ||
+      msg.toLowerCase().includes("invalid");
     setActionToast({
       text: msg,
       subText: subText || (isError ? "Something went wrong" : "Success"),
-      type: type || (isError ? "error" : "success")
+      type: type || (isError ? "error" : "success"),
     });
   };
 
   // Trigger bubble explosion effect on the closest element with the 'btn-bubble' class
   const triggerBubbleEffect = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const target = e.currentTarget.closest('.btn-bubble');
+    const target = e.currentTarget.closest(".btn-bubble");
     if (target) {
       target.classList.remove("animate");
       void (target as HTMLElement).offsetWidth;
@@ -313,7 +433,8 @@ export default function RestaurantMenuPage({ params }: PageProps) {
   // Copy Profile Link Share
   const handleShareProfile = () => {
     const url = window.location.href;
-    navigator.clipboard.writeText(url)
+    navigator.clipboard
+      .writeText(url)
       .then(() => {
         triggerToast("Link copied to clipboard! Share it with your friends.");
       })
@@ -325,22 +446,30 @@ export default function RestaurantMenuPage({ params }: PageProps) {
   // Extract menu categories dynamically or use persisted categories if available
   const categories = useMemo(() => {
     if (!restaurant) return ["All", "Popular"];
-    
+
     // If restaurant has categories from DB, use them (preserving "All" and "Popular")
-    if (restaurant.categories && Array.isArray(restaurant.categories) && restaurant.categories.length > 0) {
+    if (
+      restaurant.categories &&
+      Array.isArray(restaurant.categories) &&
+      restaurant.categories.length > 0
+    ) {
       return ["All", "Popular", ...restaurant.categories.map((c: { name: string }) => c.name)];
     }
-    
+
     // Fallback to dynamic extraction from menuItems
     if (!restaurant.menuItems) return ["All", "Popular"];
-    const cats = new Set<string>(restaurant.menuItems.map((item: MenuItem) => item.category as string));
+    const cats = new Set<string>(
+      restaurant.menuItems.map((item: MenuItem) => item.category as string),
+    );
     return ["All", "Popular", ...Array.from(cats)];
   }, [restaurant]);
 
   // Resolve correct category emoji based on DB category config
   const getCategoryEmoji = (catName: string): string => {
     if (restaurant && restaurant.categories && Array.isArray(restaurant.categories)) {
-      const match = restaurant.categories.find((c: { name: string; emoji?: string }) => c.name.toLowerCase() === catName.toLowerCase());
+      const match = restaurant.categories.find(
+        (c: { name: string; emoji?: string }) => c.name.toLowerCase() === catName.toLowerCase(),
+      );
       if (match && match.emoji) {
         return match.emoji;
       }
@@ -394,14 +523,16 @@ export default function RestaurantMenuPage({ params }: PageProps) {
   // Cart Summary details
   const cartItemsList = useMemo(() => {
     if (!restaurant || !restaurant.menuItems) return [];
-    return Object.keys(cart).map((idStr) => {
-      const id = parseInt(idStr);
-      const item = restaurant.menuItems.find((m: MenuItem) => m.id === id)!;
-      return {
-        item,
-        quantity: cart[id],
-      };
-    }).filter(entry => entry.item !== undefined);
+    return Object.keys(cart)
+      .map((idStr) => {
+        const id = parseInt(idStr);
+        const item = restaurant.menuItems.find((m: MenuItem) => m.id === id)!;
+        return {
+          item,
+          quantity: cart[id],
+        };
+      })
+      .filter((entry) => entry.item !== undefined);
   }, [cart, restaurant]);
 
   const totalItems = useMemo(() => {
@@ -409,17 +540,15 @@ export default function RestaurantMenuPage({ params }: PageProps) {
   }, [cart]);
 
   const totalPrice = useMemo(() => {
-    return cartItemsList.reduce(
-      (sum, entry) => sum + entry.quantity * entry.item.price,
-      0
-    );
+    return cartItemsList.reduce((sum, entry) => sum + entry.quantity * entry.item.price, 0);
   }, [cartItemsList]);
 
   // Trigger order submission to database
   const handlePlaceOrder = async () => {
     if (!restaurant) return;
     try {
-      const targetBranchId = branchId || (restaurant.branches && restaurant.branches[0]?.id) || "dhanmondi";
+      const targetBranchId =
+        branchId || (restaurant.branches && restaurant.branches[0]?.id) || "dhanmondi";
       const response = await fetch("/api/tenant/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -427,9 +556,13 @@ export default function RestaurantMenuPage({ params }: PageProps) {
           restaurantId: restaurant.id,
           branchId: targetBranchId,
           table: tableNumber,
-          items: cartItemsList.map(c => ({ name: c.item.name, quantity: c.quantity, price: c.item.price })),
-          total: totalPrice
-        })
+          items: cartItemsList.map((c) => ({
+            name: c.item.name,
+            quantity: c.quantity,
+            price: c.item.price,
+          })),
+          total: totalPrice,
+        }),
       });
 
       const data = await response.json();
@@ -437,9 +570,9 @@ export default function RestaurantMenuPage({ params }: PageProps) {
         const newOrder = {
           id: data.orderId,
           items: [...cartItemsList],
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           status: "Pending",
-          total: totalPrice
+          total: totalPrice,
         };
 
         setOrders((prev) => [newOrder, ...prev]);
@@ -465,7 +598,7 @@ export default function RestaurantMenuPage({ params }: PageProps) {
         setActiveTab("orders");
         setIsCartExpanded(false);
       },
-      isActive: activeTab === "orders" && !isCartExpanded
+      isActive: activeTab === "orders" && !isCartExpanded,
     },
     {
       id: "menu",
@@ -475,8 +608,8 @@ export default function RestaurantMenuPage({ params }: PageProps) {
         setActiveTab("menu");
         setIsCartExpanded(false);
       },
-      isActive: activeTab === "menu" && !isCartExpanded
-    }
+      isActive: activeTab === "menu" && !isCartExpanded,
+    },
   ];
 
   const rightNavItems = [
@@ -488,7 +621,7 @@ export default function RestaurantMenuPage({ params }: PageProps) {
         setActiveTab("reviews");
         setIsCartExpanded(false);
       },
-      isActive: activeTab === "reviews" && !isCartExpanded
+      isActive: activeTab === "reviews" && !isCartExpanded,
     },
     {
       id: "about",
@@ -498,8 +631,8 @@ export default function RestaurantMenuPage({ params }: PageProps) {
         setActiveTab("about");
         setIsCartExpanded(false);
       },
-      isActive: activeTab === "about" && !isCartExpanded
-    }
+      isActive: activeTab === "about" && !isCartExpanded,
+    },
   ];
 
   if (!mounted || (isLoading && !restaurant)) {
@@ -558,14 +691,20 @@ export default function RestaurantMenuPage({ params }: PageProps) {
             {/* Horizontal Categories pills placeholder */}
             <div className="flex gap-2 overflow-hidden py-1">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-8 w-20 sm:w-24 bg-white border border-neutral-200/60 rounded-full shrink-0 animate-pulse" />
+                <div
+                  key={i}
+                  className="h-8 w-20 sm:w-24 bg-white border border-neutral-200/60 rounded-full shrink-0 animate-pulse"
+                />
               ))}
             </div>
 
             {/* Menu Items Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white border border-neutral-250/20 rounded-2xl p-3 flex flex-col gap-3 shadow-xs">
+                <div
+                  key={i}
+                  className="bg-white border border-neutral-250/20 rounded-2xl p-3 flex flex-col gap-3 shadow-xs"
+                >
                   {/* Image Placeholder */}
                   <div className="w-full aspect-video bg-neutral-200 rounded-xl animate-pulse" />
                   {/* Text details */}
@@ -593,9 +732,9 @@ export default function RestaurantMenuPage({ params }: PageProps) {
   }
 
   // ── Appearance settings from DB (with safe defaults) ───────────────────
-  const primaryColor = restaurant?.primaryColor || '#059669';
-  const fontFamily   = 'ui-sans-serif, system-ui, sans-serif';
-  const layoutType   = restaurant?.layoutType   || 'grid';
+  const primaryColor = restaurant?.primaryColor || "#059669";
+  const fontFamily = "ui-sans-serif, system-ui, sans-serif";
+  const layoutType = restaurant?.layoutType || "grid";
 
   return (
     <EmojiProvider data={emojiData}>
@@ -605,10 +744,8 @@ export default function RestaurantMenuPage({ params }: PageProps) {
       >
         {/* Sticky Header */}
 
-
         {/* Main Content Layout Container */}
         <main className="flex-1 w-full flex flex-col">
-
           {/* Facebook Style Cover Photo Card Container */}
           <div className="w-full bg-[#f0f2f5] shadow-sm">
             <div className="max-w-6xl mx-auto relative">
@@ -656,7 +793,9 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                         e.stopPropagation();
                         setSlideDirection("prev");
                         setPrevSlide(currentSlide);
-                        setCurrentSlide((prev) => (prev - 1 + slideshowImages.length) % slideshowImages.length);
+                        setCurrentSlide(
+                          (prev) => (prev - 1 + slideshowImages.length) % slideshowImages.length,
+                        );
                       }}
                       className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/45 hover:bg-black/65 text-white rounded-full p-2 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-200 z-20 focus:outline-none cursor-pointer"
                       aria-label="Previous Slide"
@@ -690,8 +829,11 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                             setPrevSlide(currentSlide);
                             setCurrentSlide(index);
                           }}
-                          className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${index === currentSlide ? "bg-white w-4" : "bg-white/50 hover:bg-white/80"
-                            }`}
+                          className={`w-2 h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                            index === currentSlide
+                              ? "bg-white w-4"
+                              : "bg-white/50 hover:bg-white/80"
+                          }`}
                           aria-label={`Go to slide ${index + 1}`}
                           type="button"
                         />
@@ -703,10 +845,8 @@ export default function RestaurantMenuPage({ params }: PageProps) {
 
               {/* White info area overlapping cover photo */}
               <div className="bg-white rounded-t-2xl sm:rounded-t-3xl -mt-10 sm:-mt-16 md:-mt-20 pt-3 relative z-35 shadow-[0_10px_15px_-3px_rgba(0,0,0,0.03)]">
-
                 {/* Profile Details Row */}
                 <div className="px-3 sm:px-8 pb-3 flex items-center justify-between gap-5">
-
                   {/* Left Side: Avatar Profile Image & Text Info */}
                   <div className="flex flex-row items-end sm:items-center gap-2 sm:gap-5 text-left">
                     {/* Circular Profile Avatar (Logo) */}
@@ -776,18 +916,34 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                             }}
                             className="w-full px-4 py-2.5 text-xs font-bold text-neutral-750 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer text-left"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-400"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-neutral-400"
+                            >
+                              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                            </svg>
                             <span>Copy Link</span>
                           </button>
                           <button
                             onClick={() => {
                               setIsMenuDropdownOpen(false);
                               if (navigator.share) {
-                                navigator.share({
-                                  title: restaurant.name,
-                                  text: `Check out the digital food menu for ${restaurant.name}!`,
-                                  url: window.location.href,
-                                }).catch(() => { });
+                                navigator
+                                  .share({
+                                    title: restaurant.name,
+                                    text: `Check out the digital food menu for ${restaurant.name}!`,
+                                    url: window.location.href,
+                                  })
+                                  .catch(() => {});
                               } else {
                                 handleShareProfile();
                               }
@@ -801,7 +957,6 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                       </>
                     )}
                   </div>
-
                 </div>
 
                 {/* Desktop Tabs */}
@@ -812,15 +967,19 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                         setActiveTab("menu");
                         setIsCartExpanded(false);
                       }}
-                      className={`py-4 px-4 text-sm font-bold relative transition-colors cursor-pointer ${activeTab === "menu"
-                        ? "font-extrabold"
-                        : "text-neutral-500 hover:text-neutral-800"
-                        }`}
+                      className={`py-4 px-4 text-sm font-bold relative transition-colors cursor-pointer ${
+                        activeTab === "menu"
+                          ? "font-extrabold"
+                          : "text-neutral-500 hover:text-neutral-800"
+                      }`}
                       style={activeTab === "menu" ? { color: primaryColor } : {}}
                     >
                       Menu
                       {activeTab === "menu" && (
-                        <span className="absolute bottom-0 left-0 right-0 h-1 rounded-t-full" style={{ backgroundColor: primaryColor }} />
+                        <span
+                          className="absolute bottom-0 left-0 right-0 h-1 rounded-t-full"
+                          style={{ backgroundColor: primaryColor }}
+                        />
                       )}
                     </button>
                     <button
@@ -828,15 +987,19 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                         setActiveTab("about");
                         setIsCartExpanded(false);
                       }}
-                      className={`py-4 px-4 text-sm font-bold relative transition-colors cursor-pointer ${activeTab === "about"
-                        ? "font-extrabold"
-                        : "text-neutral-500 hover:text-neutral-800"
-                        }`}
+                      className={`py-4 px-4 text-sm font-bold relative transition-colors cursor-pointer ${
+                        activeTab === "about"
+                          ? "font-extrabold"
+                          : "text-neutral-500 hover:text-neutral-800"
+                      }`}
                       style={activeTab === "about" ? { color: primaryColor } : {}}
                     >
                       About
                       {activeTab === "about" && (
-                        <span className="absolute bottom-0 left-0 right-0 h-1 rounded-t-full" style={{ backgroundColor: primaryColor }} />
+                        <span
+                          className="absolute bottom-0 left-0 right-0 h-1 rounded-t-full"
+                          style={{ backgroundColor: primaryColor }}
+                        />
                       )}
                     </button>
                     <button
@@ -844,15 +1007,19 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                         setActiveTab("reviews");
                         setIsCartExpanded(false);
                       }}
-                      className={`py-4 px-4 text-sm font-bold relative transition-colors cursor-pointer ${activeTab === "reviews"
-                        ? "font-extrabold"
-                        : "text-neutral-500 hover:text-neutral-800"
-                        }`}
+                      className={`py-4 px-4 text-sm font-bold relative transition-colors cursor-pointer ${
+                        activeTab === "reviews"
+                          ? "font-extrabold"
+                          : "text-neutral-500 hover:text-neutral-800"
+                      }`}
                       style={activeTab === "reviews" ? { color: primaryColor } : {}}
                     >
                       Reviews
                       {activeTab === "reviews" && (
-                        <span className="absolute bottom-0 left-0 right-0 h-1 rounded-t-full" style={{ backgroundColor: primaryColor }} />
+                        <span
+                          className="absolute bottom-0 left-0 right-0 h-1 rounded-t-full"
+                          style={{ backgroundColor: primaryColor }}
+                        />
                       )}
                     </button>
                     <button
@@ -860,15 +1027,19 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                         setActiveTab("orders");
                         setIsCartExpanded(false);
                       }}
-                      className={`py-4 px-4 text-sm font-bold relative transition-colors cursor-pointer ${activeTab === "orders"
-                        ? "font-extrabold"
-                        : "text-neutral-500 hover:text-neutral-800"
-                        }`}
+                      className={`py-4 px-4 text-sm font-bold relative transition-colors cursor-pointer ${
+                        activeTab === "orders"
+                          ? "font-extrabold"
+                          : "text-neutral-500 hover:text-neutral-800"
+                      }`}
                       style={activeTab === "orders" ? { color: primaryColor } : {}}
                     >
                       Orders
                       {activeTab === "orders" && (
-                        <span className="absolute bottom-0 left-0 right-0 h-1 rounded-t-full" style={{ backgroundColor: primaryColor }} />
+                        <span
+                          className="absolute bottom-0 left-0 right-0 h-1 rounded-t-full"
+                          style={{ backgroundColor: primaryColor }}
+                        />
                       )}
                     </button>
                   </div>
@@ -902,17 +1073,15 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                     </div>
                   </div>
                 </div>
-
               </div>
-
             </div>
           </div>
 
-
-
-          <div className={`w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 ${activeTab === "menu" ? "mt-0" : "mt-3"} md:mt-6 flex flex-col md:flex-row gap-6 items-start ${totalItems > 0 ? "pb-48 md:pb-48" : "pb-36 md:pb-32"
-            }`}>
-
+          <div
+            className={`w-full max-w-6xl mx-auto px-4 sm:px-6 md:px-8 ${activeTab === "menu" ? "mt-0" : "mt-3"} md:mt-6 flex flex-col md:flex-row gap-6 items-start ${
+              totalItems > 0 ? "pb-48 md:pb-48" : "pb-36 md:pb-32"
+            }`}
+          >
             {/* LEFT SIDEBAR: Intro Card Box */}
             {activeTab === "about" && (
               <div className="w-full md:w-[350px] shrink-0 flex flex-col gap-4 text-left">
@@ -928,7 +1097,10 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                       renderFormattedText(restaurant.introText)
                     ) : (
                       <>
-                        Welcome to <strong className="text-neutral-800 font-bold">{restaurant.name}</strong> digital menu. Scan our unique QR codes directly at your table to place real-time kitchen orders instantly.
+                        Welcome to{" "}
+                        <strong className="text-neutral-800 font-bold">{restaurant.name}</strong>{" "}
+                        digital menu. Scan our unique QR codes directly at your table to place
+                        real-time kitchen orders instantly.
                       </>
                     )}
                   </p>
@@ -937,12 +1109,18 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                     <div className="flex items-center gap-3">
                       <Star className="w-[18px] h-[18px] text-amber-500 fill-amber-500 shrink-0" />
                       <span>
-                        Rated <strong className="text-neutral-800 font-bold">{restaurant.rating} Stars</strong> ({restaurant.reviews} reviews)
+                        Rated{" "}
+                        <strong className="text-neutral-800 font-bold">
+                          {restaurant.rating} Stars
+                        </strong>{" "}
+                        ({restaurant.reviews} reviews)
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <MapPin className="w-[18px] h-[18px] text-neutral-400 shrink-0" />
-                      <span className="truncate">Located at {branchAddress || restaurant.location}</span>
+                      <span className="truncate">
+                        Located at {branchAddress || restaurant.location}
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Clock className="w-[18px] h-[18px] text-neutral-400 shrink-0" />
@@ -959,7 +1137,6 @@ export default function RestaurantMenuPage({ params }: PageProps) {
 
             {/* RIGHT SIDE CONTENT: Active Tab details (Menu list, About description, reviews feed) */}
             <div className="grow w-full flex flex-col gap-4 text-left">
-
               {/* TAB CONTENT: Menu List */}
               {activeTab === "menu" && (
                 <div className="flex flex-col gap-4 w-full">
@@ -967,10 +1144,30 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                   <div className="flex md:hidden items-center justify-between gap-2.5 mt-0 w-full relative z-20">
                     {/* Call Waiter Quick Action Button */}
                     <Button
-                      onClick={() => triggerToast(`Waiter requested! A staff member is on their way to Table #${tableNumber}.`)}
+                      onClick={() =>
+                        triggerToast(
+                          `Waiter requested! A staff member is on their way to Table #${tableNumber}.`,
+                        )
+                      }
                       className="flex items-center gap-1.5 px-3 py-2.5 rounded-none rounded-br-xl -ml-4"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bell-ring"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /><path d="M4 2C2.8 3.7 2 5.7 2 8" /><path d="M22 8c0-2.3-.8-4.3-2-6" /></svg>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-bell-ring"
+                      >
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                        <path d="M4 2C2.8 3.7 2 5.7 2 8" />
+                        <path d="M22 8c0-2.3-.8-4.3-2-6" />
+                      </svg>
                       <span>Call Waiter</span>
                     </Button>
 
@@ -997,10 +1194,13 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                     </div>
                   </div>
 
-                  <div className={`flex flex-col gap-1.5 sticky top-0 md:relative md:top-auto z-30 bg-[#f0f2f5] transition-all duration-150 ${isCategoriesSticky
-                      ? "pt-4 pb-2 -mx-4 px-0 border-b border-neutral-200/50 shadow-sm mt-0 md:mx-0 md:px-0"
-                      : "pt-1.5 pb-2 -mx-4 px-0 md:mx-0 md:px-0 -mt-3 md:mt-0"
-                    }`}>
+                  <div
+                    className={`flex flex-col gap-1.5 sticky top-0 md:relative md:top-auto z-30 bg-[#f0f2f5] transition-all duration-150 ${
+                      isCategoriesSticky
+                        ? "pt-4 pb-2 -mx-4 px-0 border-b border-neutral-200/50 shadow-sm mt-0 md:mx-0 md:px-0"
+                        : "pt-1.5 pb-2 -mx-4 px-0 md:mx-0 md:px-0 -mt-3 md:mt-0"
+                    }`}
+                  >
                     {isCategoriesSticky && (
                       <div className="flex items-center justify-between px-4 pb-1 animate-in fade-in slide-in-from-top-1 duration-200">
                         <span className="text-xs font-black text-neutral-900 tracking-tight leading-none uppercase">
@@ -1012,21 +1212,32 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                       </div>
                     )}
 
-                    <div ref={categoriesScrollRef} className="flex gap-2 overflow-x-auto scrollbar-none w-full scroll-smooth px-4 md:px-0">
+                    <div
+                      ref={categoriesScrollRef}
+                      className="flex gap-2 overflow-x-auto scrollbar-none w-full scroll-smooth px-4 md:px-0"
+                    >
                       {categories.map((cat) => {
                         const isActive = selectedCategory.toLowerCase() === cat.toLowerCase();
                         return (
                           <button
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
-                            className={`px-4 py-2 text-xs font-bold rounded-full border whitespace-nowrap transition-all duration-200 cursor-pointer active:scale-95 shrink-0 flex items-center gap-1.5 ${isActive
+                            className={`px-4 py-2 text-xs font-bold rounded-full border whitespace-nowrap transition-all duration-200 cursor-pointer active:scale-95 shrink-0 flex items-center gap-1.5 ${
+                              isActive
                                 ? "text-white border-transparent shadow-sm"
                                 : "bg-white text-neutral-650 hover:text-neutral-900 border-neutral-200/80 hover:bg-neutral-50"
-                              }`}
-                            style={isActive ? { backgroundColor: primaryColor, borderColor: primaryColor } : {}}
+                            }`}
+                            style={
+                              isActive
+                                ? { backgroundColor: primaryColor, borderColor: primaryColor }
+                                : {}
+                            }
                           >
                             <span className="w-4.5 h-4.5 flex items-center justify-center">
-                              <Emoji name={getCategoryEmoji(cat)} className="w-full h-full object-contain" />
+                              <Emoji
+                                name={getCategoryEmoji(cat)}
+                                className="w-full h-full object-contain"
+                              />
                             </span>
                             <span>{cat}</span>
                           </button>
@@ -1039,28 +1250,36 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                   {filteredItems.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-2xl border border-neutral-200/80 flex flex-col items-center justify-center gap-4 shadow-sm">
                       <Search className="w-12 h-12 text-neutral-300" />
-                      <h3 className="text-lg font-bold text-neutral-800 leading-none">No menu items found</h3>
+                      <h3 className="text-lg font-bold text-neutral-800 leading-none">
+                        No menu items found
+                      </h3>
                       <p className="text-xs sm:text-sm text-neutral-500 font-semibold max-w-sm px-6 leading-relaxed">
-                        We couldn&apos;t find any dishes matching &quot;{searchQuery}&quot; under &quot;{selectedCategory}&quot;.
+                        We couldn&apos;t find any dishes matching &quot;{searchQuery}&quot; under
+                        &quot;{selectedCategory}&quot;.
                       </p>
                     </div>
                   ) : (
-                    <div className={`w-full ${
-                      layoutType === 'list'
-                        ? 'flex flex-col gap-3'
-                        : layoutType === 'compact'
-                        ? 'grid grid-cols-1 gap-2'
-                        : layoutType === 'masonry'
-                        ? 'columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-3 sm:gap-4 space-y-3 sm:space-y-4 [column-fill:_balance]'
-                        : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4'
-                    }`}>
+                    <div
+                      className={`w-full ${
+                        layoutType === "list"
+                          ? "flex flex-col gap-3"
+                          : layoutType === "compact"
+                            ? "grid grid-cols-1 gap-2"
+                            : layoutType === "masonry"
+                              ? "columns-2 sm:columns-2 md:columns-3 lg:columns-4 gap-3 sm:gap-4 space-y-3 sm:space-y-4 [column-fill:_balance]"
+                              : "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
+                      }`}
+                    >
                       {filteredItems.map((item: MenuItem) => {
                         const qtyInCart = cart[item.id] || 0;
 
                         // ──── 1. LIST LAYOUT ──────────────────────────────────────────
-                        if (layoutType === 'list') {
+                        if (layoutType === "list") {
                           return (
-                            <div key={item.id} className="bg-white border border-neutral-200/80 rounded-2xl p-3 shadow-xs flex gap-4 items-center hover:shadow-[0_6px_20px_rgba(0,0,0,0.025)] transition-all duration-300">
+                            <div
+                              key={item.id}
+                              className="bg-white border border-neutral-200/80 rounded-2xl p-3 shadow-xs flex gap-4 items-center hover:shadow-[0_6px_20px_rgba(0,0,0,0.025)] transition-all duration-300"
+                            >
                               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shrink-0 bg-neutral-100 relative">
                                 <Image
                                   src={item.image}
@@ -1077,22 +1296,34 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                               </div>
                               <div className="flex-1 min-w-0 flex flex-col justify-between min-h-[96px] sm:min-h-[112px] py-0.5">
                                 <div>
-                                  <h4 className="text-sm sm:text-base font-bold text-neutral-900 line-clamp-1">{item.name}</h4>
-                                  <p className="text-[11px] sm:text-xs text-neutral-500 font-semibold leading-relaxed mt-0.5 line-clamp-2">{item.description}</p>
+                                  <h4 className="text-sm sm:text-base font-bold text-neutral-900 line-clamp-1">
+                                    {item.name}
+                                  </h4>
+                                  <p className="text-[11px] sm:text-xs text-neutral-500 font-semibold leading-relaxed mt-0.5 line-clamp-2">
+                                    {item.description}
+                                  </p>
                                 </div>
                                 <div className="flex items-center justify-between mt-1">
-                                  <span className="text-sm font-black text-deep-emerald-950">${item.price.toFixed(2)}</span>
+                                  <span className="text-sm font-black text-deep-emerald-950">
+                                    ${item.price.toFixed(2)}
+                                  </span>
                                   <div className="flex items-center justify-center bg-white border border-neutral-200/80 rounded-xl h-9 px-1 shadow-sm btn-bubble">
                                     {qtyInCart > 0 ? (
                                       <div className="flex items-center gap-1.5 px-1.5">
                                         <button
                                           onClick={() => removeFromCart(item.id)}
                                           className="w-5 h-5 rounded-full flex items-center justify-center cursor-pointer transition-colors text-white"
-                                          style={{ backgroundColor: `${primaryColor}22`, color: primaryColor }}
+                                          style={{
+                                            backgroundColor: `${primaryColor}22`,
+                                            color: primaryColor,
+                                          }}
                                         >
                                           <Minus className="w-2 h-2" />
                                         </button>
-                                        <span className="text-xs font-black min-w-[14px] text-center" style={{ color: primaryColor }}>
+                                        <span
+                                          className="text-xs font-black min-w-[14px] text-center"
+                                          style={{ color: primaryColor }}
+                                        >
                                           {qtyInCart}
                                         </span>
                                         <button
@@ -1127,28 +1358,43 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                         }
 
                         // ──── 2. COMPACT LAYOUT ──────────────────────────────────────
-                        if (layoutType === 'compact') {
+                        if (layoutType === "compact") {
                           return (
-                            <div key={item.id} className="bg-white border border-neutral-200/80 rounded-xl p-3.5 shadow-xs flex items-center justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.015)] transition-all duration-300">
+                            <div
+                              key={item.id}
+                              className="bg-white border border-neutral-200/80 rounded-xl p-3.5 shadow-xs flex items-center justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.015)] transition-all duration-300"
+                            >
                               <div className="flex-1 pr-4 min-w-0">
-                                <h4 className="text-sm font-bold text-neutral-800 line-clamp-1">{item.name}</h4>
+                                <h4 className="text-sm font-bold text-neutral-800 line-clamp-1">
+                                  {item.name}
+                                </h4>
                                 {item.description && (
-                                  <p className="text-[10px] sm:text-[11px] text-neutral-400 font-semibold truncate mt-0.5">{item.description}</p>
+                                  <p className="text-[10px] sm:text-[11px] text-neutral-400 font-semibold truncate mt-0.5">
+                                    {item.description}
+                                  </p>
                                 )}
                               </div>
                               <div className="flex items-center gap-3 shrink-0">
-                                <span className="text-sm font-black text-neutral-800">${item.price.toFixed(2)}</span>
+                                <span className="text-sm font-black text-neutral-800">
+                                  ${item.price.toFixed(2)}
+                                </span>
                                 <div className="flex items-center justify-center bg-white border border-neutral-200/80 rounded-lg h-8 px-1 shadow-sm btn-bubble">
                                   {qtyInCart > 0 ? (
                                     <div className="flex items-center gap-1.5 px-1">
                                       <button
                                         onClick={() => removeFromCart(item.id)}
                                         className="w-4 h-4 rounded-full flex items-center justify-center cursor-pointer transition-colors text-white"
-                                        style={{ backgroundColor: `${primaryColor}22`, color: primaryColor }}
+                                        style={{
+                                          backgroundColor: `${primaryColor}22`,
+                                          color: primaryColor,
+                                        }}
                                       >
                                         <Minus className="w-1.5 h-1.5" />
                                       </button>
-                                      <span className="text-xs font-black min-w-[12px] text-center" style={{ color: primaryColor }}>
+                                      <span
+                                        className="text-xs font-black min-w-[12px] text-center"
+                                        style={{ color: primaryColor }}
+                                      >
                                         {qtyInCart}
                                       </span>
                                       <button
@@ -1182,9 +1428,12 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                         }
 
                         // ──── 3. MASONRY LAYOUT ──────────────────────────────────────
-                        if (layoutType === 'masonry') {
+                        if (layoutType === "masonry") {
                           return (
-                            <div key={item.id} className="break-inside-avoid inline-block w-full mb-3 sm:mb-4">
+                            <div
+                              key={item.id}
+                              className="break-inside-avoid inline-block w-full mb-3 sm:mb-4"
+                            >
                               <div className="flex flex-col h-full group food-card text-left">
                                 {/* Card 1: Details Card (Image, Title, Description) */}
                                 <div className="grow flex flex-col bg-white rounded-t-2xl rounded-br-2xl border border-neutral-200/80 border-b-0 shadow-sm hover:shadow-[0_6px_20px_rgba(0,0,0,0.025)] transition-all duration-300">
@@ -1235,11 +1484,17 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                                             removeFromCart(item.id);
                                           }}
                                           className="w-5 h-5 rounded-full flex items-center justify-center cursor-pointer transition-colors text-white"
-                                          style={{ backgroundColor: `${primaryColor}22`, color: primaryColor }}
+                                          style={{
+                                            backgroundColor: `${primaryColor}22`,
+                                            color: primaryColor,
+                                          }}
                                         >
                                           <Minus className="w-2.5 h-2.5" />
                                         </button>
-                                        <span className="text-xs font-black min-w-[14px] text-center" style={{ color: primaryColor }}>
+                                        <span
+                                          className="text-xs font-black min-w-[14px] text-center"
+                                          style={{ color: primaryColor }}
+                                        >
                                           {qtyInCart}
                                         </span>
                                         <button
@@ -1325,11 +1580,17 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                                         removeFromCart(item.id);
                                       }}
                                       className="w-5 h-5 rounded-full flex items-center justify-center cursor-pointer transition-colors text-white"
-                                      style={{ backgroundColor: `${primaryColor}22`, color: primaryColor }}
+                                      style={{
+                                        backgroundColor: `${primaryColor}22`,
+                                        color: primaryColor,
+                                      }}
                                     >
                                       <Minus className="w-2.5 h-2.5" />
                                     </button>
-                                    <span className="text-xs font-black min-w-[14px] text-center" style={{ color: primaryColor }}>
+                                    <span
+                                      className="text-xs font-black min-w-[14px] text-center"
+                                      style={{ color: primaryColor }}
+                                    >
                                       {qtyInCart}
                                     </span>
                                     <button
@@ -1369,7 +1630,6 @@ export default function RestaurantMenuPage({ params }: PageProps) {
               {/* TAB CONTENT: About Details */}
               {activeTab === "about" && (
                 <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 sm:p-6 shadow-sm flex flex-col gap-6 w-full">
-
                   {/* Category block */}
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-neutral-900 tracking-tight flex items-center gap-2 mb-3">
@@ -1381,7 +1641,13 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                         renderFormattedText(restaurant.descriptionText)
                       ) : (
                         <>
-                          Welcome to <strong className="text-neutral-800 font-bold">{restaurant.name}</strong>, where we specialize in serving premium quality {restaurant.cuisine.toLowerCase()} options in {branchAddress || restaurant.location}. Our digital ordering platform enables customers to scan table QR codes to enjoy immediate kitchen preparation status tracking and side payment checkout simulations.
+                          Welcome to{" "}
+                          <strong className="text-neutral-800 font-bold">{restaurant.name}</strong>,
+                          where we specialize in serving premium quality{" "}
+                          {restaurant.cuisine.toLowerCase()} options in{" "}
+                          {branchAddress || restaurant.location}. Our digital ordering platform
+                          enables customers to scan table QR codes to enjoy immediate kitchen
+                          preparation status tracking and side payment checkout simulations.
                         </>
                       )}
                     </p>
@@ -1393,14 +1659,20 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                       <MapPin className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
                       <div className="flex flex-col text-left">
                         <span className="text-neutral-900 font-bold">Address / Location</span>
-                        <span className="text-neutral-500 mt-0.5">{branchAddress || restaurant.location}</span>
+                        <span className="text-neutral-500 mt-0.5">
+                          {branchAddress || restaurant.location}
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <Clock className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
                       <div className="flex flex-col text-left">
                         <span className="text-neutral-900 font-bold">Opening Hours</span>
-                        <span className="text-neutral-500 mt-0.5">{branchHours || restaurant.operatingHours || "Open Daily: 11:00 AM - 11:00 PM"}</span>
+                        <span className="text-neutral-500 mt-0.5">
+                          {branchHours ||
+                            restaurant.operatingHours ||
+                            "Open Daily: 11:00 AM - 11:00 PM"}
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -1408,7 +1680,12 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                       <div className="flex flex-col text-left">
                         <span className="text-neutral-900 font-bold">Phone Number</span>
                         {branchPhone ? (
-                          <a href={`tel:${branchPhone}`} className="text-emerald-700 font-bold hover:underline mt-0.5">{branchPhone}</a>
+                          <a
+                            href={`tel:${branchPhone}`}
+                            className="text-emerald-700 font-bold hover:underline mt-0.5"
+                          >
+                            {branchPhone}
+                          </a>
                         ) : (
                           <span className="text-neutral-500 mt-0.5">Not available</span>
                         )}
@@ -1418,18 +1695,18 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                       <Calendar className="w-4 h-4 text-neutral-400 shrink-0 mt-0.5" />
                       <div className="flex flex-col text-left">
                         <span className="text-neutral-900 font-bold">Additional Facilities</span>
-                        <span className="text-neutral-500 mt-0.5">{restaurant.facilities || "Wifi, Table QR ordering"}</span>
+                        <span className="text-neutral-500 mt-0.5">
+                          {restaurant.facilities || "Wifi, Table QR ordering"}
+                        </span>
                       </div>
                     </div>
                   </div>
-
                 </div>
               )}
 
               {/* TAB CONTENT: Customer Reviews */}
               {activeTab === "reviews" && (
                 <div className="flex flex-col gap-4 w-full">
-
                   {/* Overall Rating card */}
                   <div className="bg-white rounded-2xl border border-neutral-200/80 p-5 shadow-sm flex flex-col sm:flex-row items-center gap-6 w-full">
                     <div className="flex flex-col items-center justify-center text-center px-4">
@@ -1456,12 +1733,18 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                         { stars: 4, pct: "10%" },
                         { stars: 3, pct: "4%" },
                         { stars: 2, pct: "1%" },
-                        { stars: 1, pct: "0%" }
+                        { stars: 1, pct: "0%" },
                       ].map((row) => (
-                        <div key={row.stars} className="flex items-center gap-3 w-full text-xs font-semibold text-neutral-500">
+                        <div
+                          key={row.stars}
+                          className="flex items-center gap-3 w-full text-xs font-semibold text-neutral-500"
+                        >
                           <span className="w-3 text-right">{row.stars}</span>
                           <div className="grow h-2 bg-neutral-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-500 rounded-full" style={{ width: row.pct }} />
+                            <div
+                              className="h-full bg-amber-500 rounded-full"
+                              style={{ width: row.pct }}
+                            />
                           </div>
                           <span className="w-8 text-right">{row.pct}</span>
                         </div>
@@ -1481,11 +1764,19 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full overflow-hidden border border-neutral-250 relative bg-neutral-100">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={rev.avatar} className="object-cover w-full h-full" alt={rev.author} />
+                              <img
+                                src={rev.avatar}
+                                className="object-cover w-full h-full"
+                                alt={rev.author}
+                              />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-xs sm:text-sm font-black text-neutral-900 leading-tight">{rev.author}</span>
-                              <span className="text-[10px] font-bold text-neutral-400 mt-0.5">{rev.date}</span>
+                              <span className="text-xs sm:text-sm font-black text-neutral-900 leading-tight">
+                                {rev.author}
+                              </span>
+                              <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
+                                {rev.date}
+                              </span>
                             </div>
                           </div>
 
@@ -1507,7 +1798,6 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                       </div>
                     ))}
                   </div>
-
                 </div>
               )}
 
@@ -1523,7 +1813,9 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                     {orders.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-center gap-4">
                         <ClipboardList className="w-12 h-12 text-neutral-300 animate-pulse" />
-                        <h4 className="text-base font-bold text-neutral-800">No active orders yet</h4>
+                        <h4 className="text-base font-bold text-neutral-800">
+                          No active orders yet
+                        </h4>
                         <p className="text-xs sm:text-sm text-neutral-500 max-w-xs font-semibold leading-relaxed">
                           Add delicious items from our menu to your bag and place your order!
                         </p>
@@ -1537,11 +1829,18 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                     ) : (
                       <div className="flex flex-col gap-4">
                         {orders.map((order) => (
-                          <div key={order.id} className="bg-neutral-50 border border-neutral-200/70 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+                          <div
+                            key={order.id}
+                            className="bg-neutral-50 border border-neutral-200/70 rounded-2xl p-4 flex flex-col gap-3 shadow-sm"
+                          >
                             <div className="flex items-center justify-between border-b border-neutral-200/40 pb-2">
                               <div className="flex flex-col">
-                                <span className="text-xs font-black text-neutral-800">{order.id}</span>
-                                <span className="text-[10px] font-bold text-neutral-400 mt-0.5">{order.time}</span>
+                                <span className="text-xs font-black text-neutral-800">
+                                  {order.id}
+                                </span>
+                                <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
+                                  {order.time}
+                                </span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
@@ -1553,18 +1852,28 @@ export default function RestaurantMenuPage({ params }: PageProps) {
 
                             <div className="flex flex-col gap-2">
                               {order.items.map((itemEntry) => (
-                                <div key={itemEntry.item.id} className="flex justify-between items-center text-xs text-neutral-600">
+                                <div
+                                  key={itemEntry.item.id}
+                                  className="flex justify-between items-center text-xs text-neutral-600"
+                                >
                                   <span className="font-semibold">
-                                    {itemEntry.item.name} <span className="text-neutral-400 font-bold ml-1">x{itemEntry.quantity}</span>
+                                    {itemEntry.item.name}{" "}
+                                    <span className="text-neutral-400 font-bold ml-1">
+                                      x{itemEntry.quantity}
+                                    </span>
                                   </span>
-                                  <span className="font-bold text-neutral-800">${(itemEntry.item.price * itemEntry.quantity).toFixed(2)}</span>
+                                  <span className="font-bold text-neutral-800">
+                                    ${(itemEntry.item.price * itemEntry.quantity).toFixed(2)}
+                                  </span>
                                 </div>
                               ))}
                             </div>
 
                             <div className="border-t border-neutral-200/40 pt-2.5 flex justify-between items-center font-bold text-sm text-neutral-800">
                               <span>Total Amount</span>
-                              <span className="text-emerald-700 font-black">${order.total.toFixed(2)}</span>
+                              <span className="text-emerald-700 font-black">
+                                ${order.total.toFixed(2)}
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -1573,11 +1882,8 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                   </div>
                 </div>
               )}
-
             </div>
-
           </div>
-
         </main>
 
         {/* Floating Bottom Cart Drawer */}
@@ -1588,7 +1894,10 @@ export default function RestaurantMenuPage({ params }: PageProps) {
               {/* Expandable Cart Items list container */}
               <div className="flex flex-col gap-4 max-h-[300px] overflow-y-auto divide-y divide-neutral-50 animate-in slide-in-from-bottom-8 duration-300">
                 {cartItemsList.map((entry) => (
-                  <div key={entry.item.id} className="flex items-center justify-between pt-3 first:pt-0">
+                  <div
+                    key={entry.item.id}
+                    className="flex items-center justify-between pt-3 first:pt-0"
+                  >
                     <div className="flex items-center gap-3 min-w-0 flex-1 pr-4">
                       {/* Food Item Image */}
                       <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-neutral-100 border border-neutral-200">
@@ -1636,7 +1945,9 @@ export default function RestaurantMenuPage({ params }: PageProps) {
               <div className="mt-4 pt-4 border-t border-neutral-100 flex flex-col gap-3">
                 <div className="flex justify-between items-center px-1 text-sm font-bold text-neutral-800">
                   <span>Total Amount:</span>
-                  <span className="text-emerald-700 text-base font-extrabold">${totalPrice.toFixed(2)}</span>
+                  <span className="text-emerald-700 text-base font-extrabold">
+                    ${totalPrice.toFixed(2)}
+                  </span>
                 </div>
                 <button
                   onClick={handlePlaceOrder}
@@ -1653,7 +1964,6 @@ export default function RestaurantMenuPage({ params }: PageProps) {
         {orderPlaced && (
           <div className="fixed inset-0 bg-deep-emerald-950/70 backdrop-blur-md z-100 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full flex flex-col items-center text-center gap-6 shadow-2xl border border-neutral-100 animate-in fade-in zoom-in duration-300">
-
               {/* Green Animated Checkmark */}
               <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center animate-bounce shadow-inner border border-emerald-100">
                 <CheckCircle className="w-10 h-10" />
@@ -1667,7 +1977,9 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                   Table #{tableNumber}
                 </p>
                 <p className="text-[13px] font-semibold text-neutral-500 leading-relaxed mt-4">
-                  Your order is confirmed and has been routed to the kitchen display at <strong className="text-neutral-800">{restaurant.name}</strong>. Sit back and relax while your food is prepared!
+                  Your order is confirmed and has been routed to the kitchen display at{" "}
+                  <strong className="text-neutral-800">{restaurant.name}</strong>. Sit back and
+                  relax while your food is prepared!
                 </p>
               </div>
 
@@ -1701,8 +2013,16 @@ export default function RestaurantMenuPage({ params }: PageProps) {
             {/* Left Part */}
             <div className="flex-1 bg-white rounded-tl-[24px] mr-[-2px]" />
             {/* Center Curved Part */}
-            <svg className="w-[90px] h-[72px] shrink-0" viewBox="0 0 90 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M 0 0 C 17 0, 17 44, 45 44 C 73 44, 73 0, 90 0 L 90 72 L 0 72 Z" fill="white" />
+            <svg
+              className="w-[90px] h-[72px] shrink-0"
+              viewBox="0 0 90 72"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M 0 0 C 17 0, 17 44, 45 44 C 73 44, 73 0, 90 0 L 90 72 L 0 72 Z"
+                fill="white"
+              />
             </svg>
             {/* Right Part */}
             <div className="flex-1 bg-white rounded-tr-[24px] ml-[-2px]" />
@@ -1728,8 +2048,9 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                   <button
                     key={tab.id}
                     onClick={tab.onClick}
-                    className={`flex flex-col items-center justify-center gap-1 w-14 transition-all duration-200 cursor-pointer active:scale-95 ${tab.isActive ? "font-extrabold" : "text-[#b3b3b3] font-medium"
-                      }`}
+                    className={`flex flex-col items-center justify-center gap-1 w-14 transition-all duration-200 cursor-pointer active:scale-95 ${
+                      tab.isActive ? "font-extrabold" : "text-[#b3b3b3] font-medium"
+                    }`}
                     style={tab.isActive ? { color: primaryColor } : {}}
                   >
                     <Icon className="w-5.5 h-[18px]" />
@@ -1752,7 +2073,10 @@ export default function RestaurantMenuPage({ params }: PageProps) {
               >
                 <ShoppingBag className="w-5 h-5 text-white transition-transform group-hover:scale-105" />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 text-white text-[9.5px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#1a1a1a] shadow-sm animate-in zoom-in duration-200" style={{ backgroundColor: primaryColor }}>
+                  <span
+                    className="absolute -top-1 -right-1 text-white text-[9.5px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#1a1a1a] shadow-sm animate-in zoom-in duration-200"
+                    style={{ backgroundColor: primaryColor }}
+                  >
                     {totalItems}
                   </span>
                 )}
@@ -1767,8 +2091,9 @@ export default function RestaurantMenuPage({ params }: PageProps) {
                   <button
                     key={tab.id}
                     onClick={tab.onClick}
-                    className={`flex flex-col items-center justify-center gap-1 w-14 transition-all duration-200 cursor-pointer active:scale-95 ${tab.isActive ? "font-extrabold" : "text-[#b3b3b3] font-medium"
-                      }`}
+                    className={`flex flex-col items-center justify-center gap-1 w-14 transition-all duration-200 cursor-pointer active:scale-95 ${
+                      tab.isActive ? "font-extrabold" : "text-[#b3b3b3] font-medium"
+                    }`}
                     style={tab.isActive ? { color: primaryColor } : {}}
                   >
                     <Icon className="w-5.5 h-[18px]" />
@@ -1779,7 +2104,6 @@ export default function RestaurantMenuPage({ params }: PageProps) {
             </div>
           </div>
         </div>
-
       </div>
     </EmojiProvider>
   );

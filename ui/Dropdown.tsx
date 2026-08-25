@@ -32,10 +32,7 @@ export default function Dropdown({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
@@ -54,7 +51,7 @@ export default function Dropdown({
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "bg-white border border-slate-200 rounded-xl text-xs font-bold px-3 py-2 text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 shadow-sm focus:outline-none cursor-pointer",
-          buttonClassName
+          buttonClassName,
         )}
       >
         <span>{label}</span>
@@ -65,7 +62,7 @@ export default function Dropdown({
         <div
           className={cn(
             "absolute right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-1.5 flex flex-col gap-0.5 min-w-[140px] z-50 animate-in fade-in slide-in-from-top-1 duration-150",
-            menuClassName
+            menuClassName,
           )}
         >
           {options.map((opt) => {
@@ -82,7 +79,7 @@ export default function Dropdown({
                   "w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors font-sans",
                   isSelected
                     ? "bg-[#ff7a00] text-white shadow-sm"
-                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-900",
                 )}
               >
                 {opt.label}

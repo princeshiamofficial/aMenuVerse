@@ -6,12 +6,7 @@ import Sidebar from "../components/Sidebar";
 import ImageUploader from "../../../ui/ImageUploader";
 import Dropdown from "../../../ui/Dropdown";
 import FormattedTextarea from "../../../ui/FormattedTextarea";
-import { 
-  Menu, 
-  Bell, 
-  Store, 
-  Check
-} from "lucide-react";
+import { Menu, Bell, Store, Check } from "lucide-react";
 
 interface CustomRestaurantDetails {
   name: string;
@@ -37,15 +32,19 @@ const DEFAULT_DETAILS: CustomRestaurantDetails = {
   location: "Dhanmondi, Dhaka",
   phone: "+880 1712-345678",
   operatingHours: "11:00 AM - 11:00 PM",
-  image: "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1200&auto=format&fit=crop&q=80",
-  logoImage: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&auto=format&fit=crop&q=80",
+  image:
+    "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1200&auto=format&fit=crop&q=80",
+  logoImage:
+    "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=100&auto=format&fit=crop&q=80",
   rating: "4.9",
   reviews: "1,240+",
   time: "15-25 min",
   price: "$$",
   facilities: "Air Conditioned, Wifi, Table QR ordering, bKash payments accepted",
-  introText: "Welcome to Burger Craft Lab digital menu. Scan our unique QR codes directly at your table to place real-time kitchen orders instantly.",
-  descriptionText: "Welcome to Burger Craft Lab, where we specialize in serving premium quality gourmet burgers & shakes options in Dhanmondi, Dhaka. Our digital ordering platform enables customers to scan table QR codes to enjoy immediate kitchen preparation status tracking and side payment checkout simulations."
+  introText:
+    "Welcome to Burger Craft Lab digital menu. Scan our unique QR codes directly at your table to place real-time kitchen orders instantly.",
+  descriptionText:
+    "Welcome to Burger Craft Lab, where we specialize in serving premium quality gourmet burgers & shakes options in Dhanmondi, Dhaka. Our digital ordering platform enables customers to scan table QR codes to enjoy immediate kitchen preparation status tracking and side payment checkout simulations.",
 };
 
 const timeToMinutes = (timeStr: string): number => {
@@ -54,13 +53,13 @@ const timeToMinutes = (timeStr: string): number => {
   let hours = parseInt(match[1]);
   const minutes = parseInt(match[2]);
   const period = match[3].toUpperCase();
-  
+
   if (period === "PM" && hours !== 12) {
     hours += 12;
   } else if (period === "AM" && hours === 12) {
     hours = 0;
   }
-  
+
   return hours * 60 + minutes;
 };
 
@@ -68,7 +67,7 @@ const priceOptions = [
   { value: "$", label: "$ (Budget Friendly)" },
   { value: "$$", label: "$$ (Moderate)" },
   { value: "$$$", label: "$$$ (Upscale)" },
-  { value: "$$$$", label: "$$$$ (Ultra Luxury)" }
+  { value: "$$$$", label: "$$$$ (Ultra Luxury)" },
 ];
 
 const prepTimeValueOptions = [
@@ -83,7 +82,7 @@ const prepTimeValueOptions = [
   { value: "45", label: "45 min" },
   { value: "50", label: "50 min" },
   { value: "55", label: "55 min" },
-  { value: "60", label: "60 min" }
+  { value: "60", label: "60 min" },
 ];
 
 export default function ManageRestaurantPage() {
@@ -111,7 +110,7 @@ export default function ManageRestaurantPage() {
   const [startHours, setStartHours] = useState("11:00 AM");
   const [endHours, setEndHours] = useState("11:00 PM");
   const [offerSlides, setOfferSlides] = useState<string[]>([]);
-  
+
   const cuisineDropdownOptions = useMemo(() => {
     const presets = [
       { value: "Gourmet Burgers & Shakes", label: "Gourmet Burgers & Shakes" },
@@ -122,21 +121,21 @@ export default function ManageRestaurantPage() {
       { value: "Indian & South Asian Curry", label: "Indian & South Asian Curry" },
       { value: "Thai & Southeast Asian", label: "Thai & Southeast Asian" },
       { value: "Cafe & Bakery Desserts", label: "Cafe & Bakery Desserts" },
-      { value: "Continental & Fusion", label: "Continental & Fusion" }
+      { value: "Continental & Fusion", label: "Continental & Fusion" },
     ];
-    if (cuisine && !presets.some(p => p.value === cuisine)) {
+    if (cuisine && !presets.some((p) => p.value === cuisine)) {
       return [{ value: cuisine, label: cuisine }, ...presets];
     }
     return presets;
   }, [cuisine]);
 
   const startPrepTimeOptions = useMemo(() => {
-    return prepTimeValueOptions.filter(opt => parseInt(opt.value) < 60);
+    return prepTimeValueOptions.filter((opt) => parseInt(opt.value) < 60);
   }, []);
 
   const endPrepTimeOptions = useMemo(() => {
     const startVal = parseInt(startTime) || 5;
-    return prepTimeValueOptions.filter(opt => parseInt(opt.value) > startVal);
+    return prepTimeValueOptions.filter((opt) => parseInt(opt.value) > startVal);
   }, [startTime]);
 
   const operatingHoursOptions = useMemo(() => {
@@ -154,12 +153,12 @@ export default function ManageRestaurantPage() {
   }, []);
 
   const startOperatingHoursOptions = useMemo(() => {
-    return operatingHoursOptions.filter(opt => opt.value !== "11:30 PM");
+    return operatingHoursOptions.filter((opt) => opt.value !== "11:30 PM");
   }, [operatingHoursOptions]);
 
   const endOperatingHoursOptions = useMemo(() => {
     const startMins = timeToMinutes(startHours);
-    return operatingHoursOptions.filter(opt => timeToMinutes(opt.value) > startMins);
+    return operatingHoursOptions.filter((opt) => timeToMinutes(opt.value) > startMins);
   }, [startHours, operatingHoursOptions]);
 
   const ratingDropdownOptions = useMemo(() => {
@@ -168,7 +167,7 @@ export default function ManageRestaurantPage() {
       const val = (r / 10).toFixed(1);
       presets.push({ value: val, label: val });
     }
-    if (rating && !presets.some(p => p.value === rating)) {
+    if (rating && !presets.some((p) => p.value === rating)) {
       return [{ value: rating, label: rating }, ...presets];
     }
     return presets;
@@ -180,7 +179,10 @@ export default function ManageRestaurantPage() {
     // Load restaurant details from API
     fetch("/api/tenant/restaurant-details")
       .then((res) => {
-        if (res.status === 401) { router.replace("/login"); return null; }
+        if (res.status === 401) {
+          router.replace("/login");
+          return null;
+        }
         if (!res.ok) return null;
         return res.json();
       })
@@ -213,16 +215,24 @@ export default function ManageRestaurantPage() {
         // Cover slides: use offer_slides JSON if present, else the main image
         try {
           let slidesVal = data.offer_slides;
-          while (slidesVal && typeof slidesVal === 'string') {
+          while (slidesVal && typeof slidesVal === "string") {
             slidesVal = JSON.parse(slidesVal);
           }
           const slides = Array.isArray(slidesVal) ? slidesVal : null;
-          setOfferSlides(slides && slides.length > 0 ? slides : (data.image ? [data.image] : [DEFAULT_DETAILS.image]));
+          setOfferSlides(
+            slides && slides.length > 0
+              ? slides
+              : data.image
+                ? [data.image]
+                : [DEFAULT_DETAILS.image],
+          );
         } catch {
           setOfferSlides(data.image ? [data.image] : [DEFAULT_DETAILS.image]);
         }
       })
-      .catch(() => {/* silently fall back to defaults */});
+      .catch(() => {
+        /* silently fall back to defaults */
+      });
   }, [router]);
 
   const handleLogout = () => {
@@ -233,7 +243,9 @@ export default function ManageRestaurantPage() {
     setStartTime(newStart);
     let newEnd = endTime;
     if (parseInt(newEnd) <= parseInt(newStart)) {
-      const nextOption = prepTimeValueOptions.find(opt => parseInt(opt.value) > parseInt(newStart));
+      const nextOption = prepTimeValueOptions.find(
+        (opt) => parseInt(opt.value) > parseInt(newStart),
+      );
       newEnd = nextOption ? nextOption.value : newStart;
       setEndTime(newEnd);
     }
@@ -242,7 +254,9 @@ export default function ManageRestaurantPage() {
   const handleEndTimeChange = (newEnd: string) => {
     let newStart = startTime;
     if (parseInt(newEnd) <= parseInt(newStart)) {
-      const prevOptions = prepTimeValueOptions.filter(opt => parseInt(opt.value) < parseInt(newEnd));
+      const prevOptions = prepTimeValueOptions.filter(
+        (opt) => parseInt(opt.value) < parseInt(newEnd),
+      );
       const prevOption = prevOptions[prevOptions.length - 1];
       newStart = prevOption ? prevOption.value : newEnd;
       setStartTime(newStart);
@@ -254,7 +268,9 @@ export default function ManageRestaurantPage() {
     setStartHours(newStart);
     let newEnd = endHours;
     if (timeToMinutes(newEnd) <= timeToMinutes(newStart)) {
-      const nextOption = operatingHoursOptions.find(opt => timeToMinutes(opt.value) > timeToMinutes(newStart));
+      const nextOption = operatingHoursOptions.find(
+        (opt) => timeToMinutes(opt.value) > timeToMinutes(newStart),
+      );
       newEnd = nextOption ? nextOption.value : newStart;
       setEndHours(newEnd);
     }
@@ -263,7 +279,9 @@ export default function ManageRestaurantPage() {
   const handleEndHoursChange = (newEnd: string) => {
     let newStart = startHours;
     if (timeToMinutes(newEnd) <= timeToMinutes(newStart)) {
-      const prevOptions = operatingHoursOptions.filter(opt => timeToMinutes(opt.value) < timeToMinutes(newEnd));
+      const prevOptions = operatingHoursOptions.filter(
+        (opt) => timeToMinutes(opt.value) < timeToMinutes(newEnd),
+      );
       const prevOption = prevOptions[prevOptions.length - 1];
       newStart = prevOption ? prevOption.value : newEnd;
       setStartHours(newStart);
@@ -278,7 +296,7 @@ export default function ManageRestaurantPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       triggerToast("Restaurant name is required.");
       return;
@@ -395,7 +413,7 @@ export default function ManageRestaurantPage() {
               <span>Manage Details</span>
             </h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="relative">
               <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors relative">
@@ -408,7 +426,9 @@ export default function ManageRestaurantPage() {
               <div className="w-8 h-8 rounded-full bg-linear-to-tr from-[#ff7a00] to-amber-500 flex items-center justify-center font-bold text-xs text-white">
                 CH
               </div>
-              <span className="hidden md:inline text-xs font-semibold text-slate-600">{userDisplayName}</span>
+              <span className="hidden md:inline text-xs font-semibold text-slate-600">
+                {userDisplayName}
+              </span>
             </div>
           </div>
         </header>
@@ -423,21 +443,23 @@ export default function ManageRestaurantPage() {
 
         {/* Page Body */}
         <main className="p-6 w-full flex-1 flex flex-col gap-6 pb-20">
-          
           {/* Form Settings */}
           <form onSubmit={handleSave} className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
             {/* Card 1: General Details */}
             <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-xs flex flex-col gap-5 h-fit">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 tracking-wide">General Details</h3>
-                <p className="text-[11px] text-slate-500">Core branding settings, locations, and images</p>
+                <p className="text-[11px] text-slate-500">
+                  Core branding settings, locations, and images
+                </p>
               </div>
 
               <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Restaurant Name</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Restaurant Name
+                    </label>
                     <input
                       type="text"
                       value={name}
@@ -448,7 +470,9 @@ export default function ManageRestaurantPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cuisine Style</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Cuisine Style
+                    </label>
                     <Dropdown
                       value={cuisine}
                       onChange={setCuisine}
@@ -462,7 +486,9 @@ export default function ManageRestaurantPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Geographic Location</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Geographic Location
+                    </label>
                     <input
                       type="text"
                       value={location}
@@ -473,7 +499,9 @@ export default function ManageRestaurantPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Contact Phone</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Contact Phone
+                    </label>
                     <input
                       type="text"
                       value={phone}
@@ -486,7 +514,9 @@ export default function ManageRestaurantPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Operating Hours</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Operating Hours
+                    </label>
                     <div className="flex items-center gap-2">
                       <Dropdown
                         value={startHours}
@@ -509,7 +539,9 @@ export default function ManageRestaurantPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Price Tier</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Price Tier
+                    </label>
                     <Dropdown
                       value={price}
                       onChange={setPrice}
@@ -522,7 +554,9 @@ export default function ManageRestaurantPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Brand Logo Image</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Brand Logo Image
+                  </label>
                   <div className="flex items-center gap-3">
                     {logoImage ? (
                       <div className="relative group w-14 h-14 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0 shadow-xs animate-in zoom-in-95 duration-150">
@@ -544,9 +578,9 @@ export default function ManageRestaurantPage() {
                         </button>
                       </div>
                     ) : null}
-                    <ImageUploader 
-                      onUploadSuccess={setLogoImage} 
-                      label={logoImage ? "Change Logo" : "Upload Logo"} 
+                    <ImageUploader
+                      onUploadSuccess={setLogoImage}
+                      label={logoImage ? "Change Logo" : "Upload Logo"}
                       className="shrink-0"
                       buttonClassName="h-14"
                     />
@@ -554,10 +588,15 @@ export default function ManageRestaurantPage() {
                 </div>
 
                 <div className="flex flex-col gap-2 mt-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cover Banner Images (Slideshow)</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Cover Banner Images (Slideshow)
+                  </label>
                   <div className="flex flex-wrap items-center gap-3">
                     {offerSlides.map((slide, idx) => (
-                      <div key={idx} className="relative group w-28 h-14 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0 shadow-xs animate-in zoom-in-95 duration-150">
+                      <div
+                        key={idx}
+                        className="relative group w-28 h-14 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0 shadow-xs animate-in zoom-in-95 duration-150"
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={slide}
@@ -580,9 +619,9 @@ export default function ManageRestaurantPage() {
                         </button>
                       </div>
                     ))}
-                    
+
                     {offerSlides.length < 5 && (
-                      <ImageUploader 
+                      <ImageUploader
                         multiple
                         onUploadSuccess={(url) => {
                           if (url) {
@@ -593,8 +632,8 @@ export default function ManageRestaurantPage() {
                               return updated;
                             });
                           }
-                        }} 
-                        label="Add Banner" 
+                        }}
+                        label="Add Banner"
                         className="shrink-0"
                         buttonClassName="h-14 w-28"
                       />
@@ -608,12 +647,16 @@ export default function ManageRestaurantPage() {
             <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-xs flex flex-col gap-5 h-fit">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 tracking-wide">About & Ratings</h3>
-                <p className="text-[11px] text-slate-500">Extended profiles, customer intro, description, and score parameters</p>
+                <p className="text-[11px] text-slate-500">
+                  Extended profiles, customer intro, description, and score parameters
+                </p>
               </div>
 
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Additional Facilities</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Additional Facilities
+                  </label>
                   <input
                     type="text"
                     value={facilities}
@@ -624,7 +667,9 @@ export default function ManageRestaurantPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Intro Text</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Intro Text
+                  </label>
                   <FormattedTextarea
                     value={introText}
                     onChange={setIntroText}
@@ -634,7 +679,9 @@ export default function ManageRestaurantPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Restaurant Information Description</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Restaurant Information Description
+                  </label>
                   <FormattedTextarea
                     value={descriptionText}
                     onChange={setDescriptionText}
@@ -645,7 +692,9 @@ export default function ManageRestaurantPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rating Score</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Rating Score
+                    </label>
                     <Dropdown
                       value={rating}
                       onChange={setRating}
@@ -657,7 +706,9 @@ export default function ManageRestaurantPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Reviews Count text</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Reviews Count text
+                    </label>
                     <input
                       type="text"
                       value={reviews}
@@ -668,7 +719,9 @@ export default function ManageRestaurantPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Average Prep Time</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Average Prep Time
+                    </label>
                     <div className="flex items-center gap-2">
                       <Dropdown
                         value={startTime}
@@ -690,7 +743,6 @@ export default function ManageRestaurantPage() {
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
 
@@ -710,14 +762,16 @@ export default function ManageRestaurantPage() {
                 className="px-8 h-11 flex items-center justify-center rounded-xl bg-[#ff7a00] hover:bg-[#e06b00] text-white text-xs font-bold transition-all active:scale-98 shadow-md hover:shadow-lg shadow-orange-500/10 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed gap-2"
               >
                 {isSaving ? (
-                  <><span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Saving...</>
-                ) : "Save Modifications"}
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Modifications"
+                )}
               </button>
-
             </div>
-
           </form>
-
         </main>
       </div>
     </div>

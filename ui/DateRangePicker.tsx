@@ -59,12 +59,12 @@ export default function DateRangePicker({
   className,
 }: DateRangePickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   // Custom Date Picker Selection States
   const [calendarStart, setCalendarStart] = useState<Date | null>(new Date());
   const [calendarEnd, setCalendarEnd] = useState<Date | null>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
 
   const leftMonth = currentMonth;
@@ -101,10 +101,7 @@ export default function DateRangePicker({
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         onClose();
       }
     }
@@ -233,7 +230,8 @@ export default function DateRangePicker({
           {cells.map((cell, idx) => {
             const isStart = calendarStart && isSameDay(cell.date, calendarStart);
             const isEnd = calendarEnd && isSameDay(cell.date, calendarEnd);
-            const inRange = calendarStart && calendarEnd && isBetween(cell.date, calendarStart, calendarEnd);
+            const inRange =
+              calendarStart && calendarEnd && isBetween(cell.date, calendarStart, calendarEnd);
             const isSelected = isStart || isEnd || inRange;
 
             const isSunday = idx % 7 === 0;
@@ -249,11 +247,11 @@ export default function DateRangePicker({
                   isSelected
                     ? "bg-[#ff7a00] text-white"
                     : cell.isCurrentMonth
-                    ? "text-slate-700 hover:bg-slate-50"
-                    : "text-slate-300 hover:bg-slate-50/50",
+                      ? "text-slate-700 hover:bg-slate-50"
+                      : "text-slate-300 hover:bg-slate-50/50",
                   isSelected && (isStart || isSunday) && "rounded-l-lg",
                   isSelected && (isEnd || isSaturday) && "rounded-r-lg",
-                  !isSelected && "rounded-lg"
+                  !isSelected && "rounded-lg",
                 )}
               >
                 {cell.dayNum}
@@ -273,7 +271,7 @@ export default function DateRangePicker({
       className={cn(
         "absolute right-0 top-full mt-2 bg-white border border-slate-200 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] z-50 flex flex-col md:flex-row overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200",
         isCustomActive ? "w-[300px] md:w-[780px]" : "w-[240px]",
-        className
+        className,
       )}
     >
       {/* Custom Range Calendars Panel (Shown on the Left) */}
@@ -300,7 +298,12 @@ export default function DateRangePicker({
       )}
 
       {/* Options List Panel (Shown on the Right) */}
-      <div className={cn("p-1.5 flex flex-col gap-0.5 shrink-0", isCustomActive ? "w-full md:w-[180px]" : "w-full")}>
+      <div
+        className={cn(
+          "p-1.5 flex flex-col gap-0.5 shrink-0",
+          isCustomActive ? "w-full md:w-[180px]" : "w-full",
+        )}
+      >
         {/* Header (Only shown when not side-by-side to keep layout compact) */}
         {!isCustomActive && (
           <div className="px-3 py-2.5 border-b border-slate-100 mb-1.5">
@@ -324,7 +327,7 @@ export default function DateRangePicker({
                 "w-full text-left px-3 py-2 rounded-lg text-[13px] font-medium transition-colors font-sans",
                 isSelected
                   ? "bg-[#ff7a00] text-white font-semibold shadow-sm"
-                  : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                  : "text-slate-700 hover:bg-slate-50 hover:text-slate-900",
               )}
             >
               {option}
@@ -345,7 +348,7 @@ export default function DateRangePicker({
             "w-full text-left px-3 py-2 rounded-lg text-[13px] font-medium transition-colors font-sans",
             isCustomActive
               ? "bg-[#ff7a00] text-white font-semibold shadow-sm"
-              : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              : "text-slate-700 hover:bg-slate-50 hover:text-slate-900",
           )}
         >
           Custom Range

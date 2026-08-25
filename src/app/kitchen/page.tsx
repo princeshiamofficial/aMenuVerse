@@ -4,17 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import { RESTAURANTS, Branch } from "../data/restaurants";
-import {
-  Menu,
-  Bell,
-  Check,
-  ChefHat,
-  X
-} from "lucide-react";
-import KitchenOrderCard, {
-  KitchenOrder,
-  getStationForItem
-} from "../../../ui/KitchenOrderCard";
+import { Menu, Bell, Check, ChefHat, X } from "lucide-react";
+import KitchenOrderCard, { KitchenOrder, getStationForItem } from "../../../ui/KitchenOrderCard";
 
 interface StoredLiveOrder {
   id: string;
@@ -28,7 +19,9 @@ interface StoredLiveOrder {
 const playChime = () => {
   if (typeof window === "undefined") return;
   try {
-    const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
 
@@ -60,7 +53,9 @@ const playChime = () => {
 const playOverdueWarning = () => {
   if (typeof window === "undefined") return;
   try {
-    const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
 
@@ -82,8 +77,8 @@ const playOverdueWarning = () => {
     };
 
     const now = ctx.currentTime;
-    playTone(392.00, now, 0.2); // G4
-    playTone(392.00, now + 0.25, 0.2); // G4 alert
+    playTone(392.0, now, 0.2); // G4
+    playTone(392.0, now + 0.25, 0.2); // G4 alert
   } catch (e) {
     console.error("Warning audio playback failed:", e);
   }
@@ -154,7 +149,7 @@ export default function KitchenPage() {
 
   // Load branches
   useEffect(() => {
-    const restaurant = RESTAURANTS.find(r => r.id === 1);
+    const restaurant = RESTAURANTS.find((r) => r.id === 1);
     const defaults = restaurant?.branches || [];
     try {
       const storedBranchesStr = localStorage.getItem("restaurant_branches");
@@ -168,7 +163,6 @@ export default function KitchenPage() {
       setAllBranches(defaults);
     }
   }, []);
-
 
   const openModal = (order: KitchenOrder) => {
     setSelectedOrder(order);
@@ -184,18 +178,20 @@ export default function KitchenPage() {
   };
 
   const toggleItemChecked = (orderId: string, itemIndex: number) => {
-    setOrders(prev => prev.map(o => {
-      if (o.id === orderId) {
-        const newItems = [...o.items];
-        newItems[itemIndex] = { ...newItems[itemIndex], checked: !newItems[itemIndex].checked };
-        const updatedOrder = { ...o, items: newItems };
-        if (selectedOrder && selectedOrder.id === orderId) {
-          setSelectedOrder(updatedOrder);
+    setOrders((prev) =>
+      prev.map((o) => {
+        if (o.id === orderId) {
+          const newItems = [...o.items];
+          newItems[itemIndex] = { ...newItems[itemIndex], checked: !newItems[itemIndex].checked };
+          const updatedOrder = { ...o, items: newItems };
+          if (selectedOrder && selectedOrder.id === orderId) {
+            setSelectedOrder(updatedOrder);
+          }
+          return updatedOrder;
         }
-        return updatedOrder;
-      }
-      return o;
-    }));
+        return o;
+      }),
+    );
   };
 
   const handleLogout = () => {
@@ -209,72 +205,70 @@ export default function KitchenPage() {
       table: "04",
       items: [
         { name: "Classic Cheese Burger", quantity: 2, notes: "Well done patties", checked: false },
-        { name: "Truffle Parmesan Fries", quantity: 1, checked: false }
+        { name: "Truffle Parmesan Fries", quantity: 1, checked: false },
       ],
       elapsedMinutes: 4,
       priority: "medium",
       status: "new",
-      branchId: "dhanmondi"
+      branchId: "dhanmondi",
     },
     {
       id: "ORD-8820",
       table: "12",
       items: [
         { name: "Truffle Mushroom Pizza", quantity: 1, notes: "Extra truffle oil", checked: false },
-        { name: "Fresh Mint Lemonade", quantity: 1, checked: false }
+        { name: "Fresh Mint Lemonade", quantity: 1, checked: false },
       ],
       elapsedMinutes: 7,
       priority: "high",
       status: "new",
-      branchId: "gulshan"
+      branchId: "gulshan",
     },
     {
       id: "ORD-8819",
       table: "08",
       items: [
         { name: "Dragon Sushi Roll Platter", quantity: 1, checked: true },
-        { name: "Spicy Sichuan Chilli Wontons", quantity: 1, checked: true }
+        { name: "Spicy Sichuan Chilli Wontons", quantity: 1, checked: true },
       ],
       elapsedMinutes: 14,
       priority: "medium",
       status: "preparing",
-      branchId: "uttara"
+      branchId: "uttara",
     },
     {
       id: "ORD-8818",
       table: "10",
-      items: [
-        { name: "Truffle Mushroom Pizza", quantity: 1, checked: true }
-      ],
+      items: [{ name: "Truffle Mushroom Pizza", quantity: 1, checked: true }],
       elapsedMinutes: 3,
       priority: "high",
       status: "qa",
-      branchId: "gulshan"
+      branchId: "gulshan",
     },
     {
       id: "ORD-8816",
       table: "15",
       items: [
         { name: "Classic Cheese Burger", quantity: 1, checked: true },
-        { name: "Truffle Parmesan Fries", quantity: 1, checked: true }
+        { name: "Truffle Parmesan Fries", quantity: 1, checked: true },
       ],
       elapsedMinutes: 8,
       priority: "low",
       status: "ready",
-      branchId: "dhanmondi"
+      branchId: "dhanmondi",
     },
     {
       id: "ORD-8815",
       table: "03",
       items: [
         { name: "Truffle Mushroom Pizza", quantity: 1, checked: true },
-        { name: "Fresh Mint Lemonade", quantity: 2, checked: true }
+        { name: "Fresh Mint Lemonade", quantity: 2, checked: true },
       ],
       elapsedMinutes: 12,
       priority: "medium",
       status: "delivered",
-      branchId: "uttara"
-    }
+      branchId: "uttara",
+    },
   ]);
 
   // Load custom live orders from localStorage
@@ -283,17 +277,21 @@ export default function KitchenPage() {
       const storedOrdersStr = localStorage.getItem("live_orders");
       if (storedOrdersStr) {
         const liveOrders = JSON.parse(storedOrdersStr) as StoredLiveOrder[];
-        setOrders(prev => {
+        setOrders((prev) => {
           const filteredLive = liveOrders
-            .filter((l: StoredLiveOrder) => !prev.some(p => p.id === l.id))
+            .filter((l: StoredLiveOrder) => !prev.some((p) => p.id === l.id))
             .map((l: StoredLiveOrder) => ({
               id: l.id,
               table: l.table,
-              items: l.items.map((i: { name: string; quantity: number }) => ({ name: i.name, quantity: i.quantity, checked: false })),
+              items: l.items.map((i: { name: string; quantity: number }) => ({
+                name: i.name,
+                quantity: i.quantity,
+                checked: false,
+              })),
               elapsedMinutes: 1,
               priority: "medium" as const,
               status: l.status,
-              branchId: l.branchId
+              branchId: l.branchId,
             }));
           return [...filteredLive, ...prev];
         });
@@ -306,8 +304,8 @@ export default function KitchenPage() {
   // Audio notification when new orders arrive
   const prevOrderIdsRef = useRef<string[]>([]);
   useEffect(() => {
-    const currentIds = orders.map(o => o.id);
-    const hasNewOrder = currentIds.some(id => !prevOrderIdsRef.current.includes(id));
+    const currentIds = orders.map((o) => o.id);
+    const hasNewOrder = currentIds.some((id) => !prevOrderIdsRef.current.includes(id));
     if (prevOrderIdsRef.current.length > 0 && hasNewOrder && isAudioUnlocked) {
       playChime();
     }
@@ -317,11 +315,11 @@ export default function KitchenPage() {
   // Simulate timer incrementing every minute and checking for newly overdue stages
   useEffect(() => {
     const timer = setInterval(() => {
-      setOrders(prev => {
-        const nextOrders = prev.map(o => ({ ...o, elapsedMinutes: o.elapsedMinutes + 1 }));
+      setOrders((prev) => {
+        const nextOrders = prev.map((o) => ({ ...o, elapsedMinutes: o.elapsedMinutes + 1 }));
 
         if (isAudioUnlocked) {
-          const anyNewlyOverdue = nextOrders.some(o => {
+          const anyNewlyOverdue = nextOrders.some((o) => {
             let limit = 15;
             if (o.status === "preparing") limit = 25;
             else if (o.status === "qa") limit = 5;
@@ -342,39 +340,36 @@ export default function KitchenPage() {
   }, [isAudioUnlocked]);
 
   const moveOrder = (orderId: string, nextStatus: KitchenOrder["status"]) => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o)));
   };
 
   const completeOrder = (orderId: string) => {
-    setOrders(prev => prev.filter(o => o.id !== orderId));
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
   };
 
   // Drag and Drop Handlers are currently unused in grid layout
 
   // Filter orders by branch and prep station
   const filteredOrders = orders
-    .filter(o => o.branchId === selectedBranchId)
-    .filter(o => {
+    .filter((o) => o.branchId === selectedBranchId)
+    .filter((o) => {
       if (selectedStation === "All") return true;
-      return o.items.some(item => getStationForItem(item.name) === selectedStation);
+      return o.items.some((item) => getStationForItem(item.name) === selectedStation);
     });
 
   // Sort orders for Compact Grid view (High priority & Oldest first, excluding delivered/served orders)
   const gridSortedOrders = [...filteredOrders]
-    .filter(o => o.status !== "delivered")
+    .filter((o) => o.status !== "delivered")
     .sort((a, b) => {
       const priorityWeight = { high: 3, medium: 2, low: 1 };
       const weightA = priorityWeight[a.priority] || 2;
       const weightB = priorityWeight[b.priority] || 2;
-    if (weightA !== weightB) return weightB - weightA;
-    return b.elapsedMinutes - a.elapsedMinutes;
-  });
-
-
+      if (weightA !== weightB) return weightB - weightA;
+      return b.elapsedMinutes - a.elapsedMinutes;
+    });
 
   return (
     <div className="min-h-screen bg-black flex text-slate-200 font-sans overflow-hidden">
-
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex h-screen shrink-0">
         <Sidebar
@@ -411,7 +406,6 @@ export default function KitchenPage() {
 
       {/* Main KDS Panel */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-
         {/* Top Navbar */}
         <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-3">
@@ -457,15 +451,16 @@ export default function KitchenPage() {
               <div className="w-8 h-8 rounded-full bg-linear-to-tr from-[#ff7a00] to-amber-500 flex items-center justify-center font-bold text-xs text-white">
                 CH
               </div>
-              <span className="hidden md:inline text-xs font-semibold text-slate-600">{userDisplayName}</span>
+              <span className="hidden md:inline text-xs font-semibold text-slate-600">
+                {userDisplayName}
+              </span>
             </div>
           </div>
         </header>
 
-
         {/* KDS Grid Area (Responsive Vertical Scroll) */}
         <main className="flex-1 p-6 overflow-y-auto bg-black h-full flex flex-col relative">
-          <div 
+          <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-85 z-0 pointer-events-none"
             style={{ backgroundImage: "url('/kitchen-bg.jpg')" }}
           />
@@ -478,7 +473,7 @@ export default function KitchenPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,300px)] gap-4 justify-start items-start">
-                {gridSortedOrders.map(order => (
+                {gridSortedOrders.map((order) => (
                   <KitchenOrderCard
                     key={order.id}
                     order={order}
@@ -499,13 +494,15 @@ export default function KitchenPage() {
       {/* Modal Popup for Order Details */}
       {modalState !== "closed" && selectedOrder && (
         <div
-          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-opacity duration-200 ${modalState === "open" ? "opacity-100" : "opacity-0"
-            }`}
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-opacity duration-200 ${
+            modalState === "open" ? "opacity-100" : "opacity-0"
+          }`}
           onClick={closeModal}
         >
           <div
-            className={`t-modal bg-white border border-slate-200 rounded-2xl p-6 max-w-md w-full flex flex-col gap-4 text-left shadow-2xl ${modalState === "open" ? "is-open" : "is-closing"
-              }`}
+            className={`t-modal bg-white border border-slate-200 rounded-2xl p-6 max-w-md w-full flex flex-col gap-4 text-left shadow-2xl ${
+              modalState === "open" ? "is-open" : "is-closing"
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -531,10 +528,6 @@ export default function KitchenPage() {
               </button>
             </div>
 
-
-
-
-
             {/* Items Checklist */}
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
@@ -552,22 +545,27 @@ export default function KitchenPage() {
                     <div
                       key={idx}
                       onClick={() => toggleItemChecked(selectedOrder.id, idx)}
-                      className={`flex items-start gap-3 p-3 rounded-xl border transition-all duration-200 cursor-pointer ${item.checked
-                        ? "bg-slate-50 border-slate-200 text-slate-400"
-                        : "bg-white border-slate-200 hover:border-slate-300 text-slate-800 shadow-sm"
-                        }`}
+                      className={`flex items-start gap-3 p-3 rounded-xl border transition-all duration-200 cursor-pointer ${
+                        item.checked
+                          ? "bg-slate-50 border-slate-200 text-slate-400"
+                          : "bg-white border-slate-200 hover:border-slate-300 text-slate-800 shadow-sm"
+                      }`}
                     >
                       <div
-                        className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors mt-0.5 ${item.checked
-                          ? "bg-emerald-500 border-emerald-500 text-white"
-                          : "border-slate-300 hover:border-slate-400 bg-white"
-                          }`}
+                        className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors mt-0.5 ${
+                          item.checked
+                            ? "bg-emerald-500 border-emerald-500 text-white"
+                            : "border-slate-300 hover:border-slate-400 bg-white"
+                        }`}
                       >
                         {item.checked && <Check className="w-3 h-3 stroke-3" />}
                       </div>
                       <div className="flex-1 min-w-0 flex items-center justify-between">
-                        <p className={`text-xs font-bold leading-tight ${item.checked ? "line-through text-slate-400" : ""}`}>
-                          {item.name} <span className="text-[#ff7a00] font-black">x{item.quantity}</span>
+                        <p
+                          className={`text-xs font-bold leading-tight ${item.checked ? "line-through text-slate-400" : ""}`}
+                        >
+                          {item.name}{" "}
+                          <span className="text-[#ff7a00] font-black">x{item.quantity}</span>
                         </p>
                       </div>
                     </div>
@@ -589,12 +587,15 @@ export default function KitchenPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const statusTransitions: Record<KitchenOrder["status"], KitchenOrder["status"] | "archive"> = {
+                  const statusTransitions: Record<
+                    KitchenOrder["status"],
+                    KitchenOrder["status"] | "archive"
+                  > = {
                     new: "preparing",
                     preparing: "qa",
                     qa: "ready",
                     ready: "delivered",
-                    delivered: "archive"
+                    delivered: "archive",
                   };
                   const next = statusTransitions[selectedOrder.status];
                   if (next === "archive") {
@@ -604,16 +605,17 @@ export default function KitchenPage() {
                   }
                   closeModal();
                 }}
-                className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-extrabold text-white transition-all shadow-md hover:shadow-lg active:scale-95 ${selectedOrder.status === "new"
-                  ? "bg-[#0082c9] hover:bg-[#0082c9]/90"
-                  : selectedOrder.status === "preparing"
-                    ? "bg-purple-600 hover:bg-purple-700"
-                    : selectedOrder.status === "qa"
-                      ? "bg-amber-600 hover:bg-amber-700"
-                      : selectedOrder.status === "ready"
-                        ? "bg-emerald-600 hover:bg-emerald-700"
-                        : "bg-teal-600 hover:bg-teal-700"
-                  }`}
+                className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-extrabold text-white transition-all shadow-md hover:shadow-lg active:scale-95 ${
+                  selectedOrder.status === "new"
+                    ? "bg-[#0082c9] hover:bg-[#0082c9]/90"
+                    : selectedOrder.status === "preparing"
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : selectedOrder.status === "qa"
+                        ? "bg-amber-600 hover:bg-amber-700"
+                        : selectedOrder.status === "ready"
+                          ? "bg-emerald-600 hover:bg-emerald-700"
+                          : "bg-teal-600 hover:bg-teal-700"
+                }`}
               >
                 {selectedOrder.status === "new" && "Start Preparing"}
                 {selectedOrder.status === "preparing" && "Send to QA"}
@@ -625,7 +627,6 @@ export default function KitchenPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

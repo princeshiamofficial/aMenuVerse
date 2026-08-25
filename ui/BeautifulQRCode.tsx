@@ -9,7 +9,12 @@ interface BeautifulQRCodeProps {
   size?: number;
 }
 
-export default function BeautifulQRCode({ value, tableName, logoUrl, size = 150 }: BeautifulQRCodeProps) {
+export default function BeautifulQRCode({
+  value,
+  tableName,
+  logoUrl,
+  size = 150,
+}: BeautifulQRCodeProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [QRCodeStyling, setQRCodeStyling] = useState<any>(null);
 
@@ -32,23 +37,23 @@ export default function BeautifulQRCode({ value, tableName, logoUrl, size = 150 
       // No image — avoids version bump from embedded center image
       dotsOptions: {
         color: "#000000",
-        type: "dots"
+        type: "dots",
       },
       qrOptions: {
         typeNumber: 0, // Auto — library selects minimum safe version
         mode: "Byte",
-        errorCorrectionLevel: "M"
+        errorCorrectionLevel: "M",
       },
       backgroundOptions: {
         color: "#ffffff",
       },
       cornersSquareOptions: {
         color: "#000000",
-        type: "extra-rounded"
+        type: "extra-rounded",
       },
       cornersDotOptions: {
         color: "#000000",
-        type: "dot"
+        type: "dot",
       },
       extensions: [
         (svg: any) => {
@@ -64,8 +69,8 @@ export default function BeautifulQRCode({ value, tableName, logoUrl, size = 150 
               });
             }
           });
-        }
-      ]
+        },
+      ],
     });
 
     ref.current.innerHTML = "";
@@ -77,7 +82,14 @@ export default function BeautifulQRCode({ value, tableName, logoUrl, size = 150 
   const fontSize = badgeSize > 30 ? Math.round(badgeSize * 0.55) : Math.round(badgeSize * 0.6);
 
   return (
-    <div style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+    <div
+      style={{
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       <div ref={ref} className="flex items-center justify-center select-none" />
       {centerLabel && (
         <div

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import { getCachedTenant, setCachedTenant } from '@/lib/redis';
+import { NextRequest, NextResponse } from "next/server";
+import { query } from "@/lib/db";
+import { getCachedTenant, setCachedTenant } from "@/lib/redis";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface RouteParams {
   params: Promise<{ username: string }>;
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const { username } = await params;
 
     if (!username) {
-      return NextResponse.json({ error: 'Username is required' }, { status: 400 });
+      return NextResponse.json({ error: "Username is required" }, { status: 400 });
     }
 
     const cleanUsername = username.toLowerCase().trim();
@@ -30,11 +30,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // 2. Query Restaurant details
     const restaurants = await query<Record<string, unknown>[]>(
       `SELECT * FROM restaurants WHERE username = ?`,
-      [cleanUsername]
+      [cleanUsername],
     );
 
     if (restaurants.length === 0) {
-      return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
+      return NextResponse.json({ error: "Restaurant not found" }, { status: 404 });
     }
 
     const restaurant = restaurants[0];
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // 3. Query Branches
     const branches = await query<Record<string, unknown>[]>(
       `SELECT * FROM branches WHERE restaurant_id = ?`,
-      [restaurant.id]
+      [restaurant.id],
     );
 
     // 4. Query Tables for each branch
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     for (const b of branches) {
       const tables = await query<Record<string, unknown>[]>(
         `SELECT name, location, status FROM branch_tables WHERE branch_id = ?`,
-        [b.id]
+        [b.id],
       );
       branchesWithTables.push({
         id: b.id as string,
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // 5. Query Menu Items
     const menuItems = await query<Record<string, unknown>[]>(
       `SELECT id, name, description, price, image, category, popular FROM menu_items WHERE restaurant_id = ?`,
-      [restaurant.id]
+      [restaurant.id],
     );
 
     const formattedMenuItems = menuItems.map((item: Record<string, unknown>) => ({
@@ -85,25 +85,25 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     // 5.5. Query Categories
     const categories = await query<Record<string, unknown>[]>(
       `SELECT id, name, description, emoji FROM categories WHERE restaurant_id = ? ORDER BY id ASC`,
-      [restaurant.id]
+      [restaurant.id],
     );
 
     const formattedCategories = categories.map((c: Record<string, unknown>) => ({
       id: c.id as number,
       name: c.name as string,
-      description: (c.description as string) || '',
-      emoji: (c.emoji as string) || 'hamburger'
+      description: (c.description as string) || "",
+      emoji: (c.emoji as string) || "hamburger",
     }));
 
     let parsedOfferSlides = [];
     try {
       let slidesVal = restaurant.offer_slides;
-      while (slidesVal && typeof slidesVal === 'string') {
+      while (slidesVal && typeof slidesVal === "string") {
         slidesVal = JSON.parse(slidesVal);
       }
       parsedOfferSlides = Array.isArray(slidesVal) ? slidesVal : [];
     } catch (e) {
-      console.error('Failed to parse offer_slides JSON:', e);
+      console.error("Failed to parse offer_slides JSON:", e);
     }
 
     // 6. Structure response data matching public Restaurant format
@@ -126,22 +126,21 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       facilities: restaurant.facilities as string,
       introText: restaurant.intro_text as string,
       descriptionText: restaurant.description_text as string,
-      primaryColor: (restaurant.primary_color as string) || '#ff7a00',
-      fontFamily: (restaurant.font_family as string) || 'Outfit',
-      layoutType: (restaurant.layout_type as string) || 'grid',
+      primaryColor: (restaurant.primary_color as string) || "#ff7a00",
+      fontFamily: (restaurant.font_family as string) || "Outfit",
+      layoutType: (restaurant.layout_type as string) || "grid",
       offerSlides: parsedOfferSlides,
       branches: branchesWithTables,
       menuItems: formattedMenuItems,
       categories: formattedCategories,
     };
 
-
     // 7. Store in Redis cache for 1 hour
     await setCachedTenant(cleanUsername, fullRestaurantData, 3600);
 
     return NextResponse.json(fullRestaurantData);
   } catch (err) {
-    console.error('Public restaurant GET error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Public restaurant GET error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -5,17 +5,17 @@ import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import { RESTAURANTS, Branch } from "../data/restaurants";
 import BeautifulQRCode from "../../../ui/BeautifulQRCode";
-import { 
-  Menu, 
-  Bell, 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  X, 
-  Check, 
+import {
+  Menu,
+  Bell,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Check,
   ExternalLink,
   FileText,
-  QrCode
+  QrCode,
 } from "lucide-react";
 
 interface Table {
@@ -36,7 +36,11 @@ export default function QrCodesPage() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("Saved successfully!");
   const [origin, setOrigin] = useState("http://localhost:3000");
-  const [previewQr, setPreviewQr] = useState<{ name: string; location: string; url: string } | null>(null);
+  const [previewQr, setPreviewQr] = useState<{
+    name: string;
+    location: string;
+    url: string;
+  } | null>(null);
 
   // Dynamic user roles and branch states
   const [userRole, setUserRole] = useState("admin");
@@ -59,7 +63,7 @@ export default function QrCodesPage() {
         router.replace("/login");
         return;
       }
-      
+
       const role = localStorage.getItem("userRole") || "admin";
       if (role === "admin") {
         router.replace("/dashboard");
@@ -67,7 +71,7 @@ export default function QrCodesPage() {
       }
       const name = localStorage.getItem("userDisplayName") || "Color Hut Admin";
       const branchId = localStorage.getItem("userAssignedBranchId") || "";
-      
+
       setUserRole(role);
       setUserDisplayName(name);
 
@@ -79,13 +83,15 @@ export default function QrCodesPage() {
 
       // Load restaurant details to get correct username and branches
       fetch("/api/tenant/restaurant-details")
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (data && data.username) {
             setRestaurantUsername(data.username);
-            
+
             // Load branches
-            const restaurant = RESTAURANTS.find(r => r.id === data.id || r.username === data.username);
+            const restaurant = RESTAURANTS.find(
+              (r) => r.id === data.id || r.username === data.username,
+            );
             const defaults = restaurant?.branches || [];
             const storedBranchesStr = localStorage.getItem("restaurant_branches");
             if (storedBranchesStr) {
@@ -99,9 +105,9 @@ export default function QrCodesPage() {
             }
           }
         })
-        .catch(err => {
+        .catch((err) => {
           console.error("Error loading restaurant details:", err);
-          const restaurant = RESTAURANTS.find(r => r.id === 1);
+          const restaurant = RESTAURANTS.find((r) => r.id === 1);
           setBranches(restaurant?.branches || []);
         });
 
@@ -123,14 +129,16 @@ export default function QrCodesPage() {
   };
 
   const getCurrentBranchTables = () => {
-    const currentBranch = branches.find(b => b.id === selectedBranchId);
+    const currentBranch = branches.find((b) => b.id === selectedBranchId);
     return currentBranch?.tables || [];
   };
 
   const saveBranchesToStorage = (updatedBranches: CustomBranch[]) => {
     setBranches(updatedBranches);
-    const defaults = RESTAURANTS.find(r => r.id === 1)?.branches || [];
-    const customs = updatedBranches.filter(b => !defaults.some(d => d.id === b.id) || b.isCustom);
+    const defaults = RESTAURANTS.find((r) => r.id === 1)?.branches || [];
+    const customs = updatedBranches.filter(
+      (b) => !defaults.some((d) => d.id === b.id) || b.isCustom,
+    );
     localStorage.setItem("restaurant_branches", JSON.stringify(customs));
   };
 
@@ -154,13 +162,17 @@ export default function QrCodesPage() {
     e.preventDefault();
     if (!qrTableName.trim()) return;
 
-    const updatedBranches = branches.map(b => {
+    const updatedBranches = branches.map((b) => {
       if (b.id === selectedBranchId) {
         const updatedTables = [...b.tables];
         if (qrModalMode === "add") {
           updatedTables.push({ name: qrTableName, location: qrTableLocation, status: "Active" });
         } else if (qrModalMode === "edit" && editingTableIndex !== null) {
-          updatedTables[editingTableIndex] = { name: qrTableName, location: qrTableLocation, status: "Active" };
+          updatedTables[editingTableIndex] = {
+            name: qrTableName,
+            location: qrTableLocation,
+            status: "Active",
+          };
         }
         return { ...b, tables: updatedTables };
       }
@@ -173,11 +185,11 @@ export default function QrCodesPage() {
 
   const handleDeleteTable = (index: number) => {
     if (confirm("Are you sure you want to delete this table QR code?")) {
-      const updatedBranches = branches.map(b => {
+      const updatedBranches = branches.map((b) => {
         if (b.id === selectedBranchId) {
           return {
             ...b,
-            tables: b.tables.filter((_: Table, idx: number) => idx !== index)
+            tables: b.tables.filter((_: Table, idx: number) => idx !== index),
           };
         }
         return b;
@@ -203,23 +215,23 @@ export default function QrCodesPage() {
         // No image — prevents version bump from embedded center image
         dotsOptions: {
           color: "#000000",
-          type: "dots"
+          type: "dots",
         },
         qrOptions: {
           typeNumber: 0, // Auto — library selects minimum safe version
           mode: "Byte",
-          errorCorrectionLevel: "M"
+          errorCorrectionLevel: "M",
         },
         backgroundOptions: {
           color: "#ffffff",
         },
         cornersSquareOptions: {
           color: "#000000",
-          type: "extra-rounded"
+          type: "extra-rounded",
         },
         cornersDotOptions: {
           color: "#000000",
-          type: "dot"
+          type: "dot",
         },
         extensions: [
           (svg: any) => {
@@ -235,8 +247,8 @@ export default function QrCodesPage() {
                 });
               }
             });
-          }
-        ]
+          },
+        ],
       } as any);
 
       // Get SVG blob → draw on canvas → overlay badge circle → download PNG
@@ -290,10 +302,8 @@ export default function QrCodesPage() {
     });
   };
 
-
   return (
     <div className="min-h-screen bg-[#f8fafc] flex text-slate-800 font-sans overflow-hidden">
-      
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex h-screen shrink-0">
         <Sidebar
@@ -320,7 +330,7 @@ export default function QrCodesPage() {
               onCloseMobile={() => setIsMobileOpen(false)}
             />
           </div>
-          <button 
+          <button
             onClick={() => setIsMobileOpen(false)}
             className="flex-1 h-full cursor-default focus:outline-none"
             aria-label="Close menu"
@@ -330,11 +340,10 @@ export default function QrCodesPage() {
 
       {/* Main Panel */}
       <div className="flex-1 flex flex-col h-screen overflow-y-auto">
-        
         {/* Top Navbar */}
         <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setIsMobileOpen(true)}
               className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 text-slate-655 transition-colors"
               aria-label="Open sidebar"
@@ -346,7 +355,7 @@ export default function QrCodesPage() {
               <span>Table QR Codes</span>
             </h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="relative">
               <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-550 hover:text-slate-855 transition-colors relative">
@@ -359,7 +368,9 @@ export default function QrCodesPage() {
               <div className="w-8 h-8 rounded-full bg-linear-to-tr from-[#ff7a00] to-amber-500 flex items-center justify-center font-bold text-xs text-white">
                 CH
               </div>
-              <span className="hidden md:inline text-xs font-semibold text-slate-600">{userDisplayName}</span>
+              <span className="hidden md:inline text-xs font-semibold text-slate-600">
+                {userDisplayName}
+              </span>
             </div>
           </div>
         </header>
@@ -374,25 +385,30 @@ export default function QrCodesPage() {
 
         {/* Content Body */}
         <main className="p-6 w-full flex-1 flex flex-col gap-6">
-          
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col gap-5">
             <div className="border-b border-slate-200 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="text-left">
                 <h3 className="text-sm font-bold text-slate-900">Manage Table QR Codes</h3>
-                <p className="text-[11px] text-slate-555">Download table specific QR codes directing guests to table routing systems.</p>
+                <p className="text-[11px] text-slate-555">
+                  Download table specific QR codes directing guests to table routing systems.
+                </p>
               </div>
-              
+
               <div className="flex items-center gap-2.5">
                 {userRole === "admin" && (
                   <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Branch:</span>
+                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                      Branch:
+                    </span>
                     <select
                       value={selectedBranchId}
                       onChange={(e) => setSelectedBranchId(e.target.value)}
                       className="bg-transparent border-none outline-none text-xs font-bold text-[#ff7a00] pr-1.5 focus:ring-0 cursor-pointer"
                     >
                       {branches.map((b) => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -417,12 +433,14 @@ export default function QrCodesPage() {
                 {getCurrentBranchTables().map((table: Table, i: number) => {
                   const tableUrl = `${origin}/${restaurantUsername}?branch=${selectedBranchId}&table=${table.name.replace("Table ", "")}`;
                   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(tableUrl)}`;
-                  
+
                   return (
-                    <div 
-                      key={i} 
+                    <div
+                      key={i}
                       className="bg-slate-50/50 border border-slate-200 rounded-tr-2xl rounded-bl-2xl rounded-tl-none rounded-br-none p-2.5 flex flex-col items-center justify-center text-center gap-2.5 shadow-sm hover:shadow-md hover:border-slate-350 transition-all duration-300 group aspect-square relative cursor-pointer"
-                      onClick={() => setPreviewQr({ name: table.name, location: table.location, url: tableUrl })}
+                      onClick={() =>
+                        setPreviewQr({ name: table.name, location: table.location, url: tableUrl })
+                      }
                     >
                       {/* Action buttons overlay (visible on hover) */}
                       <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
@@ -453,15 +471,19 @@ export default function QrCodesPage() {
                       <div className="p-1.5 rounded-tr-xl rounded-bl-xl rounded-tl-none rounded-br-none bg-white text-slate-900 shrink-0 border border-slate-200 shadow-inner w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center overflow-hidden hover:border-[#ff7a00] transition-colors duration-300 relative select-none">
                         <BeautifulQRCode value={tableUrl} tableName={table.name} size={96} />
                       </div>
-                      
+
                       <div className="flex flex-col gap-0.5 items-center w-full min-w-0">
                         <div className="flex items-center gap-1 justify-center max-w-full">
-                          <span className="text-[11.5px] font-extrabold text-slate-800 truncate">{table.name}</span>
+                          <span className="text-[11.5px] font-extrabold text-slate-800 truncate">
+                            {table.name}
+                          </span>
                           <span className="text-slate-400 hover:text-slate-600 p-0.5 rounded transition-colors hidden group-hover:inline-block">
                             <ExternalLink className="w-2.5 h-2.5" />
                           </span>
                         </div>
-                        <span className="text-[9px] text-[#ff7a00] font-bold uppercase tracking-wider">{table.location}</span>
+                        <span className="text-[9px] text-[#ff7a00] font-bold uppercase tracking-wider">
+                          {table.location}
+                        </span>
                       </div>
                     </div>
                   );
@@ -469,14 +491,13 @@ export default function QrCodesPage() {
               </div>
             )}
           </div>
-
         </main>
       </div>
 
       {/* QR Code Preview Modal */}
       {previewQr && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-100 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div 
+          <div
             className="bg-white rounded-tr-3xl rounded-bl-3xl rounded-tl-none rounded-br-none p-6 max-w-sm w-full flex flex-col gap-5 shadow-[0_25px_60px_rgba(0,0,0,0.15)] border border-slate-100 animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
@@ -501,8 +522,15 @@ export default function QrCodesPage() {
                 <BeautifulQRCode value={previewQr.url} tableName={previewQr.name} size={180} />
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scan to Open Menu</span>
-                <span className="text-[10px] font-semibold text-slate-500 truncate max-w-[280px] font-mono select-all" title="Click to select all">{previewQr.url}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Scan to Open Menu
+                </span>
+                <span
+                  className="text-[10px] font-semibold text-slate-500 truncate max-w-[280px] font-mono select-all"
+                  title="Click to select all"
+                >
+                  {previewQr.url}
+                </span>
               </div>
             </div>
 
@@ -534,7 +562,7 @@ export default function QrCodesPage() {
               <h3 className="text-sm font-extrabold text-slate-900">
                 {qrModalMode === "add" ? "Add New Table QR" : "Edit Table QR"}
               </h3>
-              <button 
+              <button
                 onClick={() => setIsQrModalOpen(false)}
                 type="button"
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer"
@@ -546,8 +574,8 @@ export default function QrCodesPage() {
             <form onSubmit={handleSaveQrTable} className="flex flex-col gap-4 text-left font-sans">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] uppercase font-bold text-slate-500">Table Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={qrTableName}
                   onChange={(e) => setQrTableName(e.target.value)}
                   placeholder="e.g. Table 09"
@@ -589,7 +617,6 @@ export default function QrCodesPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

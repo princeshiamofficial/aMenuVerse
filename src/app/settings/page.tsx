@@ -4,20 +4,20 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import BeautifulQRCode from "../../../ui/BeautifulQRCode";
-import { 
-  Menu, 
-  Bell, 
-  Settings, 
-  Save, 
-  Check, 
-  FileText, 
-  Wifi, 
+import {
+  Menu,
+  Bell,
+  Settings,
+  Save,
+  Check,
+  FileText,
+  Wifi,
   X,
   Lock,
   Eye,
   EyeOff,
   Mail,
-  ShieldCheck
+  ShieldCheck,
 } from "lucide-react";
 import { RESTAURANTS, Branch } from "../data/restaurants";
 
@@ -33,8 +33,6 @@ interface CustomBranch extends Branch {
   isCustom?: boolean;
 }
 
-
-
 type SettingsSection = "taxes" | "qr" | "hardware" | "branches" | "staff" | "account";
 export default function SettingsPage() {
   const router = useRouter();
@@ -43,7 +41,11 @@ export default function SettingsPage() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState<SettingsSection>("taxes");
   const [showToast, setShowToast] = useState(false);
-  const [previewQr, setPreviewQr] = useState<{ name: string; location: string; url: string } | null>(null);
+  const [previewQr, setPreviewQr] = useState<{
+    name: string;
+    location: string;
+    url: string;
+  } | null>(null);
 
   // Dynamic user roles and branch states
   const [userDisplayName, setUserDisplayName] = useState("Color Hut Admin");
@@ -69,19 +71,19 @@ export default function SettingsPage() {
         router.replace("/login");
         return;
       }
-      
+
       const role = localStorage.getItem("userRole") || "admin";
       if (role !== "admin") {
         router.replace("/dashboard");
         return;
       }
-      
+
       const name = localStorage.getItem("userDisplayName") || "Color Hut Admin";
-      
+
       setUserDisplayName(name);
 
       // Load branches
-      const restaurant = RESTAURANTS.find(r => r.id === 1);
+      const restaurant = RESTAURANTS.find((r) => r.id === 1);
       const defaults = restaurant?.branches || [];
       const storedBranchesStr = localStorage.getItem("restaurant_branches");
       if (storedBranchesStr) {
@@ -98,7 +100,13 @@ export default function SettingsPage() {
       // Listen to URL search param "section" and set active section
       const searchParams = new URLSearchParams(window.location.search);
       const sectionParam = searchParams.get("section");
-      if (sectionParam === "branches" || sectionParam === "taxes" || sectionParam === "qr" || sectionParam === "hardware" || sectionParam === "account") {
+      if (
+        sectionParam === "branches" ||
+        sectionParam === "taxes" ||
+        sectionParam === "qr" ||
+        sectionParam === "hardware" ||
+        sectionParam === "account"
+      ) {
         setSettingsSection(sectionParam as SettingsSection);
       }
     }
@@ -122,13 +130,16 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [accountSaving, setAccountSaving] = useState(false);
-  const [accountToast, setAccountToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [accountToast, setAccountToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   // Load current admin email on mount
   React.useEffect(() => {
     fetch("/api/tenant/account")
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (data.email) setAccountEmail(data.email);
       })
       .catch(() => {});
@@ -191,8 +202,10 @@ export default function SettingsPage() {
 
   const saveBranchesToStorage = (updatedBranches: CustomBranch[]) => {
     setBranches(updatedBranches);
-    const defaults = RESTAURANTS.find(r => r.id === 1)?.branches || [];
-    const customs = updatedBranches.filter(b => !defaults.some(d => d.id === b.id) || b.isCustom);
+    const defaults = RESTAURANTS.find((r) => r.id === 1)?.branches || [];
+    const customs = updatedBranches.filter(
+      (b) => !defaults.some((d) => d.id === b.id) || b.isCustom,
+    );
     localStorage.setItem("restaurant_branches", JSON.stringify(customs));
   };
 
@@ -224,13 +237,17 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!qrTableName.trim()) return;
 
-    const updatedBranches = branches.map(b => {
+    const updatedBranches = branches.map((b) => {
       if (b.id === selectedBranchId) {
         const updatedTables = [...b.tables];
         if (qrModalMode === "add") {
           updatedTables.push({ name: qrTableName, location: qrTableLocation, status: "Active" });
         } else if (qrModalMode === "edit" && editingTableIndex !== null) {
-          updatedTables[editingTableIndex] = { name: qrTableName, location: qrTableLocation, status: "Active" };
+          updatedTables[editingTableIndex] = {
+            name: qrTableName,
+            location: qrTableLocation,
+            status: "Active",
+          };
         }
         return { ...b, tables: updatedTables };
       }
@@ -286,7 +303,7 @@ export default function SettingsPage() {
     let updatedBranches;
     if (branchModalMode === "add") {
       const newId = branchFormName.toLowerCase().replace(/\s+/g, "-");
-      if (branches.some(b => b.id === newId)) {
+      if (branches.some((b) => b.id === newId)) {
         alert("A branch with this name already exists.");
         return;
       }
@@ -294,7 +311,7 @@ export default function SettingsPage() {
       const generatedTables = Array.from({ length: tableCount }, (_, i) => ({
         name: `Table ${String(i + 1).padStart(2, "0")}`,
         location: "Main Hall",
-        status: "Active"
+        status: "Active",
       }));
       const newBranch = {
         id: newId,
@@ -303,18 +320,18 @@ export default function SettingsPage() {
         phone: branchFormPhone,
         operatingHours: branchFormHours,
         tables: generatedTables,
-        isCustom: true
+        isCustom: true,
       };
       updatedBranches = [...branches, newBranch];
     } else {
-      updatedBranches = branches.map(b => {
+      updatedBranches = branches.map((b) => {
         if (b.id === editingBranchId) {
           return {
             ...b,
             name: branchFormName,
             location: branchFormLocation,
             phone: branchFormPhone,
-            operatingHours: branchFormHours
+            operatingHours: branchFormHours,
           };
         }
         return b;
@@ -354,23 +371,23 @@ export default function SettingsPage() {
         data: targetUrl,
         dotsOptions: {
           color: "#000000",
-          type: "dots"
+          type: "dots",
         },
         qrOptions: {
           typeNumber: 0, // Auto — library selects minimum safe version
           mode: "Byte",
-          errorCorrectionLevel: "M"
+          errorCorrectionLevel: "M",
         },
         backgroundOptions: {
           color: "#ffffff",
         },
         cornersSquareOptions: {
           color: "#000000",
-          type: "extra-rounded"
+          type: "extra-rounded",
         },
         cornersDotOptions: {
           color: "#000000",
-          type: "dot"
+          type: "dot",
         },
         extensions: [
           (svg: any) => {
@@ -386,8 +403,8 @@ export default function SettingsPage() {
                 });
               }
             });
-          }
-        ]
+          },
+        ],
       } as any);
 
       qrCode.getRawData("svg").then((blob) => {
@@ -434,11 +451,8 @@ export default function SettingsPage() {
     });
   };
 
-
-
   return (
     <div className="min-h-screen bg-[#f8fafc] flex text-slate-800 font-sans overflow-hidden">
-      
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex h-screen shrink-0">
         <Sidebar
@@ -465,7 +479,7 @@ export default function SettingsPage() {
               onCloseMobile={() => setIsMobileOpen(false)}
             />
           </div>
-          <button 
+          <button
             onClick={() => setIsMobileOpen(false)}
             className="flex-1 h-full cursor-default focus:outline-none"
             aria-label="Close menu"
@@ -475,11 +489,10 @@ export default function SettingsPage() {
 
       {/* Main Panel */}
       <div className="flex-1 flex flex-col h-screen overflow-y-auto">
-        
         {/* Top Navbar */}
         <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setIsMobileOpen(true)}
               className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 text-slate-650 transition-colors"
               aria-label="Open sidebar"
@@ -491,7 +504,7 @@ export default function SettingsPage() {
               <span>Restaurant Settings</span>
             </h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="relative">
               <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-550 hover:text-slate-855 transition-colors relative">
@@ -504,7 +517,9 @@ export default function SettingsPage() {
               <div className="w-8 h-8 rounded-full bg-linear-to-tr from-[#ff7a00] to-amber-500 flex items-center justify-center font-bold text-xs text-white">
                 CH
               </div>
-              <span className="hidden md:inline text-xs font-semibold text-slate-600">{userDisplayName}</span>
+              <span className="hidden md:inline text-xs font-semibold text-slate-600">
+                {userDisplayName}
+              </span>
             </div>
           </div>
         </header>
@@ -519,14 +534,13 @@ export default function SettingsPage() {
 
         {/* Content Body */}
         <main className="p-6 w-full flex-1 flex flex-col lg:flex-row gap-6">
-          
           {/* Settings Section Tabs (Left) */}
           <div className="w-full lg:w-64 shrink-0 flex lg:flex-col gap-2 overflow-x-auto pb-2.5 lg:pb-0 scrollbar-none">
             {[
               { id: "taxes", label: "Taxes & Service Fees" },
               { id: "hardware", label: "Hardware & Printers" },
-              { id: "account", label: "Account & Security" }
-            ].map(sec => (
+              { id: "account", label: "Account & Security" },
+            ].map((sec) => (
               <button
                 key={sec.id}
                 onClick={() => setSettingsSection(sec.id as SettingsSection)}
@@ -543,17 +557,20 @@ export default function SettingsPage() {
 
           {/* Form Content Pane (Right) */}
           <div className="flex-1 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-            
             {/* Taxes and Fees Form */}
             {settingsSection === "taxes" && (
               <form onSubmit={handleSave} className="flex flex-col gap-5 max-w-xl">
                 <div className="border-b border-slate-200 pb-3">
                   <h3 className="text-sm font-bold text-slate-900">Taxes & Service Charges</h3>
-                  <p className="text-[11px] text-slate-500">Configure regulatory VAT/GST and cashier receipts.</p>
+                  <p className="text-[11px] text-slate-500">
+                    Configure regulatory VAT/GST and cashier receipts.
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] uppercase font-bold text-slate-500">Value Added Tax (VAT) / GST (%)</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-500">
+                    Value Added Tax (VAT) / GST (%)
+                  </label>
                   <input
                     type="number"
                     value={vat}
@@ -563,7 +580,9 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] uppercase font-bold text-slate-500">Default Service Charge (%)</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-500">
+                    Default Service Charge (%)
+                  </label>
                   <input
                     type="number"
                     value={serviceFee}
@@ -581,10 +600,15 @@ export default function SettingsPage() {
                     className="w-5 h-5 accent-emerald-500 rounded border-slate-300 bg-white"
                   />
                   <div className="flex flex-col">
-                    <label htmlFor="auto-print" className="text-xs font-bold text-slate-700 cursor-pointer">
+                    <label
+                      htmlFor="auto-print"
+                      className="text-xs font-bold text-slate-700 cursor-pointer"
+                    >
                       Auto-Print Kitchen tickets
                     </label>
-                    <span className="text-[10px] text-slate-500 font-medium">Send order receipts directly to kitchen printer when checkout is finalized.</span>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Send order receipts directly to kitchen printer when checkout is finalized.
+                    </span>
                   </div>
                 </div>
 
@@ -595,35 +619,51 @@ export default function SettingsPage() {
                   <Save className="w-4 h-4" /> Save Configuration
                 </button>
               </form>
-             )}
+            )}
 
             {/* Hardware settings form */}
             {settingsSection === "hardware" && (
               <form onSubmit={handleSave} className="flex flex-col gap-5 max-w-xl">
                 <div className="border-b border-slate-200 pb-3">
-                  <h3 className="text-sm font-bold text-slate-900">Printers & Hardware Integration</h3>
-                  <p className="text-[11px] text-slate-500">Configure connection status of POS receipt and kitchen printers.</p>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Printers & Hardware Integration
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Configure connection status of POS receipt and kitchen printers.
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] uppercase font-bold text-slate-500">Connected Printer</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-500">
+                    Connected Printer
+                  </label>
                   <select
                     value={selectedPrinter}
                     onChange={(e) => setSelectedPrinter(e.target.value)}
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#ff7a00] text-slate-800 font-bold"
                   >
-                    <option value="LAN Printer (KITCHEN_K1)">LAN Printer (KITCHEN_K1) - IP: 192.168.1.180</option>
-                    <option value="USB Printer (RECEIPT_P1)">USB Printer (RECEIPT_P1) - Local COM3</option>
-                    <option value="Bluetooth Printer (BT_P2)">Bluetooth Printer (BT_P2) - Connected</option>
+                    <option value="LAN Printer (KITCHEN_K1)">
+                      LAN Printer (KITCHEN_K1) - IP: 192.168.1.180
+                    </option>
+                    <option value="USB Printer (RECEIPT_P1)">
+                      USB Printer (RECEIPT_P1) - Local COM3
+                    </option>
+                    <option value="Bluetooth Printer (BT_P2)">
+                      Bluetooth Printer (BT_P2) - Connected
+                    </option>
                   </select>
                 </div>
 
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <div className="flex items-center gap-3">
-                    <Wifi className={`w-5 h-5 ${isPrinterConnected ? "text-emerald-600 animate-pulse" : "text-rose-600"}`} />
+                    <Wifi
+                      className={`w-5 h-5 ${isPrinterConnected ? "text-emerald-600 animate-pulse" : "text-rose-600"}`}
+                    />
                     <div className="flex flex-col">
                       <span className="text-xs font-bold text-slate-700">Connection Status</span>
-                      <span className="text-[9px] text-slate-500 font-medium">Printer status is currently: {isPrinterConnected ? "ONLINE" : "OFFLINE"}</span>
+                      <span className="text-[9px] text-slate-500 font-medium">
+                        Printer status is currently: {isPrinterConnected ? "ONLINE" : "OFFLINE"}
+                      </span>
                     </div>
                   </div>
                   <button
@@ -661,17 +701,25 @@ export default function SettingsPage() {
                     <ShieldCheck className="w-4 h-4 text-[#ff7a00]" />
                     Account &amp; Security
                   </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Update your admin login email and password.</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Update your admin login email and password.
+                  </p>
                 </div>
 
                 {/* Toast feedback */}
                 {accountToast && (
-                  <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-semibold border ${
-                    accountToast.type === "success"
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                      : "bg-rose-50 border-rose-200 text-rose-700"
-                  }`}>
-                    {accountToast.type === "success" ? <Check className="w-4 h-4 shrink-0" /> : <X className="w-4 h-4 shrink-0" />}
+                  <div
+                    className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-semibold border ${
+                      accountToast.type === "success"
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                        : "bg-rose-50 border-rose-200 text-rose-700"
+                    }`}
+                  >
+                    {accountToast.type === "success" ? (
+                      <Check className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <X className="w-4 h-4 shrink-0" />
+                    )}
                     {accountToast.message}
                   </div>
                 )}
@@ -684,7 +732,7 @@ export default function SettingsPage() {
                   <input
                     type="email"
                     value={accountEmail}
-                    onChange={e => setAccountEmail(e.target.value)}
+                    onChange={(e) => setAccountEmail(e.target.value)}
                     required
                     placeholder="admin@example.com"
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#ff7a00] text-slate-800 font-medium transition-colors"
@@ -694,30 +742,37 @@ export default function SettingsPage() {
                 {/* Divider */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-px bg-slate-200" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Change Password</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Change Password
+                  </span>
                   <div className="flex-1 h-px bg-slate-200" />
                 </div>
 
                 {/* Current Password */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5">
-                    <Lock className="w-3 h-3" /> Current Password <span className="text-rose-400">*</span>
+                    <Lock className="w-3 h-3" /> Current Password{" "}
+                    <span className="text-rose-400">*</span>
                   </label>
                   <div className="relative">
                     <input
                       type={showCurrentPassword ? "text" : "password"}
                       value={accountCurrentPassword}
-                      onChange={e => setAccountCurrentPassword(e.target.value)}
+                      onChange={(e) => setAccountCurrentPassword(e.target.value)}
                       required
                       placeholder="Enter your current password"
                       className="w-full text-xs px-3.5 py-2.5 pr-10 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#ff7a00] text-slate-800 font-medium transition-colors"
                     />
                     <button
                       type="button"
-                      onClick={() => setShowCurrentPassword(v => !v)}
+                      onClick={() => setShowCurrentPassword((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     >
-                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showCurrentPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -725,22 +780,27 @@ export default function SettingsPage() {
                 {/* New Password */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5">
-                    <Lock className="w-3 h-3" /> New Password <span className="text-slate-400">(optional)</span>
+                    <Lock className="w-3 h-3" /> New Password{" "}
+                    <span className="text-slate-400">(optional)</span>
                   </label>
                   <div className="relative">
                     <input
                       type={showNewPassword ? "text" : "password"}
                       value={accountNewPassword}
-                      onChange={e => setAccountNewPassword(e.target.value)}
+                      onChange={(e) => setAccountNewPassword(e.target.value)}
                       placeholder="Leave blank to keep current password"
                       className="w-full text-xs px-3.5 py-2.5 pr-10 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-[#ff7a00] text-slate-800 font-medium transition-colors"
                     />
                     <button
                       type="button"
-                      onClick={() => setShowNewPassword(v => !v)}
+                      onClick={() => setShowNewPassword((v) => !v)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showNewPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -755,7 +815,7 @@ export default function SettingsPage() {
                       <input
                         type={showConfirmPassword ? "text" : "password"}
                         value={accountConfirmPassword}
-                        onChange={e => setAccountConfirmPassword(e.target.value)}
+                        onChange={(e) => setAccountConfirmPassword(e.target.value)}
                         placeholder="Re-enter your new password"
                         className={`w-full text-xs px-3.5 py-2.5 pr-10 rounded-xl bg-slate-50 border focus:outline-none focus:border-[#ff7a00] text-slate-800 font-medium transition-colors ${
                           accountConfirmPassword && accountNewPassword !== accountConfirmPassword
@@ -765,14 +825,20 @@ export default function SettingsPage() {
                       />
                       <button
                         type="button"
-                        onClick={() => setShowConfirmPassword(v => !v)}
+                        onClick={() => setShowConfirmPassword((v) => !v)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                       >
-                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
                     {accountConfirmPassword && accountNewPassword !== accountConfirmPassword && (
-                      <p className="text-[10px] text-rose-500 font-semibold">Passwords do not match</p>
+                      <p className="text-[10px] text-rose-500 font-semibold">
+                        Passwords do not match
+                      </p>
                     )}
                   </div>
                 )}
@@ -792,16 +858,14 @@ export default function SettingsPage() {
                 </button>
               </form>
             )}
-
           </div>
-
         </main>
       </div>
 
       {/* QR Code Preview Modal */}
       {previewQr && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-100 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div 
+          <div
             className="bg-white rounded-tr-3xl rounded-bl-3xl rounded-tl-none rounded-br-none p-6 max-w-sm w-full flex flex-col gap-5 shadow-[0_25px_60px_rgba(0,0,0,0.15)] border border-slate-100 animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
@@ -826,8 +890,15 @@ export default function SettingsPage() {
                 <BeautifulQRCode value={previewQr.url} tableName={previewQr.name} size={180} />
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Scan to Open Menu</span>
-                <span className="text-[10px] font-semibold text-slate-500 truncate max-w-[280px] font-mono select-all" title="Click to select all">{previewQr.url}</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Scan to Open Menu
+                </span>
+                <span
+                  className="text-[10px] font-semibold text-slate-500 truncate max-w-[280px] font-mono select-all"
+                  title="Click to select all"
+                >
+                  {previewQr.url}
+                </span>
               </div>
             </div>
 
@@ -860,7 +931,7 @@ export default function SettingsPage() {
               <h3 className="text-sm font-extrabold text-slate-900">
                 {qrModalMode === "add" ? "Add New Table QR" : "Edit Table QR"}
               </h3>
-              <button 
+              <button
                 onClick={() => setIsQrModalOpen(false)}
                 type="button"
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer"
@@ -872,8 +943,8 @@ export default function SettingsPage() {
             <form onSubmit={handleSaveQrTable} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] uppercase font-bold text-slate-500">Table Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={qrTableName}
                   onChange={(e) => setQrTableName(e.target.value)}
                   placeholder="e.g. Table 09"
@@ -924,7 +995,7 @@ export default function SettingsPage() {
               <h3 className="text-sm font-extrabold text-slate-900">
                 {branchModalMode === "add" ? "Add New Branch" : "Edit Branch Details"}
               </h3>
-              <button 
+              <button
                 onClick={() => setIsBranchModalOpen(false)}
                 type="button"
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer"
@@ -935,9 +1006,11 @@ export default function SettingsPage() {
 
             <form onSubmit={handleSaveBranch} className="flex flex-col gap-4 font-sans text-left">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] uppercase font-bold text-slate-500">Branch Name</label>
-                <input 
-                  type="text" 
+                <label className="text-[10px] uppercase font-bold text-slate-500">
+                  Branch Name
+                </label>
+                <input
+                  type="text"
                   value={branchFormName}
                   onChange={(e) => setBranchFormName(e.target.value)}
                   placeholder="e.g. Banani Branch"
@@ -947,9 +1020,11 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] uppercase font-bold text-slate-500">Location Address</label>
-                <input 
-                  type="text" 
+                <label className="text-[10px] uppercase font-bold text-slate-500">
+                  Location Address
+                </label>
+                <input
+                  type="text"
                   value={branchFormLocation}
                   onChange={(e) => setBranchFormLocation(e.target.value)}
                   placeholder="e.g. Road 11, Banani, Dhaka"
@@ -959,9 +1034,11 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] uppercase font-bold text-slate-500">Contact Phone</label>
-                <input 
-                  type="text" 
+                <label className="text-[10px] uppercase font-bold text-slate-500">
+                  Contact Phone
+                </label>
+                <input
+                  type="text"
                   value={branchFormPhone}
                   onChange={(e) => setBranchFormPhone(e.target.value)}
                   placeholder="e.g. +880 1712-999999"
@@ -971,9 +1048,11 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] uppercase font-bold text-slate-500">Operating Hours</label>
-                <input 
-                  type="text" 
+                <label className="text-[10px] uppercase font-bold text-slate-500">
+                  Operating Hours
+                </label>
+                <input
+                  type="text"
                   value={branchFormHours}
                   onChange={(e) => setBranchFormHours(e.target.value)}
                   placeholder="e.g. 11:00 AM - 11:00 PM"
@@ -984,7 +1063,9 @@ export default function SettingsPage() {
 
               {branchModalMode === "add" && (
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] uppercase font-bold text-slate-500">Initial Tables Count</label>
+                  <label className="text-[10px] uppercase font-bold text-slate-500">
+                    Initial Tables Count
+                  </label>
                   <select
                     value={branchFormTablesCount}
                     onChange={(e) => setBranchFormTablesCount(Number(e.target.value))}
@@ -1020,7 +1101,6 @@ export default function SettingsPage() {
       )}
 
       {/* Staff Add/Edit Modal (removed) */}
-
     </div>
   );
 }

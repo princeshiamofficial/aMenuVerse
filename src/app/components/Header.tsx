@@ -17,7 +17,6 @@ export default function Header() {
     <header className="w-full px-0 md:px-6 bg-transparent sticky top-0 z-50">
       {/* Flawless Floating DeepEmerald Card Container sitting flush at the top */}
       <div className="mx-auto max-w-7xl bg-deep-emerald-950 rounded-none md:rounded-b-[28px] border-b border-deep-emerald-900 md:border md:border-t-0 shadow-sm md:shadow-[0_8px_30px_rgba(0,0,0,0.03)] px-6 py-4 md:px-8 md:py-4.5 flex items-center justify-between transition-all duration-300">
-
         {/* Brand Logo and Text */}
         <a href="#" className="flex items-center gap-3 group">
           {/* Custom precision organic loop logo from the mockup */}
@@ -91,8 +90,6 @@ export default function Header() {
             </svg>
           </button>
 
-
-
           {/* Login Link */}
           <Link
             href="/login"
@@ -139,7 +136,6 @@ export default function Header() {
             )}
           </button>
         </div>
-
       </div>
 
       {/* Mobile Responsive Navigation Drawer */}
@@ -147,7 +143,9 @@ export default function Header() {
         <div className="md:hidden fixed inset-0 z-40 bg-black/45 backdrop-blur-sm transition-all duration-300 flex flex-col justify-start pt-24 px-4">
           <div className="w-full max-w-md mx-auto bg-deep-emerald-950 rounded-[24px] border border-deep-emerald-900 shadow-2xl p-6 flex flex-col gap-5 animate-in slide-in-from-top-12 duration-300">
             <div className="flex items-center justify-between border-b border-deep-emerald-900 pb-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">Navigation</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">
+                Navigation
+              </span>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-xs font-bold text-neutral-400 hover:text-white"
@@ -161,7 +159,9 @@ export default function Header() {
                 href="/"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`text-[15px] transition-colors py-1 ${
-                  isHomeActive ? "font-bold text-white" : "font-medium text-neutral-400 hover:text-white"
+                  isHomeActive
+                    ? "font-bold text-white"
+                    : "font-medium text-neutral-400 hover:text-white"
                 }`}
               >
                 Home
@@ -170,7 +170,9 @@ export default function Header() {
                 href="/restaurants"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`text-[15px] transition-colors py-1 ${
-                  isRestaurantActive ? "font-bold text-white" : "font-medium text-neutral-400 hover:text-white"
+                  isRestaurantActive
+                    ? "font-bold text-white"
+                    : "font-medium text-neutral-400 hover:text-white"
                 }`}
               >
                 Restaurant

@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
-import { getCurrentUser } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { getCurrentUser } from "@/lib/auth";
+import { query } from "@/lib/db";
 
 async function checkAdminAuth(req: NextRequest) {
   const user = await getCurrentUser(req);
-  if (!user || (user.restaurantId !== null && user.role !== 'system_admin')) {
+  if (!user || (user.restaurantId !== null && user.role !== "system_admin")) {
     return false;
   }
   return true;
@@ -15,7 +15,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const isAuthorized = await checkAdminAuth(req);
     if (!isAuthorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -23,19 +23,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { name, email, password, role, restaurantId, avatar, status } = body;
 
     if (!name || !email || !role) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     // Check if another user has this email
     const existing = await query<{ id: number }[]>(
-      'SELECT id FROM users WHERE LOWER(email) = ? AND id != ?',
-      [email.toLowerCase().trim(), id]
+      "SELECT id FROM users WHERE LOWER(email) = ? AND id != ?",
+      [email.toLowerCase().trim(), id],
     );
     if (existing.length > 0) {
-      return NextResponse.json({ error: 'A user with this email already exists' }, { status: 400 });
+      return NextResponse.json({ error: "A user with this email already exists" }, { status: 400 });
     }
 
-    const finalRestaurantId = restaurantId === '' || restaurantId === null ? null : parseInt(restaurantId, 10);
+    const finalRestaurantId =
+      restaurantId === "" || restaurantId === null ? null : parseInt(restaurantId, 10);
 
     if (password && password.trim().length >= 6) {
       // Re-hash and update password
@@ -54,9 +55,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           role,
           finalRestaurantId,
           avatar || null,
-          status || 'Active',
+          status || "Active",
           id,
-        ]
+        ],
       );
     } else {
       // Update without password change
@@ -71,19 +72,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           role,
           finalRestaurantId,
           avatar || null,
-          status || 'Active',
+          status || "Active",
           id,
-        ]
+        ],
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'User updated successfully',
+      message: "User updated successfully",
     });
   } catch (err) {
-    console.error('Admin user PUT error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Admin user PUT error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -91,7 +92,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     const isAuthorized = await checkAdminAuth(req);
     if (!isAuthorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
@@ -99,17 +100,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     // Prevent a system admin from deleting themselves
     const currentUser = await getCurrentUser(req);
     if (currentUser && currentUser.id === parseInt(id, 10)) {
-      return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 });
+      return NextResponse.json({ error: "You cannot delete your own account" }, { status: 400 });
     }
 
-    await query('DELETE FROM users WHERE id = ?', [id]);
+    await query("DELETE FROM users WHERE id = ?", [id]);
 
     return NextResponse.json({
       success: true,
-      message: 'User deleted successfully',
+      message: "User deleted successfully",
     });
   } catch (err) {
-    console.error('Admin user DELETE error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Admin user DELETE error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

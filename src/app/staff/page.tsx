@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import Dropdown from "../../../ui/Dropdown";
 import ImageUploader from "../../../ui/ImageUploader";
-import { 
-  Menu, 
-  Bell, 
-  X, 
+import {
+  Menu,
+  Bell,
+  X,
   ChevronDown,
   Mail,
   Lock,
@@ -23,7 +23,7 @@ import {
   Image as ImageIcon,
   UserCheck,
   UserX,
-  AlertTriangle
+  AlertTriangle,
 } from "lucide-react";
 
 interface Branch {
@@ -63,10 +63,12 @@ export default function StaffPage() {
   const [activeActionMenuIdx, setActiveActionMenuIdx] = useState<number | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"add" | "edit" | "change_password" | "change_avatar" | "change_role">("add");
+  const [modalMode, setModalMode] = useState<
+    "add" | "edit" | "change_password" | "change_avatar" | "change_role"
+  >("add");
   const [editingStaffEmail, setEditingStaffEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formPassword, setFormPassword] = useState("password123");
@@ -87,43 +89,45 @@ export default function StaffPage() {
         router.replace("/login");
         return;
       }
-      
+
       const role = localStorage.getItem("userRole") || "admin";
       if (role !== "admin") {
         router.replace("/dashboard");
         return;
       }
-      
+
       const name = localStorage.getItem("userDisplayName") || "Color Hut Admin";
       setUserDisplayName(name);
 
       // Load Branches
       fetch("/api/tenant/branches")
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (Array.isArray(data)) {
             setBranches(data);
           }
         })
-        .catch(err => console.error("Error loading branches:", err));
+        .catch((err) => console.error("Error loading branches:", err));
 
       // Load Staff list
       fetch("/api/tenant/staff")
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (Array.isArray(data)) {
-            setStaffList(data.map((s: StaffMember) => ({
-              id: s.id,
-              name: s.name,
-              email: s.email,
-              role: s.role,
-              assignedBranchId: s.assignedBranchId || "",
-              avatar: s.avatar || "",
-              status: s.status || "Active"
-            })));
+            setStaffList(
+              data.map((s: StaffMember) => ({
+                id: s.id,
+                name: s.name,
+                email: s.email,
+                role: s.role,
+                assignedBranchId: s.assignedBranchId || "",
+                avatar: s.avatar || "",
+                status: s.status || "Active",
+              })),
+            );
           }
         })
-        .catch(err => console.error("Error loading staff:", err));
+        .catch((err) => console.error("Error loading staff:", err));
     }
   }, [router]);
 
@@ -138,9 +142,10 @@ export default function StaffPage() {
 
   // Filtered staff list
   const filteredStaff = useMemo(() => {
-    return staffList.filter(s => {
-      const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            s.email.toLowerCase().includes(searchQuery.toLowerCase());
+    return staffList.filter((s) => {
+      const matchesSearch =
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.email.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === "All" || s.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -148,7 +153,7 @@ export default function StaffPage() {
 
   const getBranchName = (branchId: string) => {
     if (!branchId) return "All Branches";
-    const branch = branches.find(b => b.id === branchId);
+    const branch = branches.find((b) => b.id === branchId);
     return branch ? branch.name : "All Branches";
   };
 
@@ -223,18 +228,20 @@ export default function StaffPage() {
 
   const refreshStaff = () => {
     fetch("/api/tenant/staff")
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         if (Array.isArray(data)) {
-          setStaffList(data.map((s: StaffMember) => ({
-            id: s.id,
-            name: s.name,
-            email: s.email,
-            role: s.role,
-            assignedBranchId: s.assignedBranchId || "",
-            avatar: s.avatar || "",
-            status: s.status || "Active"
-          })));
+          setStaffList(
+            data.map((s: StaffMember) => ({
+              id: s.id,
+              name: s.name,
+              email: s.email,
+              role: s.role,
+              assignedBranchId: s.assignedBranchId || "",
+              avatar: s.avatar || "",
+              status: s.status || "Active",
+            })),
+          );
         }
       });
   };
@@ -257,10 +264,11 @@ export default function StaffPage() {
           role: formRole.toLowerCase(),
           assignedBranchId: formBranchId,
           avatar: formAvatar,
-          status: formStatus
-        })
-      }).then(res => res.json())
-        .then(data => {
+          status: formStatus,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
           if (data.success) {
             triggerToast(`Added staff ${formName}!`);
             refreshStaff();
@@ -269,7 +277,9 @@ export default function StaffPage() {
           }
         });
     } else {
-      const staffToEdit = staffList.find(s => s.email.toLowerCase() === editingStaffEmail.toLowerCase());
+      const staffToEdit = staffList.find(
+        (s) => s.email.toLowerCase() === editingStaffEmail.toLowerCase(),
+      );
       if (staffToEdit) {
         fetch("/api/tenant/staff", {
           method: "PUT",
@@ -282,10 +292,11 @@ export default function StaffPage() {
             assignedBranchId: formBranchId,
             password: formPassword.trim() !== "" ? formPassword : "",
             avatar: formAvatar,
-            status: formStatus
-          })
-        }).then(res => res.json())
-          .then(data => {
+            status: formStatus,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
             if (data.success) {
               triggerToast(`Updated details for ${formName}!`);
               refreshStaff();
@@ -313,7 +324,7 @@ export default function StaffPage() {
 
   const handleExecuteConfirm = () => {
     if (!confirmStaff) return;
-    
+
     if (confirmMode === "ban" || confirmMode === "unban") {
       const newStatus = confirmMode === "ban" ? "Banned" : "Active";
       fetch("/api/tenant/staff", {
@@ -327,12 +338,15 @@ export default function StaffPage() {
           assignedBranchId: confirmStaff.assignedBranchId,
           password: "",
           avatar: confirmStaff.avatar,
-          status: newStatus
-        })
-      }).then(res => res.json())
-        .then(data => {
+          status: newStatus,
+        }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
           if (data.success) {
-            triggerToast(`${confirmStaff.name} has been ${newStatus === "Banned" ? "banned" : "unbanned"}.`);
+            triggerToast(
+              `${confirmStaff.name} has been ${newStatus === "Banned" ? "banned" : "unbanned"}.`,
+            );
             refreshStaff();
           } else {
             triggerToast(data.error || "Failed to update status.");
@@ -340,9 +354,10 @@ export default function StaffPage() {
         });
     } else if (confirmMode === "delete") {
       fetch(`/api/tenant/staff?id=${confirmStaff.id}`, {
-        method: "DELETE"
-      }).then(res => res.json())
-        .then(data => {
+        method: "DELETE",
+      })
+        .then((res) => res.json())
+        .then((data) => {
           if (data.success) {
             triggerToast(`Deleted staff ${confirmStaff.name}.`);
             refreshStaff();
@@ -352,14 +367,13 @@ export default function StaffPage() {
         })
         .catch(() => triggerToast("Network error."));
     }
-    
+
     setShowConfirmModal(false);
     setConfirmStaff(null);
   };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex text-slate-800 font-sans overflow-hidden">
-      
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex h-screen shrink-0">
         <Sidebar
@@ -386,7 +400,7 @@ export default function StaffPage() {
               onCloseMobile={() => setIsMobileOpen(false)}
             />
           </div>
-          <button 
+          <button
             onClick={() => setIsMobileOpen(false)}
             className="flex-1 h-full cursor-default focus:outline-none"
             aria-label="Close menu"
@@ -396,11 +410,10 @@ export default function StaffPage() {
 
       {/* Main Panel */}
       <div className="flex-1 flex flex-col h-screen overflow-y-auto">
-        
         {/* Top Navbar */}
         <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setIsMobileOpen(true)}
               className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-slate-100 text-slate-650 transition-colors"
               aria-label="Open sidebar"
@@ -412,7 +425,7 @@ export default function StaffPage() {
               <span>Staff Management</span>
             </h1>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <div className="relative">
               <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-550 hover:text-slate-855 transition-colors relative">
@@ -425,7 +438,9 @@ export default function StaffPage() {
               <div className="w-8 h-8 rounded-full bg-linear-to-tr from-[#ff7a00] to-amber-500 flex items-center justify-center font-bold text-xs text-white">
                 CH
               </div>
-              <span className="hidden md:inline text-xs font-semibold text-slate-600">{userDisplayName}</span>
+              <span className="hidden md:inline text-xs font-semibold text-slate-600">
+                {userDisplayName}
+              </span>
             </div>
           </div>
         </header>
@@ -440,14 +455,12 @@ export default function StaffPage() {
 
         {/* Content Body matches reference container spacing */}
         <main className="p-4 sm:p-6 lg:p-8 w-full flex-1 flex flex-col gap-6">
-          
           {/* Card Table matches shadow-xl border bg-card rounded-lg */}
           <div className="text-card-foreground shadow-xl border border-[#e1e7ef] bg-white rounded-[12px] flex flex-col lg:overflow-visible overflow-hidden">
-            
             {/* Header controls matching references */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 border-b border-[#e1e7ef] bg-white sticky top-0 z-20">
               <div className="font-semibold tracking-tight text-slate-900 text-xl">All Staff</div>
-              
+
               <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                 {/* Search field */}
                 <div className="relative grow w-full sm:w-auto sm:max-w-xs">
@@ -476,9 +489,12 @@ export default function StaffPage() {
 
                   {showFilterDropdown && (
                     <>
-                      <div className="fixed inset-0 z-10" onClick={() => setShowFilterDropdown(false)} />
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setShowFilterDropdown(false)}
+                      />
                       <div className="absolute right-0 mt-1 w-36 bg-white border border-[#e1e7ef] rounded-[10px] shadow-lg z-20 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
-                        {["All", "Active", "Banned"].map(status => (
+                        {["All", "Active", "Banned"].map((status) => (
                           <button
                             key={status}
                             onClick={() => {
@@ -486,11 +502,15 @@ export default function StaffPage() {
                               setShowFilterDropdown(false);
                             }}
                             className={`w-full px-3.5 py-2 text-xs font-semibold text-left hover:bg-slate-50 transition-colors flex items-center justify-between ${
-                              statusFilter === status ? "text-[#ff7a00] bg-orange-50/20" : "text-slate-700"
+                              statusFilter === status
+                                ? "text-[#ff7a00] bg-orange-50/20"
+                                : "text-slate-700"
                             }`}
                           >
                             <span>{status}</span>
-                            {statusFilter === status && <Check className="w-3.5 h-3.5 text-[#ff7a00]" />}
+                            {statusFilter === status && (
+                              <Check className="w-3.5 h-3.5 text-[#ff7a00]" />
+                            )}
                           </button>
                         ))}
                       </div>
@@ -516,53 +536,77 @@ export default function StaffPage() {
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-[#e1e7ef] bg-slate-50/20">
-                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 pl-6 w-[50px]">SL</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 w-[80px]">Avatar</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[150px]">Name</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[200px]">Email</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[120px]">Role</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[100px]">Status</th>
-                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[150px]">Assigned Branch</th>
-                    <th className="h-12 px-4 align-middle font-medium text-slate-400 pr-6 text-right min-w-[80px]">Actions</th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 pl-6 w-[50px]">
+                      SL
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 w-[80px]">
+                      Avatar
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[150px]">
+                      Name
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[200px]">
+                      Email
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[120px]">
+                      Role
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[100px]">
+                      Status
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-slate-400 min-w-[150px]">
+                      Assigned Branch
+                    </th>
+                    <th className="h-12 px-4 align-middle font-medium text-slate-400 pr-6 text-right min-w-[80px]">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#e1e7ef] text-xs font-medium text-slate-700">
                   {filteredStaff.length > 0 ? (
                     filteredStaff.map((staff, idx) => {
-                      const openUpward = idx >= filteredStaff.length - 2 && filteredStaff.length > 2;
+                      const openUpward =
+                        idx >= filteredStaff.length - 2 && filteredStaff.length > 2;
                       const roleLower = staff.role.toLowerCase();
                       let roleBadgeStyle = {
                         backgroundColor: "rgb(20, 83, 45)", // Default CRM green
-                        color: "#ffffff"
+                        color: "#ffffff",
                       };
                       if (roleLower === "system admin" || roleLower === "owner") {
                         roleBadgeStyle = {
                           backgroundColor: "rgb(112, 48, 160)", // SYSTEM ADMIN/Owner purple
-                          color: "#ffffff"
+                          color: "#ffffff",
                         };
                       } else if (roleLower === "admin" || roleLower === "manager") {
                         roleBadgeStyle = {
                           backgroundColor: "rgb(30, 58, 138)", // ADMIN/Manager dark blue
-                          color: "#ffffff"
+                          color: "#ffffff",
                         };
                       } else if (roleLower === "kitchen") {
                         roleBadgeStyle = {
                           backgroundColor: "rgb(15, 118, 110)", // Kitchen teal
-                          color: "#ffffff"
+                          color: "#ffffff",
                         };
                       } else if (roleLower === "waiter") {
                         roleBadgeStyle = {
                           backgroundColor: "rgb(194, 65, 12)", // Waiter orange
-                          color: "#ffffff"
+                          color: "#ffffff",
                         };
                       }
 
-                      const initials = staff.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+                      const initials = staff.name
+                        .split(" ")
+                        .map((w) => w[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase();
 
                       return (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                           {/* SL */}
-                          <td className="p-4 align-middle pl-6 font-mono text-slate-400">{idx + 1}</td>
+                          <td className="p-4 align-middle pl-6 font-mono text-slate-400">
+                            {idx + 1}
+                          </td>
 
                           {/* Avatar */}
                           <td className="p-4 align-middle">
@@ -578,7 +622,13 @@ export default function StaffPage() {
                                   }}
                                 />
                               ) : (
-                                <span className="flex h-full w-full items-center justify-center rounded-full bg-primary/10 font-semibold" style={{ color: "rgb(249, 116, 21)", backgroundColor: "rgba(249, 116, 21, 0.1)" }}>
+                                <span
+                                  className="flex h-full w-full items-center justify-center rounded-full bg-primary/10 font-semibold"
+                                  style={{
+                                    color: "rgb(249, 116, 21)",
+                                    backgroundColor: "rgba(249, 116, 21, 0.1)",
+                                  }}
+                                >
                                   {initials}
                                 </span>
                               )}
@@ -586,14 +636,18 @@ export default function StaffPage() {
                           </td>
 
                           {/* Name */}
-                          <td className="p-4 align-middle font-semibold text-slate-800">{staff.name}</td>
+                          <td className="p-4 align-middle font-semibold text-slate-800">
+                            {staff.name}
+                          </td>
 
                           {/* Email */}
-                          <td className="p-4 align-middle text-slate-400 font-normal">{staff.email}</td>
+                          <td className="p-4 align-middle text-slate-400 font-normal">
+                            {staff.email}
+                          </td>
 
                           {/* Role Badge */}
                           <td className="p-4 align-middle">
-                            <div 
+                            <div
                               className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border-none select-none tracking-wider text-[10px] uppercase"
                               style={roleBadgeStyle}
                             >
@@ -603,12 +657,21 @@ export default function StaffPage() {
 
                           {/* Status */}
                           <td className="p-4 align-middle">
-                            <div 
+                            <div
                               className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold select-none text-[11px]"
                               style={{
-                                color: staff.status === "Active" ? "rgb(21, 128, 61)" : "rgb(185, 28, 28)",
-                                backgroundColor: staff.status === "Active" ? "rgba(34, 197, 94, 0.2)" : "rgba(239, 68, 68, 0.15)",
-                                borderColor: staff.status === "Active" ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.25)"
+                                color:
+                                  staff.status === "Active"
+                                    ? "rgb(21, 128, 61)"
+                                    : "rgb(185, 28, 28)",
+                                backgroundColor:
+                                  staff.status === "Active"
+                                    ? "rgba(34, 197, 94, 0.2)"
+                                    : "rgba(239, 68, 68, 0.15)",
+                                borderColor:
+                                  staff.status === "Active"
+                                    ? "rgba(34, 197, 94, 0.3)"
+                                    : "rgba(239, 68, 68, 0.25)",
                               }}
                             >
                               {staff.status}
@@ -616,12 +679,16 @@ export default function StaffPage() {
                           </td>
 
                           {/* Assigned Branch */}
-                          <td className="p-4 align-middle text-slate-450 font-normal">{getBranchName(staff.assignedBranchId)}</td>
+                          <td className="p-4 align-middle text-slate-450 font-normal">
+                            {getBranchName(staff.assignedBranchId)}
+                          </td>
 
                           {/* Actions */}
                           <td className="p-4 align-middle pr-6 text-right relative">
                             <button
-                              onClick={() => setActiveActionMenuIdx(activeActionMenuIdx === idx ? null : idx)}
+                              onClick={() =>
+                                setActiveActionMenuIdx(activeActionMenuIdx === idx ? null : idx)
+                              }
                               className="inline-flex items-center justify-center rounded-md text-sm font-medium hover:bg-slate-100 h-9 w-9 text-slate-600 transition-colors cursor-pointer border-none bg-transparent"
                               title="Staff Actions"
                               type="button"
@@ -629,10 +696,15 @@ export default function StaffPage() {
                               <MoreVerticalIcon className="h-4 w-4" />
                             </button>
 
-                             {activeActionMenuIdx === idx && (
+                            {activeActionMenuIdx === idx && (
                               <>
-                                <div className="fixed inset-0 z-10" onClick={() => setActiveActionMenuIdx(null)} />
-                                <div className={`absolute right-6 ${openUpward ? "bottom-full mb-1" : "mt-1"} w-40 bg-white border border-[#e1e7ef] rounded-[10px] shadow-lg z-20 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150 text-left`}>
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  onClick={() => setActiveActionMenuIdx(null)}
+                                />
+                                <div
+                                  className={`absolute right-6 ${openUpward ? "bottom-full mb-1" : "mt-1"} w-40 bg-white border border-[#e1e7ef] rounded-[10px] shadow-lg z-20 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150 text-left`}
+                                >
                                   <button
                                     onClick={() => {
                                       handleOpenEditModal(staff);
@@ -679,8 +751,8 @@ export default function StaffPage() {
                                       setActiveActionMenuIdx(null);
                                     }}
                                     className={`w-full px-3 py-2 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer border-none bg-transparent ${
-                                      staff.status === "Banned" 
-                                        ? "text-emerald-600 hover:bg-emerald-50/50" 
+                                      staff.status === "Banned"
+                                        ? "text-emerald-600 hover:bg-emerald-50/50"
                                         : "text-amber-600 hover:bg-amber-50/50"
                                     }`}
                                   >
@@ -716,7 +788,10 @@ export default function StaffPage() {
                     })
                   ) : (
                     <tr>
-                      <td colSpan={8} className="py-12 px-6 text-center text-slate-400 font-semibold">
+                      <td
+                        colSpan={8}
+                        className="py-12 px-6 text-center text-slate-400 font-semibold"
+                      >
                         No staff found matching parameters.
                       </td>
                     </tr>
@@ -724,9 +799,7 @@ export default function StaffPage() {
                 </tbody>
               </table>
             </div>
-
           </div>
-
         </main>
       </div>
 
@@ -734,7 +807,7 @@ export default function StaffPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-[#f1f3f6] w-full max-w-md rounded-[20px] shadow-2xl p-7 flex flex-col gap-6 animate-in zoom-in-95 duration-200 text-left font-sans relative border border-slate-200/50">
-            <button 
+            <button
               onClick={() => setIsModalOpen(false)}
               className="absolute top-5 right-5 p-1.5 hover:bg-slate-200/50 text-slate-400 hover:text-slate-650 rounded-lg transition-colors cursor-pointer border-none bg-transparent"
               type="button"
@@ -758,11 +831,14 @@ export default function StaffPage() {
                 </span>
               </h3>
               <p className="text-[11px] text-slate-400 font-medium">
-                {modalMode === "add" && "Create a new login profile and branch assignment for your staff."}
-                {modalMode === "edit" && `Manage details, status, and permissions for ${formEmail}.`}
+                {modalMode === "add" &&
+                  "Create a new login profile and branch assignment for your staff."}
+                {modalMode === "edit" &&
+                  `Manage details, status, and permissions for ${formEmail}.`}
                 {modalMode === "change_password" && `Set a new secure password for ${formEmail}.`}
                 {modalMode === "change_avatar" && `Manage the profile picture for ${formEmail}.`}
-                {modalMode === "change_role" && `Update permission levels and branch access for ${formEmail}.`}
+                {modalMode === "change_role" &&
+                  `Update permission levels and branch access for ${formEmail}.`}
               </p>
             </div>
 
@@ -770,7 +846,9 @@ export default function StaffPage() {
               {(modalMode === "add" || modalMode === "edit") && (
                 <>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Display Name</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Display Name
+                    </label>
                     <input
                       type="text"
                       value={formName}
@@ -782,7 +860,9 @@ export default function StaffPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Email Address
+                    </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
@@ -798,14 +878,20 @@ export default function StaffPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Secure Password</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Secure Password
+                    </label>
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type={showPassword ? "text" : "password"}
                         value={formPassword}
                         onChange={(e) => setFormPassword(e.target.value)}
-                        placeholder={modalMode === "add" ? "Min 6 characters..." : "Leave blank to keep existing..."}
+                        placeholder={
+                          modalMode === "add"
+                            ? "Min 6 characters..."
+                            : "Leave blank to keep existing..."
+                        }
                         className="w-full h-10 pl-10 pr-10 rounded-[10px] border border-slate-200 text-xs font-semibold placeholder:text-slate-400 focus:outline-none focus:border-[#ff7a00] transition-colors bg-white"
                         required={modalMode === "add"}
                       />
@@ -814,20 +900,26 @@ export default function StaffPage() {
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 transition-colors p-0.5 rounded focus:outline-none cursor-pointer border-none bg-transparent"
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avatar Image</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Avatar Image
+                    </label>
                     <div className="flex items-center gap-4">
                       {formAvatar ? (
                         <div className="relative w-12 h-12 shrink-0">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img 
-                            src={formAvatar} 
-                            alt="Avatar Preview" 
+                          <img
+                            src={formAvatar}
+                            alt="Avatar Preview"
                             className="w-full h-full rounded-full object-cover border border-slate-200 shadow-sm"
                           />
                           <button
@@ -843,7 +935,7 @@ export default function StaffPage() {
                           No Photo
                         </div>
                       )}
-                      <ImageUploader 
+                      <ImageUploader
                         onUploadSuccess={(url) => setFormAvatar(url)}
                         label="Upload Photo"
                         className="flex-1"
@@ -854,7 +946,9 @@ export default function StaffPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Access Role</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Access Role
+                      </label>
                       <Dropdown
                         value={formRole}
                         onChange={setFormRole}
@@ -863,7 +957,7 @@ export default function StaffPage() {
                           { value: "owner", label: "Owner" },
                           { value: "manager", label: "Manager" },
                           { value: "kitchen", label: "Kitchen" },
-                          { value: "waiter", label: "Waiter" }
+                          { value: "waiter", label: "Waiter" },
                         ]}
                         className="w-full"
                         buttonClassName="w-full h-10 px-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-[10px] justify-between shadow-none font-semibold text-xs text-slate-800 text-left cursor-pointer"
@@ -872,13 +966,15 @@ export default function StaffPage() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Staff Status</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Staff Status
+                      </label>
                       <Dropdown
                         value={formStatus}
                         onChange={setFormStatus}
                         options={[
                           { value: "Active", label: "Active" },
-                          { value: "Banned", label: "Banned" }
+                          { value: "Banned", label: "Banned" },
                         ]}
                         className="w-full"
                         buttonClassName="w-full h-10 px-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-[10px] justify-between shadow-none font-semibold text-xs text-slate-800 text-left cursor-pointer"
@@ -888,13 +984,15 @@ export default function StaffPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assigned Outlet Branch</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Assigned Outlet Branch
+                    </label>
                     <Dropdown
                       value={formBranchId}
                       onChange={setFormBranchId}
                       options={[
                         { value: "", label: "All Branches" },
-                        ...branches.map(b => ({ value: b.id, label: b.name }))
+                        ...branches.map((b) => ({ value: b.id, label: b.name })),
                       ]}
                       className="w-full"
                       buttonClassName="w-full h-10 px-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-[10px] justify-between shadow-none font-semibold text-xs text-slate-800 text-left cursor-pointer"
@@ -906,7 +1004,9 @@ export default function StaffPage() {
 
               {modalMode === "change_password" && (
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">New Secure Password</label>
+                  <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
+                    New Secure Password
+                  </label>
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -938,9 +1038,9 @@ export default function StaffPage() {
                     {formAvatar ? (
                       <div className="relative w-20 h-20 shrink-0">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={formAvatar} 
-                          alt="Avatar Preview" 
+                        <img
+                          src={formAvatar}
+                          alt="Avatar Preview"
                           className="w-full h-full rounded-full object-cover border-2 border-white shadow-md"
                         />
                       </div>
@@ -949,8 +1049,8 @@ export default function StaffPage() {
                         No Photo
                       </div>
                     )}
-                    
-                    <ImageUploader 
+
+                    <ImageUploader
                       onUploadSuccess={(url) => setFormAvatar(url)}
                       label="Upload Image"
                       className="grow"
@@ -978,7 +1078,9 @@ export default function StaffPage() {
               {modalMode === "change_role" && (
                 <>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">Access Role</label>
+                    <label className="text-[10px] font-bold text-slate-450 uppercase tracking-wider">
+                      Access Role
+                    </label>
                     <Dropdown
                       value={formRole}
                       onChange={setFormRole}
@@ -987,7 +1089,7 @@ export default function StaffPage() {
                         { value: "owner", label: "Owner" },
                         { value: "manager", label: "Manager" },
                         { value: "kitchen", label: "Kitchen" },
-                        { value: "waiter", label: "Waiter" }
+                        { value: "waiter", label: "Waiter" },
                       ]}
                       className="w-full"
                       buttonClassName="w-full h-10 px-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-[10px] justify-between shadow-none font-semibold text-xs text-slate-800 text-left cursor-pointer"
@@ -996,13 +1098,15 @@ export default function StaffPage() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider">Assigned Outlet Branch</label>
+                    <label className="text-[10px] font-bold text-slate-455 uppercase tracking-wider">
+                      Assigned Outlet Branch
+                    </label>
                     <Dropdown
                       value={formBranchId}
                       onChange={setFormBranchId}
                       options={[
                         { value: "", label: "All Branches" },
-                        ...branches.map(b => ({ value: b.id, label: b.name }))
+                        ...branches.map((b) => ({ value: b.id, label: b.name })),
                       ]}
                       className="w-full"
                       buttonClassName="w-full h-10 px-3.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-[10px] justify-between shadow-none font-semibold text-xs text-slate-800 text-left cursor-pointer"
@@ -1043,17 +1147,23 @@ export default function StaffPage() {
                 <p className="text-xs text-slate-450 leading-relaxed font-semibold">
                   {confirmMode === "ban" && (
                     <>
-                       You are about to ban the staff <strong className="text-slate-850">&ldquo;{confirmStaff?.name}&rdquo;</strong>. They will no longer be able to log in.
+                      You are about to ban the staff{" "}
+                      <strong className="text-slate-850">&ldquo;{confirmStaff?.name}&rdquo;</strong>
+                      . They will no longer be able to log in.
                     </>
                   )}
                   {confirmMode === "unban" && (
                     <>
-                       You are about to unban the staff <strong className="text-slate-850">&ldquo;{confirmStaff?.name}&rdquo;</strong>. They will be able to log in again.
+                      You are about to unban the staff{" "}
+                      <strong className="text-slate-850">&ldquo;{confirmStaff?.name}&rdquo;</strong>
+                      . They will be able to log in again.
                     </>
                   )}
                   {confirmMode === "delete" && (
                     <>
-                       You are about to delete the staff <strong className="text-slate-850">&ldquo;{confirmStaff?.name}&rdquo;</strong>. This action cannot be undone.
+                      You are about to delete the staff{" "}
+                      <strong className="text-slate-850">&ldquo;{confirmStaff?.name}&rdquo;</strong>
+                      . This action cannot be undone.
                     </>
                   )}
                 </p>
@@ -1075,8 +1185,8 @@ export default function StaffPage() {
                 type="button"
                 onClick={handleExecuteConfirm}
                 className={`px-5 py-2.5 rounded-xl text-white text-xs font-bold transition-all cursor-pointer border-none shadow-xs ${
-                  confirmMode === "unban" 
-                    ? "bg-emerald-600 hover:bg-emerald-700" 
+                  confirmMode === "unban"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
                     : "bg-red-600 hover:bg-red-700"
                 }`}
               >
@@ -1088,7 +1198,6 @@ export default function StaffPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

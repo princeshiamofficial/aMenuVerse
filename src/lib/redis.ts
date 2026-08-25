@@ -1,4 +1,4 @@
-import { createClient, RedisClientType } from 'redis';
+import { createClient, RedisClientType } from "redis";
 
 let redisClient: RedisClientType | null = null;
 let redisUnavailable = false;
@@ -23,17 +23,17 @@ async function getRedisClient(): Promise<RedisClientType | null> {
   }
 
   try {
-    const url = process.env.REDIS_URL || 'redis://localhost:6379';
+    const url = process.env.REDIS_URL || "redis://localhost:6379";
 
     const client = createClient({
       url,
       socket: {
-        connectTimeout: 2000,   // fail fast: 2 seconds max to connect
+        connectTimeout: 2000, // fail fast: 2 seconds max to connect
         reconnectStrategy: false, // never auto-reconnect — we handle it ourselves
       },
     });
 
-    client.on('error', () => {
+    client.on("error", () => {
       // Suppress noisy ECONNREFUSED spam
     });
 
@@ -41,25 +41,25 @@ async function getRedisClient(): Promise<RedisClientType | null> {
     await Promise.race([
       client.connect(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Redis connect timeout')), 2500)
+        setTimeout(() => reject(new Error("Redis connect timeout")), 2500),
       ),
     ]);
 
     // Disable write protection on bgsave errors to avoid MISCONF blockage
     try {
-      await client.sendCommand(['CONFIG', 'SET', 'stop-writes-on-bgsave-error', 'no']);
+      await client.sendCommand(["CONFIG", "SET", "stop-writes-on-bgsave-error", "no"]);
     } catch (configErr) {
-      console.warn('Could not disable Redis stop-writes-on-bgsave-error:', configErr);
+      console.warn("Could not disable Redis stop-writes-on-bgsave-error:", configErr);
     }
 
     redisClient = client as RedisClientType;
     globalRef.redisClient = redisClient;
-    console.log('Redis connected successfully.');
+    console.log("Redis connected successfully.");
     return redisClient;
   } catch {
     redisUnavailable = true;
     globalRef.redisUnavailable = true;
-    console.warn('Redis unavailable — falling back to MySQL only.');
+    console.warn("Redis unavailable — falling back to MySQL only.");
     return null;
   }
 }
@@ -104,14 +104,11 @@ export async function invalidateTenantCache(username: string): Promise<void> {
   }
 }
 
-export async function blacklistToken(
-  token: string,
-  ttlSeconds: number,
-): Promise<void> {
+export async function blacklistToken(token: string, ttlSeconds: number): Promise<void> {
   try {
     const client = await getRedisClient();
     if (!client) return;
-    await client.set(`blacklist:${token}`, 'true', { EX: ttlSeconds });
+    await client.set(`blacklist:${token}`, "true", { EX: ttlSeconds });
   } catch {
     // Non-fatal
   }
@@ -122,7 +119,7 @@ export async function isTokenBlacklisted(token: string): Promise<boolean> {
     const client = await getRedisClient();
     if (!client) return false;
     const exists = await client.get(`blacklist:${token}`);
-    return exists === 'true';
+    return exists === "true";
   } catch {
     return false;
   }

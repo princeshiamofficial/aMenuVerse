@@ -1,18 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { query } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 
 // GET: Retrieve list of orders for the tenant
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
     if (!user || !user.restaurantId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     let orders;
     // If the user is a manager with a specific assigned branch, filter by branch
-    if (user.role === 'manager' && user.assignedBranchId) {
+    if (user.role === "manager" && user.assignedBranchId) {
       orders = await query<any[]>(
         `SELECT o.id, o.restaurant_id as restaurantId, o.branch_id as branchId, 
                 o.table_name as \`table\`, o.items, o.status, o.total, o.created_at as time,
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
          JOIN branches b ON o.branch_id = b.id
          WHERE o.restaurant_id = ? AND o.branch_id = ?
          ORDER BY o.created_at DESC`,
-        [user.restaurantId, user.assignedBranchId]
+        [user.restaurantId, user.assignedBranchId],
       );
     } else {
       orders = await query<any[]>(
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
          JOIN branches b ON o.branch_id = b.id
          WHERE o.restaurant_id = ?
          ORDER BY o.created_at DESC`,
-        [user.restaurantId]
+        [user.restaurantId],
       );
     }
 
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       branchId: order.branchId,
       branchName: order.branchName,
       table: order.table,
-      items: typeof order.items === 'string' ? JSON.parse(order.items) : order.items,
+      items: typeof order.items === "string" ? JSON.parse(order.items) : order.items,
       status: order.status,
       total: parseFloat(order.total),
       time: order.time,
@@ -51,8 +51,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(formattedOrders);
   } catch (err: any) {
-    console.error('Tenant orders GET error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Tenant orders GET error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -62,17 +62,17 @@ export async function POST(req: NextRequest) {
     const { restaurantId, branchId, table, items, total } = await req.json();
 
     if (!restaurantId || !branchId || !table || !items || !total) {
-      return NextResponse.json({ error: 'Missing order details' }, { status: 400 });
+      return NextResponse.json({ error: "Missing order details" }, { status: 400 });
     }
 
     // Check if branch exists and belongs to restaurant
     const branches = await query<any[]>(
-      'SELECT id FROM branches WHERE id = ? AND restaurant_id = ?',
-      [branchId, restaurantId]
+      "SELECT id FROM branches WHERE id = ? AND restaurant_id = ?",
+      [branchId, restaurantId],
     );
 
     if (branches.length === 0) {
-      return NextResponse.json({ error: 'Invalid branch selection' }, { status: 400 });
+      return NextResponse.json({ error: "Invalid branch selection" }, { status: 400 });
     }
 
     // Generate readable order ID (e.g. ORD-12345)
@@ -81,17 +81,17 @@ export async function POST(req: NextRequest) {
     await query(
       `INSERT INTO orders (id, restaurant_id, branch_id, table_name, items, status, total) 
        VALUES (?, ?, ?, ?, ?, 'Pending', ?)`,
-      [orderId, restaurantId, branchId, table, JSON.stringify(items), total]
+      [orderId, restaurantId, branchId, table, JSON.stringify(items), total],
     );
 
     return NextResponse.json({
       success: true,
       orderId,
-      message: 'Order submitted successfully',
+      message: "Order submitted successfully",
     });
   } catch (err: any) {
-    console.error('Submit order POST error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Submit order POST error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -100,40 +100,45 @@ export async function PUT(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
     if (!user || !user.restaurantId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id, status } = await req.json();
 
     if (!id || !status) {
-      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+      return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
     }
 
     // Verify ownership and manager branch bounds
     const orders = await query<any[]>(
-      'SELECT id, branch_id FROM orders WHERE id = ? AND restaurant_id = ?',
-      [id, user.restaurantId]
+      "SELECT id, branch_id FROM orders WHERE id = ? AND restaurant_id = ?",
+      [id, user.restaurantId],
     );
 
     if (orders.length === 0) {
-      return NextResponse.json({ error: 'Order not found or unauthorized' }, { status: 404 });
+      return NextResponse.json({ error: "Order not found or unauthorized" }, { status: 404 });
     }
 
     const order = orders[0];
 
     // Managers can only update orders of their assigned branch
-    if (user.role === 'manager' && user.assignedBranchId && order.branch_id !== user.assignedBranchId) {
-      return NextResponse.json({ error: 'Access denied to this branch\'s orders' }, { status: 403 });
+    if (
+      user.role === "manager" &&
+      user.assignedBranchId &&
+      order.branch_id !== user.assignedBranchId
+    ) {
+      return NextResponse.json({ error: "Access denied to this branch's orders" }, { status: 403 });
     }
 
-    await query(
-      'UPDATE orders SET status = ? WHERE id = ? AND restaurant_id = ?',
-      [status, id, user.restaurantId]
-    );
+    await query("UPDATE orders SET status = ? WHERE id = ? AND restaurant_id = ?", [
+      status,
+      id,
+      user.restaurantId,
+    ]);
 
-    return NextResponse.json({ success: true, message: 'Order status updated successfully' });
+    return NextResponse.json({ success: true, message: "Order status updated successfully" });
   } catch (err: any) {
-    console.error('Update order PUT error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error("Update order PUT error:", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

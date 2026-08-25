@@ -1,4 +1,4 @@
-import pool from './db';
+import pool from "./db";
 
 let initialized = false;
 
@@ -9,7 +9,7 @@ export async function initDb(): Promise<void> {
   const conn = await pool.getConnection();
   try {
     // Ensure FK checks are off during creation to avoid order issues
-    await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+    await conn.query("SET FOREIGN_KEY_CHECKS = 0");
 
     // 1. Restaurants (Tenants)
     await conn.query(`
@@ -128,11 +128,11 @@ export async function initDb(): Promise<void> {
       )
     `);
 
-    await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+    await conn.query("SET FOREIGN_KEY_CHECKS = 1");
 
-    console.log('[DB] ✅ All tables verified / created successfully.');
+    console.log("[DB] ✅ All tables verified / created successfully.");
   } catch (err) {
-    console.error('[DB] ❌ Failed to initialize database tables:', err);
+    console.error("[DB] ❌ Failed to initialize database tables:", err);
     throw err;
   } finally {
     conn.release();

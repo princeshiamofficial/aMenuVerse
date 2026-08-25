@@ -58,9 +58,7 @@ export default function FormattedTextarea({
         className="absolute inset-0 p-3.5 border border-transparent text-xs font-medium text-slate-700 bg-transparent pointer-events-none whitespace-pre-wrap wrap-break-word overflow-hidden"
         style={{ fontFamily: "inherit", lineHeight: "1.625" }}
       >
-        {renderFormattedTextInPlace(value) || (
-          <span className="text-slate-400">{placeholder}</span>
-        )}
+        {renderFormattedTextInPlace(value) || <span className="text-slate-400">{placeholder}</span>}
       </div>
 
       {/* Foreground interactive textarea */}
@@ -72,11 +70,11 @@ export default function FormattedTextarea({
         placeholder={placeholder}
         rows={rows}
         className="w-full p-3.5 rounded-xl border border-slate-200 text-xs font-medium placeholder-transparent focus:outline-none focus:border-[#ff7a00] transition-colors bg-transparent resize-y text-transparent caret-slate-800 whitespace-pre-wrap wrap-break-word block"
-        style={{ 
-          fontFamily: "inherit", 
+        style={{
+          fontFamily: "inherit",
           lineHeight: "1.625",
           color: "transparent",
-          WebkitTextFillColor: "transparent"
+          WebkitTextFillColor: "transparent",
         }}
       />
     </div>

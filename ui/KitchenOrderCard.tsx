@@ -144,7 +144,10 @@ export const calculateProgressInfo = (order: KitchenOrder, now: Date): ProgressI
     progressColorClass = "bg-destructive";
     percentage = 100;
   } else {
-    const secondsRemaining = Math.max(0, Math.floor((effectiveTargetDate.getTime() - now.getTime()) / 1000));
+    const secondsRemaining = Math.max(
+      0,
+      Math.floor((effectiveTargetDate.getTime() - now.getTime()) / 1000),
+    );
     displayText = `${formatDurationPrecise(secondsRemaining)} remaining`;
 
     const totalDurationSeconds = totalSlaMinutes * 60;
@@ -199,7 +202,8 @@ export default function KitchenOrderCard({
         }
       : {
           width: `${progressInfo.percentage}%`,
-          backgroundColor: progressInfo.progressColorClass === "bg-destructive" ? "#ef4444" : "#f5a623",
+          backgroundColor:
+            progressInfo.progressColorClass === "bg-destructive" ? "#ef4444" : "#f5a623",
         };
 
   const statusColors: Record<KitchenOrder["status"], string> = {
@@ -230,7 +234,9 @@ export default function KitchenOrderCard({
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-sm font-black tracking-tight text-white">{order.id}</span>
-            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${statusColors[order.status]}`}>
+            <span
+              className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${statusColors[order.status]}`}
+            >
               {statusLabels[order.status]}
             </span>
           </div>
@@ -245,8 +251,8 @@ export default function KitchenOrderCard({
             order.priority === "high"
               ? "bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.2)] animate-pulse"
               : order.priority === "medium"
-              ? "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.2)]"
-              : "bg-slate-800/50 border-slate-700/50 text-slate-400"
+                ? "bg-amber-500/10 border-amber-500/30 text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.2)]"
+                : "bg-slate-800/50 border-slate-700/50 text-slate-400"
           }`}
         >
           {order.priority}
@@ -257,8 +263,13 @@ export default function KitchenOrderCard({
       {progressInfo.showProgressBar && (
         <div className="flex flex-col gap-1.5 mt-0.5">
           <div className="flex items-center gap-1.5 text-slate-350 text-[11px] font-bold">
-            <StopwatchIcon className={`w-3.5 h-3.5 shrink-0 ${progressInfo.isOverdue ? "text-red-400" : "text-amber-500"}`} />
-            <span className={`truncate ${progressInfo.isOverdue ? "text-red-400 font-extrabold" : ""}`} title={progressInfo.displayText}>
+            <StopwatchIcon
+              className={`w-3.5 h-3.5 shrink-0 ${progressInfo.isOverdue ? "text-red-400" : "text-amber-500"}`}
+            />
+            <span
+              className={`truncate ${progressInfo.isOverdue ? "text-red-400 font-extrabold" : ""}`}
+              title={progressInfo.displayText}
+            >
               {progressInfo.displayText}
             </span>
           </div>
@@ -296,8 +307,11 @@ export default function KitchenOrderCard({
                       : "bg-[#ff7a00] shadow-[0_0_6px_rgba(255,122,0,0.6)]"
                   }`}
                 />
-                <span className={`truncate transition-all duration-200 ${item.checked ? "line-through text-slate-500 font-normal" : ""}`}>
-                  {item.name} <span className="text-[#ff7a00] font-black ml-0.5">x{item.quantity}</span>
+                <span
+                  className={`truncate transition-all duration-200 ${item.checked ? "line-through text-slate-500 font-normal" : ""}`}
+                >
+                  {item.name}{" "}
+                  <span className="text-[#ff7a00] font-black ml-0.5">x{item.quantity}</span>
                 </span>
               </div>
               <span
@@ -325,16 +339,18 @@ export default function KitchenOrderCard({
             order.status === "new"
               ? "bg-sky-600 hover:bg-sky-500 border-sky-500/30 shadow-sky-600/10"
               : order.status === "preparing"
-              ? "bg-purple-600 hover:bg-purple-500 border-purple-500/30 shadow-purple-600/10"
-              : order.status === "qa"
-              ? "bg-amber-600 hover:bg-amber-500 border-amber-500/30 shadow-amber-600/10"
-              : order.status === "ready"
-              ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500/30 shadow-emerald-600/10"
-              : "bg-teal-600 hover:bg-teal-500 border-teal-500/30 shadow-teal-600/10"
+                ? "bg-purple-600 hover:bg-purple-500 border-purple-500/30 shadow-purple-600/10"
+                : order.status === "qa"
+                  ? "bg-amber-600 hover:bg-amber-500 border-amber-500/30 shadow-amber-600/10"
+                  : order.status === "ready"
+                    ? "bg-emerald-600 hover:bg-emerald-500 border-emerald-500/30 shadow-emerald-600/10"
+                    : "bg-teal-600 hover:bg-teal-500 border-teal-500/30 shadow-teal-600/10"
           }`}
         >
           <span>Status: {statusLabels[order.status]}</span>
-          <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? "rotate-90" : ""}`} />
+          <ChevronRight
+            className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? "rotate-90" : ""}`}
+          />
         </button>
 
         {isDropdownOpen && (
@@ -356,7 +372,9 @@ export default function KitchenOrderCard({
                 }`}
               >
                 <span>{statusLabels[status]}</span>
-                {order.status === status && <Check className="w-3.5 h-3.5 text-[#ff7a00] stroke-3" />}
+                {order.status === status && (
+                  <Check className="w-3.5 h-3.5 text-[#ff7a00] stroke-3" />
+                )}
               </button>
             ))}
           </div>
