@@ -307,6 +307,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
   const restaurantColumnAlters = [
     "ALTER TABLE restaurants ADD COLUMN slug VARCHAR(255) NULL",
     "ALTER TABLE restaurants ADD COLUMN username VARCHAR(255) NULL",
+    "ALTER TABLE restaurants ADD COLUMN description TEXT NULL",
     "ALTER TABLE restaurants ADD COLUMN plan VARCHAR(50) DEFAULT 'Starter'",
     "ALTER TABLE restaurants ADD COLUMN is_verified TINYINT(1) DEFAULT 1",
     "ALTER TABLE restaurants ADD COLUMN about TEXT NULL",
@@ -323,6 +324,8 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     "ALTER TABLE restaurants ADD COLUMN location TEXT NULL",
     "ALTER TABLE restaurants ADD COLUMN phone VARCHAR(50) NULL",
     "ALTER TABLE restaurants ADD COLUMN status VARCHAR(50) DEFAULT 'active'",
+    "ALTER TABLE restaurants ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+    "ALTER TABLE restaurants ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
   ];
   for (const alter of restaurantColumnAlters) {
     try {
@@ -346,6 +349,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   // Ensure all branches table columns exist across legacy schemas
   const branchColumnAlters = [
+    "ALTER TABLE branches ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
     "ALTER TABLE branches ADD COLUMN address TEXT NULL",
     "ALTER TABLE branches ADD COLUMN location TEXT NULL",
     "ALTER TABLE branches ADD COLUMN phone VARCHAR(50) NULL",

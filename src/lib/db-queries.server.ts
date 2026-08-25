@@ -565,63 +565,77 @@ export const getRestaurantData = createServerFn({ method: "GET" })
 
 export const getAdminRestaurantsServer = createServerFn({ method: "GET" }).handler(async () => {
   try {
-    const rows = await query<Record<string, unknown>[]>(
-      `SELECT 
-        r.id,
-        r.name,
-        COALESCE(r.slug, r.username, '') AS username,
-        COALESCE(r.cuisine, 'Gourmet Kitchen') AS cuisine,
-        COALESCE(r.location, r.description, 'Main Location') AS location,
-        COALESCE(r.plan, 'Starter') AS plan,
-        COALESCE(r.status, 'active') AS status,
-        COALESCE(r.logo_url, '') AS logo_url,
-        COALESCE(r.is_verified, 0) AS is_verified,
-        COALESCE(DATE_FORMAT(r.created_at, '%Y-%m-%d'), '2026-01-01') AS joined,
-        (SELECT COUNT(*) FROM branches b WHERE b.restaurant_id = r.id) AS branches,
-        (SELECT COUNT(*) FROM categories c WHERE c.restaurant_id = r.id) AS categories_count,
-        (SELECT COUNT(*) FROM food_items f WHERE f.restaurant_id = r.id) AS food_items_count
-       FROM restaurants r
-       ORDER BY r.id ASC`,
-    );
+    let rows: Record<string, unknown>[] = [];
+    try {
+      rows = await query<Record<string, unknown>[]>(
+        `SELECT 
+          r.id,
+          r.name,
+          COALESCE(r.slug, r.username, '') AS username,
+          COALESCE(r.cuisine, 'Gourmet Kitchen') AS cuisine,
+          COALESCE(r.location, 'Main Location') AS location,
+          COALESCE(r.plan, 'Starter') AS plan,
+          COALESCE(r.status, 'active') AS status,
+          COALESCE(r.logo_url, '') AS logo_url,
+          COALESCE(r.is_verified, 1) AS is_verified,
+          '2026-01-01' AS joined,
+          (SELECT COUNT(*) FROM branches b WHERE b.restaurant_id = r.id) AS branches,
+          (SELECT COUNT(*) FROM categories c WHERE c.restaurant_id = r.id) AS categories_count,
+          (SELECT COUNT(*) FROM food_items f WHERE f.restaurant_id = r.id) AS food_items_count
+         FROM restaurants r
+         ORDER BY r.id ASC`,
+      );
+    } catch (fullQueryErr) {
+      console.warn("[getAdminRestaurantsServer] Complex query notice, falling back to simple SELECT:", fullQueryErr);
+      rows = await query<Record<string, unknown>[]>(
+        `SELECT * FROM restaurants ORDER BY id ASC`,
+      );
+    }
 
     if (rows && rows.length > 0) {
       return rows.map((r) => {
-        const slug = String(r.username || "");
+        const id = String(r.id || "");
+        const name = String(r.name || "Restaurant");
+        const slug = String(r.slug || r.username || id || "");
         const logoImage =
-          String(r.logo_url || "") ||
+          String(r.logo_url || r.logo || "") ||
           "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=120&auto=format&fit=crop&q=80";
         const cuisine = String(r.cuisine || "Gourmet Kitchen");
-        const location = String(r.location || "Main Location");
+        const location = String(r.location || r.address || "Main Location");
+        const plan = String(r.plan || "Starter");
+        const status = String(r.status || "active");
+        const isVerified = r.is_verified === 1 || r.is_verified === true || r.is_verified === "1";
         const categoriesCount = Number(r.categories_count || 0);
         const foodItemsCount = Number(r.food_items_count || 0);
+        const branchesCount = Number(r.branches || 1);
 
         return {
-          id: String(r.id),
-          name: String(r.name || ""),
+          id,
+          name,
           username: slug,
           cuisine,
           location,
-          plan: String(r.plan || "Starter"),
-          status: String(r.status || "active"),
-          isVerified: Number(r.is_verified) === 1,
+          plan,
+          status,
+          isVerified,
           logoImage,
-          joined: String(r.joined || "2026-01-01"),
-          branches: Number(r.branches || 1),
+          joined: String(r.created_at ? String(r.created_at).split("T")[0] : "2026-01-01"),
+          branches: branchesCount,
           categories: categoriesCount,
           foodItems: foodItemsCount,
           mrr:
-            r.plan === "Business"
+            plan === "Business"
               ? 89
-              : r.plan === "Enterprise"
+              : plan === "Enterprise"
                 ? 299
-                : r.plan === "Starter"
+                : plan === "Starter"
                   ? 29
                   : 0,
         };
       });
     }
   } catch (err) {
-    console.warn("[getAdminRestaurantsServer Error]", err);
+    console.error("[getAdminRestaurantsServer Error]", err);
   }
 
   return [];
