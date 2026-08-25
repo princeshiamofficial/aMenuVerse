@@ -289,7 +289,7 @@ interface StaffFormProps {
   editTarget: StaffMember | null;
   showPassword: boolean;
   setShowPassword: React.Dispatch<React.SetStateAction<boolean>>;
-  branches: string[];
+  branches: Array<{ id: string; name: string }>;
   isManager: boolean;
   managerBranchName: string | null;
 }
@@ -395,8 +395,8 @@ function StaffForm({
               </SelectTrigger>
               <SelectContent>
                 {branches.map((b) => (
-                  <SelectItem key={b} value={b}>
-                    {b}
+                  <SelectItem key={b.id || b.name} value={b.id || b.name}>
+                    {b.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -551,7 +551,16 @@ function StaffPage() {
             mbLower.includes(sBranchLower);
         }
       } else if (filterBranch !== "all") {
-        matchBranch = s.branch === filterBranch;
+        const fbLower = filterBranch.toLowerCase().trim();
+        const sBranchLower = (s.branch || "").toLowerCase().trim();
+        matchBranch =
+          sBranchLower === fbLower ||
+          s.branch === filterBranch ||
+          branchesList.some(
+            (b) =>
+              (b.id.toLowerCase() === fbLower || b.name.toLowerCase() === fbLower) &&
+              (b.id.toLowerCase() === sBranchLower || b.name.toLowerCase() === sBranchLower),
+          );
       }
 
       const matchStatus = filterStatus === "all" || s.status === filterStatus;
@@ -580,10 +589,12 @@ function StaffPage() {
   const openAdd = () => {
     const defaultBranch =
       isManager && managerBranchName
-        ? managerBranchName
+        ? branchesList.find(
+            (b) => b.name.toLowerCase().trim() === managerBranchName.toLowerCase().trim(),
+          )?.id || managerBranchName
         : filterBranch !== "all"
           ? filterBranch
-          : dynamicBranches[0] || "Main Branch";
+          : branchesList[0]?.id || "Main Branch";
     setForm({ ...EMPTY_FORM, branch: defaultBranch });
     setIsAddOpen(true);
   };
@@ -834,9 +845,9 @@ function StaffPage() {
             </SelectTrigger>
             <SelectContent className="rounded-md">
               <SelectItem value="all">All Branches</SelectItem>
-              {dynamicBranches.map((b) => (
-                <SelectItem key={b} value={b}>
-                  {b}
+              {branchesList.map((b) => (
+                <SelectItem key={b.id || b.name} value={b.id || b.name}>
+                  {b.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -980,9 +991,12 @@ function StaffPage() {
                     <TableCell className="py-3.5">
                       <div className="flex items-center gap-1.5 text-xs text-gray-600 font-medium">
                         <Building2 className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                        {member.branch === "Main Branch" && branchesList[0]
-                          ? branchesList[0].name
-                          : member.branch}
+                        {(() => {
+                          const match = branchesList.find(
+                            (b) => b.id === member.branch || b.name === member.branch,
+                          );
+                          return match ? match.name : member.branch || "Main Branch";
+                        })()}
                       </div>
                     </TableCell>
 
@@ -1125,7 +1139,7 @@ function StaffPage() {
             editTarget={null}
             showPassword={showPassword}
             setShowPassword={setShowPassword}
-            branches={dynamicBranches}
+            branches={branchesList}
             isManager={isManager}
             managerBranchName={managerBranchName}
           />
@@ -1161,7 +1175,7 @@ function StaffPage() {
             editTarget={editTarget}
             showPassword={showPassword}
             setShowPassword={setShowPassword}
-            branches={dynamicBranches}
+            branches={branchesList}
             isManager={isManager}
             managerBranchName={managerBranchName}
           />

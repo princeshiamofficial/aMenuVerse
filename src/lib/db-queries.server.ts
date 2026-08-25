@@ -4792,14 +4792,36 @@ export const saveReservationsServer = createServerFn({ method: "POST" })
           ]);
         }
 
+        const [bRows] = await conn.execute(
+          "SELECT id, name FROM branches WHERE restaurant_id = ?",
+          [tenant.restaurantId],
+        );
+        const branchList = Array.isArray(bRows)
+          ? (bRows as Array<{ id: string; name: string }>)
+          : [];
+
         for (const r of reservations) {
+          const target = (r.branchId || r.branchName || "").toLowerCase().trim();
+          const matchedBranch = branchList.find(
+            (b) =>
+              b.id.toLowerCase() === target ||
+              b.name.toLowerCase() === target ||
+              b.name.toLowerCase().includes(target) ||
+              target.includes(b.name.toLowerCase()),
+          );
+
+          const resolvedBranchId = matchedBranch ? matchedBranch.id : r.branchId || "";
+          const resolvedBranchName = matchedBranch
+            ? matchedBranch.name
+            : r.branchName || tenant.branch || "Main Branch";
+
           await conn.execute(
             `INSERT INTO reservations (id, restaurant_id, branch_id, guest_name, phone, email, party_size, date, time, seating_area, branch_name, table_number, status, special_notes, occasion)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               r.id || crypto.randomUUID(),
               tenant.restaurantId,
-              sanitizeText(r.branchId || ""),
+              sanitizeText(resolvedBranchId),
               sanitizeText(r.guestName),
               sanitizeText(r.phone),
               sanitizeText(r.email || ""),
@@ -4807,7 +4829,7 @@ export const saveReservationsServer = createServerFn({ method: "POST" })
               sanitizeText(r.date),
               sanitizeText(r.time),
               sanitizeText(r.seatingArea || "Main Dining Room"),
-              sanitizeText(r.branchName || tenant.branch || "Main Branch"),
+              sanitizeText(resolvedBranchName),
               sanitizeText(r.tableNumber || ""),
               r.status || "pending",
               sanitizeText(r.specialNotes || ""),
@@ -5179,6 +5201,26 @@ export const saveStaffServer = createServerFn({ method: "POST" })
       if (isManager && managerBranch) {
         sanitizedBranch = sanitizeText(managerBranch);
       }
+
+      // Always resolve to the authoritative branch UUID if available
+      try {
+        const bRows = await query<Record<string, unknown>[]>(
+          "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?) LIMIT 1",
+          [
+            tenant.restaurantId,
+            sanitizedBranch,
+            sanitizedBranch,
+            sanitizedBranch,
+            `%${sanitizedBranch}%`,
+          ],
+        );
+        if (bRows && bRows.length > 0 && bRows[0].id) {
+          sanitizedBranch = String(bRows[0].id);
+        }
+      } catch {
+        /* ignore */
+      }
+
       const sanitizedShift = sanitizeText(s.shift || "Full Day");
       const sanitizedAvatar = s.avatarUrl && !s.avatarUrl.startsWith("blob:") ? s.avatarUrl : null;
 
@@ -5187,13 +5229,14 @@ export const saveStaffServer = createServerFn({ method: "POST" })
         if (s.password && s.password.trim().length >= 6) {
           const passHash = await hashPassword(s.password.trim());
           await query(
-            `UPDATE users SET email = ?, full_name = ?, password_hash = ?, phone = ?, avatar_url = ?, branch = ?, status = ?, shift = ? WHERE id = ?`,
+            `UPDATE users SET email = ?, full_name = ?, password_hash = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ? WHERE id = ?`,
             [
               sanitizedEmail,
               sanitizedName,
               passHash,
               sanitizedPhone,
               sanitizedAvatar,
+              sanitizedBranch,
               sanitizedBranch,
               s.status || "active",
               sanitizedShift,
@@ -5202,12 +5245,13 @@ export const saveStaffServer = createServerFn({ method: "POST" })
           );
         } else {
           await query(
-            `UPDATE users SET email = ?, full_name = ?, phone = ?, avatar_url = ?, branch = ?, status = ?, shift = ? WHERE id = ?`,
+            `UPDATE users SET email = ?, full_name = ?, phone = ?, avatar_url = ?, branch = ?, assigned_branch_id = ?, status = ?, shift = ? WHERE id = ?`,
             [
               sanitizedEmail,
               sanitizedName,
               sanitizedPhone,
               sanitizedAvatar,
+              sanitizedBranch,
               sanitizedBranch,
               s.status || "active",
               sanitizedShift,
@@ -5224,8 +5268,8 @@ export const saveStaffServer = createServerFn({ method: "POST" })
         const newId = s.id || crypto.randomUUID();
         const passHash = s.password ? await hashPassword(s.password.trim()) : null;
         await query(
-          `INSERT INTO users (id, email, password_hash, full_name, phone, avatar_url, branch, status, shift)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO users (id, email, password_hash, full_name, phone, avatar_url, branch, assigned_branch_id, status, shift)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             newId,
             sanitizedEmail,
@@ -5233,6 +5277,7 @@ export const saveStaffServer = createServerFn({ method: "POST" })
             sanitizedName,
             sanitizedPhone,
             sanitizedAvatar,
+            sanitizedBranch,
             sanitizedBranch,
             s.status || "active",
             sanitizedShift,
@@ -5763,23 +5808,44 @@ export const createWaiterRequestServer = createServerFn({ method: "POST" })
     const { restaurantUsername, branchId, tableNo, type, note } = data;
     const publicTenant = await resolvePublicRestaurant(restaurantUsername);
 
+    let resolvedBranchId = branchId ? String(branchId).trim() : null;
+    try {
+      if (resolvedBranchId) {
+        const bRows = await query<Record<string, unknown>[]>(
+          "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?) LIMIT 1",
+          [
+            publicTenant.restaurantId,
+            resolvedBranchId,
+            resolvedBranchId,
+            resolvedBranchId,
+            `%${resolvedBranchId}%`,
+          ],
+        );
+        if (bRows && bRows.length > 0 && bRows[0].id) {
+          resolvedBranchId = String(bRows[0].id);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
     try {
       const id = crypto.randomUUID();
       await query(
         `INSERT INTO waiter_requests
            (id, restaurant_id, branch_id, table_no, type, note, status)
          VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
-        [id, publicTenant.restaurantId, branchId || null, tableNo, type, note || null],
+        [id, publicTenant.restaurantId, resolvedBranchId || null, tableNo, type, note || null],
       );
 
       broadcastRealtimeEvent({
         type: "waiter:called",
         restaurantId: publicTenant.restaurantId,
-        branchId: branchId || null,
+        branchId: resolvedBranchId || null,
         payload: {
           id,
           restaurantId: Number(publicTenant.restaurantId),
-          branchId: branchId || null,
+          branchId: resolvedBranchId || null,
           tableNo,
           type,
           note: note || null,
