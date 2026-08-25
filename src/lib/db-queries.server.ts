@@ -3361,20 +3361,29 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
         );
       }
 
-      // 3. Fallback search by table_no only if valid token matches computed token
-      if ((!rows || rows.length === 0) && data.branchId && data.tableNo) {
-        const expectedToken = encodeTableToken(data.branchId, data.tableNo);
-        if (!data.token || data.token === expectedToken) {
+      // 3. Match tenant table_no from token decoding or parameters
+      if (!rows || rows.length === 0) {
+        const decoded = data.token ? decodeTableToken(data.token) : null;
+        const targetTableNo = data.tableNo || decoded?.tableNo;
+
+        if (targetTableNo) {
+          const cleanNo = targetTableNo.trim();
+          const numVal = parseInt(cleanNo, 10);
+          const noFormatted = !isNaN(numVal) ? String(numVal).padStart(2, "0") : cleanNo;
+
           rows = await query<Record<string, unknown>[]>(
-            "SELECT id, table_no, zone, status, qr_token FROM branch_tables WHERE (branch_id = ? OR branch_id = ?) AND table_no = ? AND (qr_token = ? OR qr_token IS NULL) AND restaurant_id = ? LIMIT 1",
-            [
-              data.branchId,
-              data.branchId.replace("branch-", ""),
-              data.tableNo,
-              expectedToken,
-              tenant.restaurantId,
-            ],
+            "SELECT id, table_no, zone, status, qr_token FROM branch_tables WHERE (table_no = ? OR table_no = ? OR table_no = ?) AND restaurant_id = ? LIMIT 1",
+            [cleanNo, noFormatted, String(numVal), tenant.restaurantId],
           );
+
+          // Auto-repair/sync qr_token in MySQL if matching tenant table is found
+          if (rows && rows.length > 0 && data.token) {
+            const tableRowId = String(rows[0].id);
+            query("UPDATE branch_tables SET qr_token = ? WHERE id = ?", [
+              data.token,
+              tableRowId,
+            ]).catch(() => {});
+          }
         }
       }
 
