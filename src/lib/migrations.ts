@@ -344,6 +344,88 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     /* ignore */
   }
 
+  // Ensure all branches table columns exist across legacy schemas
+  const branchColumnAlters = [
+    "ALTER TABLE branches ADD COLUMN address TEXT NULL",
+    "ALTER TABLE branches ADD COLUMN location TEXT NULL",
+    "ALTER TABLE branches ADD COLUMN phone VARCHAR(50) NULL",
+    "ALTER TABLE branches ADD COLUMN manager VARCHAR(255) NULL",
+    "ALTER TABLE branches ADD COLUMN status VARCHAR(50) DEFAULT 'open'",
+    "ALTER TABLE branches ADD COLUMN is_default TINYINT(1) DEFAULT 0",
+    "ALTER TABLE branches ADD COLUMN menu_id VARCHAR(255) NULL",
+  ];
+  for (const alter of branchColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column already exists */
+    }
+  }
+
+  // Ensure address and location are synced on branches
+  try {
+    await pool.query(
+      "UPDATE branches SET address = COALESCE(NULLIF(address, ''), location) WHERE address IS NULL OR address = ''",
+    );
+    await pool.query(
+      "UPDATE branches SET location = COALESCE(NULLIF(location, ''), address) WHERE location IS NULL OR location = ''",
+    );
+  } catch {
+    /* ignore */
+  }
+
+  // Ensure all categories table columns exist across legacy schemas
+  const categoryColumnAlters = [
+    "ALTER TABLE categories ADD COLUMN description TEXT NULL",
+    "ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL",
+    "ALTER TABLE categories ADD COLUMN emoji VARCHAR(50) NULL",
+    "ALTER TABLE categories ADD COLUMN image TEXT NULL",
+    "ALTER TABLE categories ADD COLUMN image_url TEXT NULL",
+    "ALTER TABLE categories ADD COLUMN sort_order INT DEFAULT 0",
+    "ALTER TABLE categories ADD COLUMN is_active TINYINT(1) DEFAULT 1",
+  ];
+  for (const alter of categoryColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column already exists */
+    }
+  }
+
+  // Ensure all food_items table columns exist across legacy schemas
+  const foodItemColumnAlters = [
+    "ALTER TABLE food_items ADD COLUMN category VARCHAR(255) NULL",
+    "ALTER TABLE food_items ADD COLUMN category_id VARCHAR(255) NULL",
+    "ALTER TABLE food_items ADD COLUMN slug VARCHAR(255) NULL",
+    "ALTER TABLE food_items ADD COLUMN short_description TEXT NULL",
+    "ALTER TABLE food_items ADD COLUMN long_description TEXT NULL",
+    "ALTER TABLE food_items ADD COLUMN description TEXT NULL",
+    "ALTER TABLE food_items ADD COLUMN image_url TEXT NULL",
+    "ALTER TABLE food_items ADD COLUMN image TEXT NULL",
+    "ALTER TABLE food_items ADD COLUMN price DECIMAL(10,2) NOT NULL DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN discount_price DECIMAL(10,2) NULL",
+    "ALTER TABLE food_items ADD COLUMN prep_time INT DEFAULT 15",
+    "ALTER TABLE food_items ADD COLUMN calories INT DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN ingredients TEXT NULL",
+    "ALTER TABLE food_items ADD COLUMN allergens TEXT NULL",
+    "ALTER TABLE food_items ADD COLUMN spicy_level INT DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN best_seller TINYINT(1) DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN popular TINYINT(1) DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN chef_choice TINYINT(1) DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN vegetarian TINYINT(1) DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN halal TINYINT(1) DEFAULT 1",
+    "ALTER TABLE food_items ADD COLUMN out_of_stock TINYINT(1) DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN is_available TINYINT(1) DEFAULT 1",
+    "ALTER TABLE food_items ADD COLUMN sort_order INT DEFAULT 0",
+  ];
+  for (const alter of foodItemColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column already exists */
+    }
+  }
+
   // Ensure all users table columns exist across legacy schemas
   const userColumnAlters = [
     "ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL",
@@ -355,6 +437,9 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     "ALTER TABLE users ADD COLUMN role VARCHAR(50) NULL",
     "ALTER TABLE users ADD COLUMN restaurant_id INT NULL",
     "ALTER TABLE users ADD COLUMN assigned_branch_id VARCHAR(100) NULL",
+    "ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'active'",
+    "ALTER TABLE users ADD COLUMN shift VARCHAR(100) DEFAULT 'Full Day'",
+    "ALTER TABLE users ADD COLUMN joined_date VARCHAR(100) NULL",
   ];
   for (const alter of userColumnAlters) {
     try {
@@ -364,59 +449,73 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     }
   }
 
-  // Add 'branch_id' column to pos_orders if missing
-  try {
-    await pool.query(
-      "ALTER TABLE pos_orders ADD COLUMN branch_id VARCHAR(255) AFTER restaurant_id",
-    );
-  } catch {
-    /* Column already exists */
+  // Ensure all pos_orders table columns exist across legacy schemas
+  const posOrdersColumnAlters = [
+    "ALTER TABLE pos_orders ADD COLUMN branch_id VARCHAR(255) NULL AFTER restaurant_id",
+    "ALTER TABLE pos_orders ADD COLUMN order_number INT NOT NULL DEFAULT 1",
+    "ALTER TABLE pos_orders ADD COLUMN type VARCHAR(50) DEFAULT 'dine-in'",
+    "ALTER TABLE pos_orders ADD COLUMN status VARCHAR(50) DEFAULT 'pending'",
+    "ALTER TABLE pos_orders ADD COLUMN table_number VARCHAR(50) NULL",
+    "ALTER TABLE pos_orders ADD COLUMN customer_name VARCHAR(255) NULL",
+    "ALTER TABLE pos_orders ADD COLUMN phone VARCHAR(50) NULL",
+    "ALTER TABLE pos_orders ADD COLUMN notes TEXT NULL",
+    "ALTER TABLE pos_orders ADD COLUMN lines_json JSON NULL",
+    "ALTER TABLE pos_orders ADD COLUMN subtotal DECIMAL(10,2) NOT NULL DEFAULT 0",
+    "ALTER TABLE pos_orders ADD COLUMN discount_type VARCHAR(50) DEFAULT 'amount'",
+    "ALTER TABLE pos_orders ADD COLUMN discount_value DECIMAL(10,2) DEFAULT 0",
+    "ALTER TABLE pos_orders ADD COLUMN discount_amount DECIMAL(10,2) DEFAULT 0",
+    "ALTER TABLE pos_orders ADD COLUMN tax DECIMAL(10,2) DEFAULT 0",
+    "ALTER TABLE pos_orders ADD COLUMN total DECIMAL(10,2) NOT NULL DEFAULT 0",
+  ];
+  for (const alter of posOrdersColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column already exists */
+    }
   }
 
-  // Add 'qr_token' and 'status' columns to branch_tables if missing
-  try {
-    await pool.query(
-      "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL AFTER sort_order",
-    );
-  } catch {
-    /* Column already exists */
-  }
-  try {
-    await pool.query(
-      "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
-    );
-  } catch {
-    /* Column already exists */
+  // Ensure all branch_tables table columns exist across legacy schemas
+  const branchTableColumnAlters = [
+    "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(100) DEFAULT 'MAIN ROOM'",
+    "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
+    "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL",
+    "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+  ];
+  for (const alter of branchTableColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column already exists */
+    }
   }
 
-  // Add 'branch_name', 'branch_id', 'created_by_role', 'created_by_user_id' to promotions if missing
-  try {
-    await pool.query(
-      "ALTER TABLE promotions ADD COLUMN branch_name VARCHAR(255) DEFAULT 'all' AFTER show_popup",
-    );
-  } catch {
-    /* Column already exists */
-  }
-  try {
-    await pool.query(
-      "ALTER TABLE promotions ADD COLUMN branch_id VARCHAR(255) DEFAULT 'all' AFTER branch_name",
-    );
-  } catch {
-    /* Column already exists */
-  }
-  try {
-    await pool.query(
-      "ALTER TABLE promotions ADD COLUMN created_by_role VARCHAR(50) DEFAULT 'owner' AFTER branch_id",
-    );
-  } catch {
-    /* Column already exists */
-  }
-  try {
-    await pool.query(
-      "ALTER TABLE promotions ADD COLUMN created_by_user_id VARCHAR(255) AFTER created_by_role",
-    );
-  } catch {
-    /* Column already exists */
+  // Ensure all promotions table columns exist across legacy schemas
+  const promotionColumnAlters = [
+    "ALTER TABLE promotions ADD COLUMN kind VARCHAR(50) DEFAULT 'seasonal'",
+    "ALTER TABLE promotions ADD COLUMN discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0",
+    "ALTER TABLE promotions ADD COLUMN start_date VARCHAR(50) NULL",
+    "ALTER TABLE promotions ADD COLUMN end_date VARCHAR(50) NULL",
+    "ALTER TABLE promotions ADD COLUMN start_time VARCHAR(20) NULL",
+    "ALTER TABLE promotions ADD COLUMN end_time VARCHAR(20) NULL",
+    "ALTER TABLE promotions ADD COLUMN target_scope VARCHAR(50) DEFAULT 'all'",
+    "ALTER TABLE promotions ADD COLUMN category_names_json JSON NULL",
+    "ALTER TABLE promotions ADD COLUMN item_ids_json JSON NULL",
+    "ALTER TABLE promotions ADD COLUMN active TINYINT(1) DEFAULT 1",
+    "ALTER TABLE promotions ADD COLUMN image TEXT NULL",
+    "ALTER TABLE promotions ADD COLUMN description TEXT NULL",
+    "ALTER TABLE promotions ADD COLUMN show_popup TINYINT(1) DEFAULT 1",
+    "ALTER TABLE promotions ADD COLUMN branch_name VARCHAR(255) DEFAULT 'all'",
+    "ALTER TABLE promotions ADD COLUMN branch_id VARCHAR(255) DEFAULT 'all'",
+    "ALTER TABLE promotions ADD COLUMN created_by_role VARCHAR(50) DEFAULT 'owner'",
+    "ALTER TABLE promotions ADD COLUMN created_by_user_id VARCHAR(255) NULL",
+  ];
+  for (const alter of promotionColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column already exists */
+    }
   }
 
   // Idempotent Seed for Default Tenants
