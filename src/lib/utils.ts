@@ -254,20 +254,28 @@ export function decodeTableToken(token: string): { branchSlug: string; tableNo: 
 }
 
 /**
- * Formats ultra-short encrypted table QR URL.
- * e.g. http://burgercraft.localhost:8080/e/df02k7
+ * Formats ultra-short branch & table ID QR URL.
+ * e.g. http://bellapizza.localhost:5173/bd76cb40/1ce8c163
  */
 export function getEncryptedTableUrl(
   username: string,
-  branchSlug: string,
-  tableNo: string,
+  branchId: string,
+  tableIdOrNo: string,
 ): string {
-  const token = encodeTableToken(branchSlug, tableNo);
+  const bClean = (branchId || "main")
+    .replace(/^menu-/, "")
+    .replace(/^branch-/, "")
+    .trim();
+  const bShort = bClean.length > 8 ? bClean.slice(0, 8) : bClean;
+
+  const tClean = (tableIdOrNo || "01").trim();
+  const tShort = tClean.length > 8 ? tClean.slice(0, 8) : tClean;
+
   const baseUrl = getRestaurantUrl(username);
   if (baseUrl.startsWith("http")) {
-    return `${baseUrl}/e/${token}`;
+    return `${baseUrl}/${bShort}/${tShort}`;
   }
-  return `/${username}/e/${token}`;
+  return `/${username}/${bShort}/${tShort}`;
 }
 
 export const CURRENCY_SYMBOLS: Record<string, string> = {

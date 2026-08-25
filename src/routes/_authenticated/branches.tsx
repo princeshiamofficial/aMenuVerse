@@ -913,15 +913,12 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     toast.success(`Table ${num} deleted`);
   };
 
-  const getTableUrl = (tNo: string) => {
+  const getTableUrl = (tNo: string, tableId?: string) => {
     if (!branch) return "";
     const username = restaurantSlug || "burgercraft";
-    const branchSlug = branch.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-
-    return getEncryptedTableUrl(username, branchSlug, tNo);
+    const bId = branch.menuId || branch.id || branch.name;
+    const tId = tableId || tNo;
+    return getEncryptedTableUrl(username, bId, tId);
   };
 
   const downloadTableQr = (tableNo: string, canvasId: string) => {
@@ -1003,7 +1000,7 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 p-1">
               {tables.map((t) => {
-                const url = getTableUrl(t.tableNo);
+                const url = getTableUrl(t.tableNo, t.id);
                 const canvasId = `qr-card-canvas-${t.id}`;
 
                 return (

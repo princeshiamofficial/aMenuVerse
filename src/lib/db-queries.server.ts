@@ -3374,10 +3374,20 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
           "SELECT id, branch_id, table_no, zone, qr_token FROM branch_tables WHERE (qr_token = ? OR id = ?) AND restaurant_id = ? LIMIT 1",
           [data.token, data.token, tenant.restaurantId],
         );
-      } else if (data.tableId) {
+      }
+
+      // 2. Match by tableId/tableNo short UUID or token
+      if ((!rows || rows.length === 0) && (data.tableId || data.tableNo)) {
+        const tSearch = (data.tableId || data.tableNo || "").trim();
+        const tPattern = `%${tSearch}%`;
+
         rows = await query<Record<string, unknown>[]>(
-          "SELECT id, branch_id, table_no, zone, qr_token FROM branch_tables WHERE id = ? AND restaurant_id = ? LIMIT 1",
-          [data.tableId, tenant.restaurantId],
+          `SELECT id, branch_id, table_no, zone, qr_token 
+           FROM branch_tables 
+           WHERE restaurant_id = ? 
+             AND (id = ? OR id LIKE ? OR qr_token = ? OR table_no = ?)
+           LIMIT 1`,
+          [tenant.restaurantId, tSearch, tPattern, tSearch, tSearch],
         );
       }
 
