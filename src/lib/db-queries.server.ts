@@ -377,8 +377,10 @@ export const getRestaurantData = createServerFn({ method: "GET" })
     // 3. Fetch active categories, food items, and profile from DB for this specific tenant
     const serverCategories = await getCategoriesServer({ data: username });
     const serverItems = await getFoodItemsServer({ data: username });
-    const profile = ((await getRestaurantProfile({ data: username })) ||
-      {}) as Record<string, unknown>;
+    const profile = ((await getRestaurantProfile({ data: username })) || {}) as Record<
+      string,
+      unknown
+    >;
     const rawCategories = serverCategories || [];
     const rawItems = serverItems || [];
 
