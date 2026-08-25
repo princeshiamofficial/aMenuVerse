@@ -5399,6 +5399,8 @@ export const saveAdminUserAccountServer = createServerFn({ method: "POST" })
     }
 
     const passwordHash = data.password ? await hashPassword(data.password) : null;
+    const targetRestaurantId = restaurantId ?? 0;
+    const targetPasswordHash = passwordHash || (await hashPassword("password123"));
     const roleDb = data.role.toLowerCase().trim();
 
     try {
@@ -5411,38 +5413,43 @@ export const saveAdminUserAccountServer = createServerFn({ method: "POST" })
         const uid = String(existing[0].id);
         if (passwordHash) {
           await query(
-            "UPDATE users SET full_name = ?, password_hash = ?, branch = ? WHERE id = ?",
-            [data.name, passwordHash, data.branchName || "Main Branch", uid],
+            "UPDATE users SET full_name = ?, name = ?, password_hash = ?, branch = ?, role = ?, restaurant_id = ? WHERE id = ?",
+            [data.name, data.name, passwordHash, data.branchName || "Main Branch", roleDb, targetRestaurantId, uid],
           );
         } else {
-          await query("UPDATE users SET full_name = ?, branch = ? WHERE id = ?", [
-            data.name,
-            data.branchName || "Main Branch",
-            uid,
-          ]);
+          await query(
+            "UPDATE users SET full_name = ?, name = ?, branch = ?, role = ?, restaurant_id = ? WHERE id = ?",
+            [data.name, data.name, data.branchName || "Main Branch", roleDb, targetRestaurantId, uid],
+          );
         }
-        await query("UPDATE user_roles SET role = ?, restaurant_id = ? WHERE user_id = ?", [
-          roleDb,
-          restaurantId,
-          uid,
-        ]);
+        try {
+          await query(
+            "INSERT INTO user_roles (user_id, role, restaurant_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role), restaurant_id = VALUES(restaurant_id)",
+            [uid, roleDb, targetRestaurantId],
+          );
+        } catch {
+          /* ignore user_roles sync if not available */
+        }
         return { success: true, id: uid };
       } else {
         const uid = data.id || crypto.randomUUID();
         await query(
-          "INSERT INTO users (id, email, password_hash, full_name, branch, status) VALUES (?, ?, ?, ?, ?, 'active')",
-          [uid, emailClean, passwordHash, data.name, data.branchName || "Main Branch"],
+          "INSERT INTO users (id, email, password_hash, full_name, name, branch, role, restaurant_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')",
+          [uid, emailClean, targetPasswordHash, data.name, data.name, data.branchName || "Main Branch", roleDb, targetRestaurantId],
         );
-        await query("INSERT INTO user_roles (user_id, role, restaurant_id) VALUES (?, ?, ?)", [
-          uid,
-          roleDb,
-          restaurantId,
-        ]);
+        try {
+          await query(
+            "INSERT INTO user_roles (user_id, role, restaurant_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role), restaurant_id = VALUES(restaurant_id)",
+            [uid, roleDb, targetRestaurantId],
+          );
+        } catch {
+          /* ignore user_roles sync if not available */
+        }
         return { success: true, id: uid };
       }
     } catch (err) {
       console.error("[MySQL] saveAdminUserAccountServer error:", err);
-      throw new Error("Failed to save user account credentials");
+      throw new Error((err as Error)?.message || "Failed to save user account credentials");
     }
   });
 

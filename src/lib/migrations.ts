@@ -453,6 +453,21 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     }
   }
 
+  // Ensure all user_roles table columns exist across legacy schemas
+  const userRolesColumnAlters = [
+    "ALTER TABLE user_roles ADD COLUMN user_id VARCHAR(255) NOT NULL",
+    "ALTER TABLE user_roles ADD COLUMN role VARCHAR(100) NOT NULL",
+    "ALTER TABLE user_roles ADD COLUMN restaurant_id INT NULL DEFAULT 0",
+    "ALTER TABLE user_roles MODIFY COLUMN restaurant_id INT NULL DEFAULT 0",
+  ];
+  for (const alter of userRolesColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column already exists */
+    }
+  }
+
   // Ensure all pos_orders table columns exist across legacy schemas
   const posOrdersColumnAlters = [
     "ALTER TABLE pos_orders ADD COLUMN branch_id VARCHAR(255) NULL AFTER restaurant_id",
