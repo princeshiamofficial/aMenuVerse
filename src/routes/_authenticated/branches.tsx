@@ -108,23 +108,13 @@ const STORAGE_KEY = "menuverse:branches";
 const DEFAULT_BRANCHES: Branch[] = [
   {
     id: "branch-downtown",
-    name: "Gulshan Bistro Branch",
-    address: "Road 11, Gulshan-2, Dhaka",
-    phone: "+880 1712-876543",
-    manager: "Sabrina Rahman",
+    name: "Main Branch",
+    address: "",
+    phone: "",
+    manager: "",
     status: "open",
     isDefault: true,
-    menuId: "menu-gulshan",
-  },
-  {
-    id: "branch-uttara",
-    name: "Uttara Express Kitchen",
-    address: "Sector 3, Uttara, Dhaka",
-    phone: "+880 1890-123456",
-    manager: "Ar Rahman",
-    status: "open",
-    isDefault: false,
-    menuId: "menu-uttara",
+    menuId: "menu-main",
   },
 ];
 const PLAN_BRANCH_LIMITS: Record<string, number | "unlimited"> = {
@@ -159,14 +149,7 @@ function menuUrl(b: Branch) {
   return `${origin}/m/${b.menuId}`;
 }
 
-const AVAILABLE_MANAGERS = [
-  "Sabrina Rahman",
-  "Amelia Rossi",
-  "Rahim Ahmed",
-  "Nusrat Jahan",
-  "Marco Tanaka",
-  "Kenji Lee",
-];
+const AVAILABLE_MANAGERS: string[] = [];
 
 function cleanManagerName(name: string): string {
   if (!name) return "";
@@ -206,29 +189,19 @@ function BranchesPage() {
     const set = new Set<string>();
 
     const actualManagers = dbStaff
-      .filter((s) => (s.role || "").toLowerCase().trim() === "manager")
+      .filter(
+        (s) =>
+          (s.role || "").toLowerCase().trim() === "manager" ||
+          (s.role || "").toLowerCase().trim() === "owner" ||
+          (s.role || "").toLowerCase().trim() === "super_admin",
+      )
       .map((s) => cleanManagerName(s.name))
       .filter(Boolean);
 
-    if (actualManagers.length > 0) {
-      actualManagers.forEach((m) => set.add(m));
-    } else {
-      AVAILABLE_MANAGERS.forEach((m) => {
-        const cleaned = cleanManagerName(m);
-        if (cleaned) set.add(cleaned);
-      });
-    }
+    actualManagers.forEach((m) => set.add(m));
 
-    if (editing?.manager && editing.manager.trim()) {
-      const cleanedEdit = cleanManagerName(editing.manager);
-      const staffMatch = dbStaff.find(
-        (s) => cleanManagerName(s.name).toLowerCase() === cleanedEdit.toLowerCase(),
-      );
-      if (staffMatch) {
-        if ((staffMatch.role || "").toLowerCase().trim() === "manager") {
-          set.add(cleanedEdit);
-        }
-      }
+    if (editing?.manager && editing.manager.trim() && editing.manager !== "Unassigned") {
+      set.add(cleanManagerName(editing.manager));
     }
 
     return Array.from(set);
@@ -766,16 +739,19 @@ function BranchesPage() {
                   <Label htmlFor="b-manager">Manager</Label>
                   <Select
                     value={
-                      editing.manager && managerList.includes(cleanManagerName(editing.manager))
+                      editing.manager && editing.manager.trim() && editing.manager !== "Unassigned"
                         ? cleanManagerName(editing.manager)
-                        : managerList[0] || ""
+                        : "Unassigned"
                     }
-                    onValueChange={(v) => setEditing({ ...editing, manager: v })}
+                    onValueChange={(v) =>
+                      setEditing({ ...editing, manager: v === "Unassigned" ? "" : v })
+                    }
                   >
                     <SelectTrigger id="b-manager" className="w-full">
                       <SelectValue placeholder="Select manager" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="Unassigned">Unassigned (No Manager)</SelectItem>
                       {managerList.map((m) => (
                         <SelectItem key={m} value={m}>
                           {m}
