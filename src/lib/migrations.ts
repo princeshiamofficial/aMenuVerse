@@ -338,10 +338,17 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     /* Column already exists */
   }
 
-  // Add 'qr_token' column to branch_tables if missing
+  // Add 'qr_token' and 'status' columns to branch_tables if missing
   try {
     await pool.execute(
       "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL AFTER sort_order",
+    );
+  } catch {
+    /* Column already exists */
+  }
+  try {
+    await pool.execute(
+      "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
     );
   } catch {
     /* Column already exists */

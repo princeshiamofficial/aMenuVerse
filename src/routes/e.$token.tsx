@@ -22,6 +22,8 @@ function EncryptedTableRoute() {
   const [restaurantData, setRestaurantData] = useState<Restaurant | null>(() =>
     detectedSubdomain ? fetchPublicMenuSync(detectedSubdomain) : null,
   );
+  const [resolvedBranchId, setResolvedBranchId] = useState<string>("");
+  const [resolvedTableNo, setResolvedTableNo] = useState<string>("");
   const [qrValid, setQrValid] = useState<boolean>(true);
   const [invalidReason, setInvalidReason] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
@@ -65,6 +67,9 @@ function EncryptedTableRoute() {
         if (valRes && valRes.valid === false) {
           setQrValid(false);
           setInvalidReason(valRes.reason || "Invalid Table QR Code");
+        } else if (valRes && valRes.valid) {
+          if (valRes.branchId) setResolvedBranchId(valRes.branchId);
+          if (valRes.tableNo) setResolvedTableNo(valRes.tableNo);
         }
       } catch {
         /* ignore */
@@ -114,8 +119,8 @@ function EncryptedTableRoute() {
     <PublicRestaurantView
       initialRestaurant={restaurantData}
       restaurantUsername={activeSlug}
-      tableNumber={tableNo}
-      branchId={branchSlug}
+      tableNumber={resolvedTableNo || tableNo}
+      branchId={resolvedBranchId || branchSlug}
     />
   );
 }

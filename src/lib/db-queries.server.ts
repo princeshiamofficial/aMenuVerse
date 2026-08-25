@@ -3338,6 +3338,17 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
+      try {
+        await query("ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'");
+      } catch {
+        /* ignore */
+      }
+      try {
+        await query("ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL");
+      } catch {
+        /* ignore */
+      }
+
       const tenant = await resolvePublicRestaurant(data.restaurantSlug);
       if (!tenant || tenant.restaurantId === 0) {
         return { valid: false, reason: "Restaurant not found in database" };
@@ -3348,7 +3359,7 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
       // 1. Search by exact qr_token token in MySQL branch_tables
       if (data.token) {
         rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone, status, qr_token FROM branch_tables WHERE (qr_token = ? OR id = ?) AND restaurant_id = ? LIMIT 1",
+          "SELECT id, branch_id, table_no, zone, qr_token FROM branch_tables WHERE (qr_token = ? OR id = ?) AND restaurant_id = ? LIMIT 1",
           [data.token, data.token, tenant.restaurantId],
         );
       }
@@ -3356,7 +3367,7 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
       // 2. Search by tableId
       if ((!rows || rows.length === 0) && data.tableId) {
         rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone, status, qr_token FROM branch_tables WHERE id = ? AND restaurant_id = ? LIMIT 1",
+          "SELECT id, branch_id, table_no, zone, qr_token FROM branch_tables WHERE id = ? AND restaurant_id = ? LIMIT 1",
           [data.tableId, tenant.restaurantId],
         );
       }
@@ -3372,7 +3383,7 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
           const noFormatted = !isNaN(numVal) ? String(numVal).padStart(2, "0") : cleanNo;
 
           rows = await query<Record<string, unknown>[]>(
-            "SELECT id, table_no, zone, status, qr_token FROM branch_tables WHERE (table_no = ? OR table_no = ? OR table_no = ?) AND restaurant_id = ? LIMIT 1",
+            "SELECT id, branch_id, table_no, zone, qr_token FROM branch_tables WHERE (table_no = ? OR table_no = ? OR table_no = ?) AND restaurant_id = ? LIMIT 1",
             [cleanNo, noFormatted, String(numVal), tenant.restaurantId],
           );
 
@@ -3399,9 +3410,10 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
       return {
         valid: true,
         tableId: String(row.id),
+        branchId: String(row.branch_id || ""),
         tableNo: String(row.table_no),
         zone: String(row.zone || "MAIN ROOM"),
-        status: String(row.status || "available"),
+        status: "available",
       };
     } catch (err) {
       console.warn("[validateTableQrServer Warning]", err);
