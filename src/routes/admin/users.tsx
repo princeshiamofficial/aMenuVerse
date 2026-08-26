@@ -226,7 +226,7 @@ function getRoleBadge(role: UserRoleAccount["role"]) {
 
 function UsersComponent() {
   const { restaurantsList } = useAdminContext();
-  const [users, setUsers] = useState<UserRoleAccount[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<UserRoleAccount[]>([]);
   const [activeTab, setActiveTab] = useState<string>("system-users");
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -241,7 +241,7 @@ function UsersComponent() {
     async function loadUsers() {
       try {
         const rows = await getAdminUsersServer();
-        if (rows && rows.length > 0) {
+        if (rows && Array.isArray(rows)) {
           setUsers(rows);
         }
       } catch (err) {

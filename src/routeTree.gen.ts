@@ -32,6 +32,7 @@ import { Route as ApiCategoriesRouteImport } from './routes/api/categories'
 import { Route as ApiBranchesRouteImport } from './routes/api/branches'
 import { Route as ApiBranchTablesRouteImport } from './routes/api/branch-tables'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
+import { Route as ApiAdminStatsRouteImport } from './routes/api/admin-stats'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminSupportRouteImport } from './routes/admin/support'
 import { Route as AdminSubscriptionsRouteImport } from './routes/admin/subscriptions'
@@ -173,6 +174,11 @@ const ApiBranchTablesRoute = ApiBranchTablesRouteImport.update({
 const ApiAnalyticsRoute = ApiAnalyticsRouteImport.update({
   id: '/api/analytics',
   path: '/api/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminStatsRoute = ApiAdminStatsRouteImport.update({
+  id: '/api/admin-stats',
+  path: '/api/admin-stats',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -354,6 +360,7 @@ export interface FileRoutesByFullPath {
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/admin-stats': typeof ApiAdminStatsRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/branch-tables': typeof ApiBranchTablesRoute
   '/api/branches': typeof ApiBranchesRoute
@@ -405,6 +412,7 @@ export interface FileRoutesByTo {
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/admin-stats': typeof ApiAdminStatsRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/branch-tables': typeof ApiBranchTablesRoute
   '/api/branches': typeof ApiBranchesRoute
@@ -459,6 +467,7 @@ export interface FileRoutesById {
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/admin-stats': typeof ApiAdminStatsRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/api/branch-tables': typeof ApiBranchTablesRoute
   '/api/branches': typeof ApiBranchesRoute
@@ -513,6 +522,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/support'
     | '/admin/users'
+    | '/api/admin-stats'
     | '/api/analytics'
     | '/api/branch-tables'
     | '/api/branches'
@@ -564,6 +574,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/support'
     | '/admin/users'
+    | '/api/admin-stats'
     | '/api/analytics'
     | '/api/branch-tables'
     | '/api/branches'
@@ -617,6 +628,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/support'
     | '/admin/users'
+    | '/api/admin-stats'
     | '/api/analytics'
     | '/api/branch-tables'
     | '/api/branches'
@@ -644,6 +656,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiAdminStatsRoute: typeof ApiAdminStatsRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiBranchTablesRoute: typeof ApiBranchTablesRoute
   ApiBranchesRoute: typeof ApiBranchesRoute
@@ -823,6 +836,13 @@ declare module '@tanstack/react-router' {
       path: '/api/analytics'
       fullPath: '/api/analytics'
       preLoaderRoute: typeof ApiAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin-stats': {
+      id: '/api/admin-stats'
+      path: '/api/admin-stats'
+      fullPath: '/api/admin-stats'
+      preLoaderRoute: typeof ApiAdminStatsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -1115,6 +1135,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiAdminStatsRoute: ApiAdminStatsRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiBranchTablesRoute: ApiBranchTablesRoute,
   ApiBranchesRoute: ApiBranchesRoute,
