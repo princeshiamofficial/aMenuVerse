@@ -19,7 +19,9 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as MSlugRouteImport } from './routes/m.$slug'
 import { Route as ETokenRouteImport } from './routes/e.$token'
 import { Route as ApiWaiterRequestsRouteImport } from './routes/api/waiter-requests'
+import { Route as ApiSubscriptionRouteImport } from './routes/api/subscription'
 import { Route as ApiStaffRouteImport } from './routes/api/staff'
+import { Route as ApiSettingsRouteImport } from './routes/api/settings'
 import { Route as ApiRestaurantProfileRouteImport } from './routes/api/restaurant-profile'
 import { Route as ApiReservationsRouteImport } from './routes/api/reservations'
 import { Route as ApiRealtimeRouteImport } from './routes/api/realtime'
@@ -31,6 +33,7 @@ import { Route as ApiFoodItemsRouteImport } from './routes/api/food-items'
 import { Route as ApiCategoriesRouteImport } from './routes/api/categories'
 import { Route as ApiBranchesRouteImport } from './routes/api/branches'
 import { Route as ApiBranchTablesRouteImport } from './routes/api/branch-tables'
+import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as ApiAdminStatsRouteImport } from './routes/api/admin-stats'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
@@ -113,9 +116,19 @@ const ApiWaiterRequestsRoute = ApiWaiterRequestsRouteImport.update({
   path: '/api/waiter-requests',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSubscriptionRoute = ApiSubscriptionRouteImport.update({
+  id: '/api/subscription',
+  path: '/api/subscription',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStaffRoute = ApiStaffRouteImport.update({
   id: '/api/staff',
   path: '/api/staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSettingsRoute = ApiSettingsRouteImport.update({
+  id: '/api/settings',
+  path: '/api/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRestaurantProfileRoute = ApiRestaurantProfileRouteImport.update({
@@ -171,6 +184,11 @@ const ApiBranchesRoute = ApiBranchesRouteImport.update({
 const ApiBranchTablesRoute = ApiBranchTablesRouteImport.update({
   id: '/api/branch-tables',
   path: '/api/branch-tables',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthRoute = ApiAuthRouteImport.update({
+  id: '/api/auth',
+  path: '/api/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAnalyticsRoute = ApiAnalyticsRouteImport.update({
@@ -376,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/api/admin-stats': typeof ApiAdminStatsRoute
   '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/branch-tables': typeof ApiBranchTablesRoute
   '/api/branches': typeof ApiBranchesRoute
   '/api/categories': typeof ApiCategoriesRoute
@@ -387,7 +406,9 @@ export interface FileRoutesByFullPath {
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/reservations': typeof ApiReservationsRoute
   '/api/restaurant-profile': typeof ApiRestaurantProfileRoute
+  '/api/settings': typeof ApiSettingsRoute
   '/api/staff': typeof ApiStaffRoute
+  '/api/subscription': typeof ApiSubscriptionRoute
   '/api/waiter-requests': typeof ApiWaiterRequestsRoute
   '/e/$token': typeof ETokenRoute
   '/m/$slug': typeof MSlugRoute
@@ -430,6 +451,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/api/admin-stats': typeof ApiAdminStatsRoute
   '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/branch-tables': typeof ApiBranchTablesRoute
   '/api/branches': typeof ApiBranchesRoute
   '/api/categories': typeof ApiCategoriesRoute
@@ -441,7 +463,9 @@ export interface FileRoutesByTo {
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/reservations': typeof ApiReservationsRoute
   '/api/restaurant-profile': typeof ApiRestaurantProfileRoute
+  '/api/settings': typeof ApiSettingsRoute
   '/api/staff': typeof ApiStaffRoute
+  '/api/subscription': typeof ApiSubscriptionRoute
   '/api/waiter-requests': typeof ApiWaiterRequestsRoute
   '/e/$token': typeof ETokenRoute
   '/m/$slug': typeof MSlugRoute
@@ -487,6 +511,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/api/admin-stats': typeof ApiAdminStatsRoute
   '/api/analytics': typeof ApiAnalyticsRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/branch-tables': typeof ApiBranchTablesRoute
   '/api/branches': typeof ApiBranchesRoute
   '/api/categories': typeof ApiCategoriesRoute
@@ -498,7 +523,9 @@ export interface FileRoutesById {
   '/api/realtime': typeof ApiRealtimeRoute
   '/api/reservations': typeof ApiReservationsRoute
   '/api/restaurant-profile': typeof ApiRestaurantProfileRoute
+  '/api/settings': typeof ApiSettingsRoute
   '/api/staff': typeof ApiStaffRoute
+  '/api/subscription': typeof ApiSubscriptionRoute
   '/api/waiter-requests': typeof ApiWaiterRequestsRoute
   '/e/$token': typeof ETokenRoute
   '/m/$slug': typeof MSlugRoute
@@ -544,6 +571,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/admin-stats'
     | '/api/analytics'
+    | '/api/auth'
     | '/api/branch-tables'
     | '/api/branches'
     | '/api/categories'
@@ -555,7 +583,9 @@ export interface FileRouteTypes {
     | '/api/realtime'
     | '/api/reservations'
     | '/api/restaurant-profile'
+    | '/api/settings'
     | '/api/staff'
+    | '/api/subscription'
     | '/api/waiter-requests'
     | '/e/$token'
     | '/m/$slug'
@@ -598,6 +628,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/admin-stats'
     | '/api/analytics'
+    | '/api/auth'
     | '/api/branch-tables'
     | '/api/branches'
     | '/api/categories'
@@ -609,7 +640,9 @@ export interface FileRouteTypes {
     | '/api/realtime'
     | '/api/reservations'
     | '/api/restaurant-profile'
+    | '/api/settings'
     | '/api/staff'
+    | '/api/subscription'
     | '/api/waiter-requests'
     | '/e/$token'
     | '/m/$slug'
@@ -654,6 +687,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/admin-stats'
     | '/api/analytics'
+    | '/api/auth'
     | '/api/branch-tables'
     | '/api/branches'
     | '/api/categories'
@@ -665,7 +699,9 @@ export interface FileRouteTypes {
     | '/api/realtime'
     | '/api/reservations'
     | '/api/restaurant-profile'
+    | '/api/settings'
     | '/api/staff'
+    | '/api/subscription'
     | '/api/waiter-requests'
     | '/e/$token'
     | '/m/$slug'
@@ -684,6 +720,7 @@ export interface RootRouteChildren {
   BranchIdTableIdRoute: typeof BranchIdTableIdRoute
   ApiAdminStatsRoute: typeof ApiAdminStatsRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
+  ApiAuthRoute: typeof ApiAuthRoute
   ApiBranchTablesRoute: typeof ApiBranchTablesRoute
   ApiBranchesRoute: typeof ApiBranchesRoute
   ApiCategoriesRoute: typeof ApiCategoriesRoute
@@ -695,7 +732,9 @@ export interface RootRouteChildren {
   ApiRealtimeRoute: typeof ApiRealtimeRoute
   ApiReservationsRoute: typeof ApiReservationsRoute
   ApiRestaurantProfileRoute: typeof ApiRestaurantProfileRoute
+  ApiSettingsRoute: typeof ApiSettingsRoute
   ApiStaffRoute: typeof ApiStaffRoute
+  ApiSubscriptionRoute: typeof ApiSubscriptionRoute
   ApiWaiterRequestsRoute: typeof ApiWaiterRequestsRoute
   ETokenRoute: typeof ETokenRoute
   MSlugRoute: typeof MSlugRoute
@@ -773,11 +812,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWaiterRequestsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/subscription': {
+      id: '/api/subscription'
+      path: '/api/subscription'
+      fullPath: '/api/subscription'
+      preLoaderRoute: typeof ApiSubscriptionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/staff': {
       id: '/api/staff'
       path: '/api/staff'
       fullPath: '/api/staff'
       preLoaderRoute: typeof ApiStaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/settings': {
+      id: '/api/settings'
+      path: '/api/settings'
+      fullPath: '/api/settings'
+      preLoaderRoute: typeof ApiSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/restaurant-profile': {
@@ -855,6 +908,13 @@ declare module '@tanstack/react-router' {
       path: '/api/branch-tables'
       fullPath: '/api/branch-tables'
       preLoaderRoute: typeof ApiBranchTablesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth': {
+      id: '/api/auth'
+      path: '/api/auth'
+      fullPath: '/api/auth'
+      preLoaderRoute: typeof ApiAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/analytics': {
@@ -1181,6 +1241,7 @@ const rootRouteChildren: RootRouteChildren = {
   BranchIdTableIdRoute: BranchIdTableIdRoute,
   ApiAdminStatsRoute: ApiAdminStatsRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
+  ApiAuthRoute: ApiAuthRoute,
   ApiBranchTablesRoute: ApiBranchTablesRoute,
   ApiBranchesRoute: ApiBranchesRoute,
   ApiCategoriesRoute: ApiCategoriesRoute,
@@ -1192,7 +1253,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRealtimeRoute: ApiRealtimeRoute,
   ApiReservationsRoute: ApiReservationsRoute,
   ApiRestaurantProfileRoute: ApiRestaurantProfileRoute,
+  ApiSettingsRoute: ApiSettingsRoute,
   ApiStaffRoute: ApiStaffRoute,
+  ApiSubscriptionRoute: ApiSubscriptionRoute,
   ApiWaiterRequestsRoute: ApiWaiterRequestsRoute,
   ETokenRoute: ETokenRoute,
   MSlugRoute: MSlugRoute,
