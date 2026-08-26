@@ -3516,37 +3516,6 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
     }
 
     try {
-      try {
-        const pool = await getPool();
-        const alters = [
-          "ALTER TABLE branch_tables CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
-          "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
-          "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
-          "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
-          "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(255) NULL",
-          "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL",
-          "ALTER TABLE branch_tables ADD COLUMN location VARCHAR(255) NULL",
-          "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(255) DEFAULT 'MAIN ROOM'",
-          "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
-          "ALTER TABLE branch_tables ADD COLUMN qr_token TEXT NULL",
-          "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
-          "ALTER TABLE branch_tables ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-          "ALTER TABLE branch_tables ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
-          "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
-          "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
-          "ALTER TABLE branch_tables MODIFY COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
-        ];
-        for (const alt of alters) {
-          try {
-            await pool.query(alt);
-          } catch {
-            /* ignore */
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-
       let rows: Record<string, unknown>[] | null = null;
       const cleanBranchId = String(branchId || "").trim();
 
@@ -3685,37 +3654,6 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
     const tenant = await resolvePrivateTenantContext();
     saveTablesToFile(branchId, tables);
     try {
-      try {
-        const pool = await getPool();
-        const alters = [
-          "ALTER TABLE branch_tables CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
-          "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
-          "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
-          "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
-          "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(255) NULL",
-          "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL",
-          "ALTER TABLE branch_tables ADD COLUMN location VARCHAR(255) NULL",
-          "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(255) DEFAULT 'MAIN ROOM'",
-          "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
-          "ALTER TABLE branch_tables ADD COLUMN qr_token TEXT NULL",
-          "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
-          "ALTER TABLE branch_tables ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-          "ALTER TABLE branch_tables ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
-          "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
-          "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
-          "ALTER TABLE branch_tables MODIFY COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
-        ];
-        for (const alt of alters) {
-          try {
-            await pool.query(alt);
-          } catch {
-            /* ignore */
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-
       // Check QR Code package limit for tenant
       try {
         const otherTables = await query<Record<string, unknown>[]>(
