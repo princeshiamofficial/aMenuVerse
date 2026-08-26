@@ -77,13 +77,15 @@ export const Route = createFileRoute("/api/food-items")({
               /* ignore parse errors */
             }
 
+            const itemImg = String(r.image || r.image_url || r.imageUrl || r.img || "");
             return {
               id: String(r.id),
               name: String(r.name || ""),
               categoryId: String(r.category_id || ""),
               price: Number(r.price || 0),
               originalPrice: r.original_price ? Number(r.original_price) : undefined,
-              image: String(r.image || ""),
+              image: itemImg,
+              imageUrl: itemImg,
               description: String(r.description || ""),
               badge: r.badge ? String(r.badge) : undefined,
               isVeg: Boolean(r.is_veg),
@@ -227,6 +229,7 @@ export const Route = createFileRoute("/api/food-items")({
                price = VALUES(price),
                original_price = VALUES(original_price),
                image = VALUES(image),
+               image_url = VALUES(image),
                description = VALUES(description),
                badge = VALUES(badge),
                is_veg = VALUES(is_veg),

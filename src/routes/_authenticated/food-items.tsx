@@ -172,7 +172,7 @@ function sanitizeFoodItem(raw: Record<string, unknown>, index: number): FoodItem
     shortDescription: String(raw?.shortDescription || raw?.description || ""),
     longDescription: String(raw?.longDescription || raw?.description || ""),
     category: String(raw?.category || "Burgers"),
-    image: String(raw?.image || ""),
+    image: String(raw?.image || raw?.imageUrl || raw?.image_url || raw?.img || ""),
     gallery: Array.isArray(raw?.gallery) ? (raw.gallery as string[]) : [],
     view360: String(raw?.view360 || ""),
     price: Number(raw?.price) || 0,
