@@ -1714,7 +1714,7 @@ function saveBranchesToFile(_data: DbBranchRecord[]) {
   /* Disabled plain-text disk cache — MySQL database is primary store */
 }
 
-async function resolvePublicRestaurant(
+export async function resolvePublicRestaurant(
   customSlugOrEmail?: string,
 ): Promise<{ restaurantId: number; slug: string }> {
   const target = (customSlugOrEmail || "burgercraftlab").toLowerCase().trim();

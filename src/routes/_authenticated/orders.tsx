@@ -81,6 +81,7 @@ import {
   getSettingsServer,
   getRestaurantProfile,
 } from "@/lib/db-queries.server";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api-client";
 import { useRealtime, playChime } from "@/lib/use-realtime";
 
 export const Route = createFileRoute("/_authenticated/orders")({ component: OrdersPage });
@@ -622,7 +623,9 @@ function OrdersPage() {
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     try {
-      await updateOrderStatusServer({ data: { id, status } });
+      await apiPut("/api/orders", { id, status }).catch(async () => {
+        await updateOrderStatusServer({ data: { id, status } });
+      });
       const prevOrder = orders.find((o) => o.id === id);
       const prevStatus = prevOrder?.status;
       setOrders((prev) =>
@@ -643,7 +646,9 @@ function OrdersPage() {
 
   const handleDeleteOrder = async (orderId: string) => {
     try {
-      await deleteOrderServer({ data: orderId });
+      await apiDelete(`/api/orders?id=${encodeURIComponent(orderId)}`).catch(async () => {
+        await deleteOrderServer({ data: orderId });
+      });
       const prevOrder = orders.find((o) => o.id === orderId);
       const prevStatus = prevOrder?.status;
       setOrders((prev) => prev.filter((o) => o.id !== orderId));

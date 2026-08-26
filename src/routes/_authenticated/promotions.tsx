@@ -52,6 +52,7 @@ import {
   getCurrentUser,
   getBranchesServer,
 } from "@/lib/db-queries.server";
+import { apiGet, apiPost, apiDelete } from "@/lib/api-client";
 
 export const Route = createFileRoute("/_authenticated/promotions")({ component: PromotionsPage });
 
@@ -225,7 +226,10 @@ function PromotionsPage() {
       }
 
       try {
-        const dbPromos = await getPromotionsServer({ data: {} });
+        const dbPromos = await apiGet<Promotion[]>("/api/promotions").catch(async () => {
+          const res = await getPromotionsServer({ data: {} });
+          return (res || []) as unknown as Promotion[];
+        });
         if (dbPromos && Array.isArray(dbPromos)) {
           setPromotions(dbPromos as unknown as Promotion[]);
         }

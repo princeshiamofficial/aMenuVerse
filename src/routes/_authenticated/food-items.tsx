@@ -10,6 +10,7 @@ import {
   getRestaurantProfile,
   getSettingsServer,
 } from "@/lib/db-queries.server";
+import { apiGet, apiPost, apiDelete } from "@/lib/api-client";
 import { SkeletonFoodItemsPage } from "@/components/menuverse/skeletons";
 import { BlobImg } from "@/components/ui/blob-img";
 import { uploadToImgBB } from "@/lib/imgbb";
@@ -282,12 +283,23 @@ function FoodItemsPage() {
     if (!hydrated) return;
     const timer = setTimeout(async () => {
       try {
-        const dbItems = await getFoodItemsServer({
-          data: {
-            category: categoryFilter !== "all" ? categoryFilter : undefined,
-            search: query.trim() || undefined,
-          },
+        const q = query.trim();
+        const cat = categoryFilter !== "all" ? categoryFilter : "";
+        const params = new URLSearchParams();
+        if (q) params.set("search", q);
+        if (cat) params.set("categoryId", cat);
+        const url = `/api/food-items${params.toString() ? `?${params.toString()}` : ""}`;
+
+        const dbItems = await apiGet<FoodItem[]>(url).catch(async () => {
+          const res = await getFoodItemsServer({
+            data: {
+              category: cat || undefined,
+              search: q || undefined,
+            },
+          });
+          return (res || []).map(sanitizeFoodItem);
         });
+
         if (dbItems && Array.isArray(dbItems)) {
           setItems(dbItems.map(sanitizeFoodItem));
         }
@@ -362,7 +374,27 @@ function FoodItemsPage() {
     setSheetOpen(false);
 
     try {
-      await saveFoodItemsServer({ data: updatedList });
+      await apiPost("/api/food-items", {
+        id: toSave.id,
+        name: toSave.name,
+        categoryId: toSave.category,
+        price: toSave.price,
+        originalPrice: toSave.discountPrice,
+        image: toSave.image,
+        description: toSave.shortDescription || toSave.description,
+        badge: toSave.badge,
+        isVeg: toSave.veg,
+        isVegan: toSave.vegan,
+        isGlutenFree: toSave.glutenFree,
+        isHalal: toSave.halal,
+        spicyLevel: toSave.spicyLevel,
+        calories: toSave.calories,
+        prepTime: toSave.preparationTime,
+        status: toSave.available ? "available" : "sold_out",
+        variations: toSave.variations || [],
+        addOns: toSave.addons || [],
+        branchIds: toSave.branchIds || [],
+      });
       toast.success(isNew ? "Food item created successfully" : "Food item updated successfully");
     } catch (err: unknown) {
       console.error("DB save error:", err);
@@ -378,10 +410,12 @@ function FoodItemsPage() {
     setDeleteId(null);
 
     try {
-      await deleteFoodItemServer({ data: { id: targetId } });
+      await apiDelete(`/api/food-items?id=${encodeURIComponent(targetId)}`);
       toast.success("Food item deleted successfully");
-    } catch {
-      toast.success("Food item deleted successfully");
+    } catch (err: unknown) {
+      console.error("Delete food item error:", err);
+      const msg = err instanceof Error ? err.message : "Failed to delete food item";
+      toast.error(msg);
     }
   };
 

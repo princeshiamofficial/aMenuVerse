@@ -34,6 +34,7 @@ import {
   updateRestaurantProfile,
   getCurrentUser,
 } from "@/lib/db-queries.server";
+import { apiGet, apiPost } from "@/lib/api-client";
 import { uploadToImgBB } from "@/lib/imgbb";
 import { BlobImg } from "@/components/ui/blob-img";
 import { toast } from "sonner";
@@ -275,7 +276,9 @@ function RestaurantProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const dbData = await getRestaurantProfile();
+        const dbData = await apiGet<Record<string, unknown>>("/api/restaurant-profile").catch(async () => {
+          return await getRestaurantProfile();
+        });
         if (dbData) {
           setBranding((prev) => {
             const updated = { ...prev, ...dbData };
@@ -283,11 +286,11 @@ function RestaurantProfilePage() {
             setEditIntroForm(updated);
             return updated;
           });
-          const appData = dbData.appearance || {};
+          const appData = (dbData.appearance as Record<string, unknown>) || {};
           setAppearance({
-            themeColor: appData.themeColor || "amber",
-            menuLayout: appData.menuLayout || "cards",
-            fontFamily: appData.fontFamily || "sans",
+            themeColor: (appData.themeColor as string) || "amber",
+            menuLayout: (appData.menuLayout as "cards" | "grid" | "compact" | "modern") || "cards",
+            fontFamily: (appData.fontFamily as string) || "sans",
             bannerStyle: "full",
           });
         }
@@ -368,7 +371,9 @@ function RestaurantProfilePage() {
     setBranding(updated);
     setIsEditingInfo(false);
     try {
-      await updateRestaurantProfile({ data: editForm });
+      await apiPost("/api/restaurant-profile", editForm).catch(async () => {
+        await updateRestaurantProfile({ data: editForm });
+      });
       if (typeof window !== "undefined" && updated.name) {
         window.dispatchEvent(
           new CustomEvent("menuverse:profile-updated", { detail: { name: updated.name } }),
@@ -390,7 +395,9 @@ function RestaurantProfilePage() {
     setBranding(updated);
     setIsEditingIntro(false);
     try {
-      await updateRestaurantProfile({ data: editIntroForm });
+      await apiPost("/api/restaurant-profile", editIntroForm).catch(async () => {
+        await updateRestaurantProfile({ data: editIntroForm });
+      });
       toast.success("Intro details updated silently!");
     } catch (err) {
       console.warn("[MySQL] Save intro error:", err);
