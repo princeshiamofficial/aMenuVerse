@@ -5,7 +5,9 @@ import {
   resolvePrivateTenantContext,
   resolvePublicRestaurant,
   getTenantSubscriptionServer,
+  serverUploadImageToImgBBIfBase64,
 } from "../../lib/db-queries.server";
+import { sanitizeImageUrl } from "../../lib/imgbb";
 import { hasPermission } from "../../lib/permissions";
 import crypto from "crypto";
 
@@ -77,7 +79,8 @@ export const Route = createFileRoute("/api/food-items")({
               /* ignore parse errors */
             }
 
-            const itemImg = String(r.image || r.image_url || r.imageUrl || r.img || "");
+            const rawImg = String(r.image || r.image_url || r.imageUrl || r.img || "");
+            const itemImg = sanitizeImageUrl(rawImg);
             return {
               id: String(r.id),
               name: String(r.name || ""),
@@ -180,16 +183,32 @@ export const Route = createFileRoute("/api/food-items")({
 
           // Ensure columns
           try {
-            await pool.query(
+            const foodAlters = [
               "ALTER TABLE food_items CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
-            );
-            await pool.query(
               "ALTER TABLE food_items ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
-            );
-            await pool.query("ALTER TABLE food_items ADD COLUMN image TEXT NULL");
-            await pool.query("ALTER TABLE food_items ADD COLUMN image_url TEXT NULL");
-            await pool.query("ALTER TABLE food_items ADD COLUMN addons JSON NULL");
-            await pool.query("ALTER TABLE food_items ADD COLUMN branch_ids JSON NULL");
+              "ALTER TABLE food_items ADD COLUMN category VARCHAR(255) NULL",
+              "ALTER TABLE food_items ADD COLUMN category_id VARCHAR(255) NULL",
+              "ALTER TABLE food_items ADD COLUMN image TEXT NULL",
+              "ALTER TABLE food_items ADD COLUMN image_url TEXT NULL",
+              "ALTER TABLE food_items ADD COLUMN original_price DECIMAL(10,2) NULL",
+              "ALTER TABLE food_items ADD COLUMN badge VARCHAR(255) NULL",
+              "ALTER TABLE food_items ADD COLUMN is_veg TINYINT(1) DEFAULT 0",
+              "ALTER TABLE food_items ADD COLUMN is_vegan TINYINT(1) DEFAULT 0",
+              "ALTER TABLE food_items ADD COLUMN is_gluten_free TINYINT(1) DEFAULT 0",
+              "ALTER TABLE food_items ADD COLUMN is_halal TINYINT(1) DEFAULT 1",
+              "ALTER TABLE food_items ADD COLUMN halal TINYINT(1) DEFAULT 1",
+              "ALTER TABLE food_items ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+              "ALTER TABLE food_items ADD COLUMN variations JSON NULL",
+              "ALTER TABLE food_items ADD COLUMN addons JSON NULL",
+              "ALTER TABLE food_items ADD COLUMN branch_ids JSON NULL",
+            ];
+            for (const alt of foodAlters) {
+              try {
+                await pool.query(alt);
+              } catch {
+                /* ignore */
+              }
+            }
           } catch {
             /* ignore */
           }
@@ -219,7 +238,8 @@ export const Route = createFileRoute("/api/food-items")({
             }
           }
 
-          const itemImageUrl = String(body.image || "");
+          const rawImg = body.image || (body as { imageUrl?: string }).imageUrl || "";
+          const itemImageUrl = await serverUploadImageToImgBBIfBase64(rawImg);
 
           await query(
             `INSERT INTO food_items (
@@ -282,7 +302,8 @@ export const Route = createFileRoute("/api/food-items")({
                 categoryId: body.categoryId,
                 price: body.price,
                 originalPrice: body.originalPrice,
-                image: body.image || "",
+                image: itemImageUrl || body.image || "",
+                imageUrl: itemImageUrl || body.image || "",
                 description: body.description || "",
                 badge: body.badge,
                 isVeg: Boolean(body.isVeg),

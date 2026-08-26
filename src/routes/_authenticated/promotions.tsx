@@ -226,12 +226,40 @@ function PromotionsPage() {
       }
 
       try {
-        const dbPromos = await apiGet<Promotion[]>("/api/promotions").catch(async () => {
+        const dbPromos = await apiGet<unknown[]>("/api/promotions").catch(async () => {
           const res = await getPromotionsServer({ data: {} });
-          return (res || []) as unknown as Promotion[];
+          return (res || []) as unknown[];
         });
         if (dbPromos && Array.isArray(dbPromos)) {
-          setPromotions(dbPromos as unknown as Promotion[]);
+          const normalized: Promotion[] = dbPromos.map((p: any) => ({
+            id: String(p.id),
+            kind: (p.kind || "seasonal") as PromotionKind,
+            name: String(p.name || p.title || ""),
+            discountPercent: Number(p.discountPercent || p.discount_percent || 0),
+            startDate: String(p.startDate || p.start_date || ""),
+            endDate: String(p.endDate || p.end_date || ""),
+            startTime: p.startTime || p.start_time,
+            endTime: p.endTime || p.end_time,
+            targetScope: (p.targetScope || "all") as TargetScope,
+            categoryNames: Array.isArray(p.categoryNames) ? p.categoryNames : [],
+            itemIds: Array.isArray(p.itemIds) ? p.itemIds : [],
+            active: p.active !== undefined ? Boolean(p.active) : p.status === "active",
+            image: p.image || p.bannerUrl || p.banner_url || "",
+            description: p.description,
+            showPopup:
+              p.showPopup !== undefined
+                ? Boolean(p.showPopup)
+                : Boolean(p.popupEnabled || p.popup_enabled),
+            branchName: p.branchName || p.branch,
+            branchIds: Array.isArray(p.branchIds)
+              ? p.branchIds
+              : typeof p.branch_ids === "string"
+                ? JSON.parse(p.branch_ids)
+                : Array.isArray(p.branch_ids)
+                  ? p.branch_ids
+                  : [],
+          }));
+          setPromotions(normalized);
         }
       } catch {
         /* ignore */
@@ -846,9 +874,9 @@ function PromotionsPage() {
                               ? "All items included"
                               : p.targetScope === "categories"
                                 ? `${(p.categoryNames || []).length} categor${(p.categoryNames || []).length === 1 ? "y" : "ies"} included`
-                                : p.itemIds.length === 0
+                                : (p.itemIds || []).length === 0
                                   ? "All items included"
-                                  : `${p.itemIds.length} item${p.itemIds.length === 1 ? "" : "s"} included`}
+                                  : `${(p.itemIds || []).length} item${(p.itemIds || []).length === 1 ? "" : "s"} included`}
                           </span>
                         </div>
                         <p className="text-[11px] px-1 text-muted-foreground">

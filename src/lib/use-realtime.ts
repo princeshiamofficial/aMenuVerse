@@ -4,8 +4,6 @@ import type { RealtimeEvent, RealtimeEventType } from "./realtime.server";
 // Persistent singleton AudioContext and decoded sound buffer cache
 let sharedAudioCtx: AudioContext | null = null;
 let soundWavBuffer: AudioBuffer | null = null;
-let originalTabTitle = "";
-let tabTitleFlashInterval: NodeJS.Timeout | null = null;
 
 function getSharedAudioContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -81,51 +79,69 @@ export function unlockAudioEngine() {
   requestNotificationPermission();
 }
 
+let originalTabTitle = "";
+let tabTitleFlashInterval: NodeJS.Timeout | null = null;
+let flashTimeout: NodeJS.Timeout | null = null;
+
 // Attach auto-unlock listener on first user click/tap/keydown anywhere on window
 if (typeof window !== "undefined") {
   const unlockEvents = ["click", "pointerdown", "keydown", "touchstart", "mousemove"];
   const handleUserGesture = () => {
     unlockAudioEngine();
-    unlockEvents.forEach((evt) => window.removeEventListener(evt, handleUserGesture));
+    if (tabTitleFlashInterval && originalTabTitle) {
+      clearInterval(tabTitleFlashInterval);
+      tabTitleFlashInterval = null;
+      if (flashTimeout) clearTimeout(flashTimeout);
+      document.title = originalTabTitle;
+    }
   };
   unlockEvents.forEach((evt) =>
-    window.addEventListener(evt, handleUserGesture, { once: false, passive: true }),
+    window.addEventListener(evt, handleUserGesture, { passive: true }),
   );
 
   // Restore title when user returns to tab
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && originalTabTitle) {
-      document.title = originalTabTitle;
       if (tabTitleFlashInterval) clearInterval(tabTitleFlashInterval);
+      if (flashTimeout) clearTimeout(flashTimeout);
       tabTitleFlashInterval = null;
+      document.title = originalTabTitle;
     }
   });
 }
 
-function flashTabTitle(message: string) {
+export function flashTabTitle(message: string, durationMs = 15000) {
   if (typeof document === "undefined") return;
-  if (!originalTabTitle) {
-    originalTabTitle = document.title || "aMenuVerse";
+  if (!originalTabTitle || originalTabTitle.startsWith("🔔") || originalTabTitle.startsWith("🚨")) {
+    const raw = document.title || "aMenuVerse";
+    originalTabTitle = raw.replace(/^🔔.*?\|\s*/, "").replace(/^🚨.*?\|\s*/, "") || "aMenuVerse";
   }
   if (tabTitleFlashInterval) clearInterval(tabTitleFlashInterval);
+  if (flashTimeout) clearTimeout(flashTimeout);
 
-  let isFlashed = false;
+  let isFlashed = true;
+  document.title = message;
+
   tabTitleFlashInterval = setInterval(() => {
-    if (!document.hidden) {
-      document.title = originalTabTitle;
-      if (tabTitleFlashInterval) clearInterval(tabTitleFlashInterval);
-      tabTitleFlashInterval = null;
-      return;
-    }
-    document.title = isFlashed ? originalTabTitle : message;
+    document.title = isFlashed ? message : originalTabTitle;
     isFlashed = !isFlashed;
   }, 1000);
+
+  flashTimeout = setTimeout(() => {
+    if (tabTitleFlashInterval) {
+      clearInterval(tabTitleFlashInterval);
+      tabTitleFlashInterval = null;
+    }
+    if (originalTabTitle) {
+      document.title = originalTabTitle;
+    }
+  }, durationMs);
 }
 
 let lastChimeTime = 0;
 
 /**
- * Plays order alert audio using sound.wav with Web Audio buffer fallback for background tabs.
+ * Plays order alert audio using sound.wav with Web Audio buffer fallback.
  */
 export function playChime(type: "order" | "waiter" | "success" | "alert" = "order") {
   if (typeof window === "undefined") return;
@@ -134,59 +150,35 @@ export function playChime(type: "order" | "waiter" | "success" | "alert" = "orde
   if (now - lastChimeTime < 1000) return;
   lastChimeTime = now;
 
-  // 1. Resume shared AudioContext
-  const ctx = getSharedAudioContext();
-
-  // 2. If tab is in background, flash tab title & trigger native desktop notification
-  if (document.hidden) {
-    if (type === "order") {
-      flashTabTitle("🔔 (1) NEW ORDER!");
-      triggerDesktopNotification("🔔 New Order Received!", "A new order was placed by a customer.");
-    } else if (type === "waiter") {
-      flashTabTitle("🚨 WAITER CALLED!");
-      triggerDesktopNotification("🚨 Waiter Called!", "A guest requested table service.");
-    }
-  }
-
-  // 3. For 'order', play pre-decoded Web Audio buffer first (bypasses background tab HTML5 autoplay limits)
+  // 1. Flash tab title & trigger native desktop notification
   if (type === "order") {
-    if (ctx && soundWavBuffer) {
-      try {
-        const source = ctx.createBufferSource();
-        source.buffer = soundWavBuffer;
-        const gainNode = ctx.createGain();
-        gainNode.gain.setValueAtTime(0.9, ctx.currentTime);
-        source.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        source.start(0);
-        return;
-      } catch {
-        /* fallback to audio element or synth */
-      }
-    }
-
-    // Fallback A: HTML5 Audio element
-    try {
-      const audio = new Audio("/sound.wav");
-      audio.volume = 0.85;
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          playSynthesizedChime("order");
-        });
-      }
-      return;
-    } catch {
-      playSynthesizedChime("order");
-      return;
-    }
+    flashTabTitle("🔔 (1) NEW ORDER!");
+    triggerDesktopNotification("🔔 New Order Received!", "A new order was placed by a customer.");
+  } else if (type === "waiter") {
+    flashTabTitle("🚨 WAITER CALLED!");
+    triggerDesktopNotification("🚨 Waiter Called!", "A guest requested table service.");
   }
 
+  // 2. Play Audio via HTML5 Audio element
+  try {
+    const audio = new Audio("/sound.wav");
+    audio.volume = 1.0;
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        playSynthesizedChime(type);
+      });
+    }
+  } catch {
+    playSynthesizedChime(type);
+  }
+
+  // 3. Parallel synthesized multi-tone Web Audio chime for guaranteed audibility
   playSynthesizedChime(type);
 }
 
 /**
- * Synthesizes pure Web Audio chimes as a reliable fallback.
+ * Synthesizes pure Web Audio chimes as a 100% reliable fallback.
  */
 export function playSynthesizedChime(type: "order" | "waiter" | "success" | "alert" = "order") {
   if (typeof window === "undefined") return;
@@ -194,60 +186,69 @@ export function playSynthesizedChime(type: "order" | "waiter" | "success" | "ale
     const ctx = getSharedAudioContext();
     if (!ctx) return;
 
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
     if (type === "order") {
-      // Double bell chime: C5 (523.25 Hz) then G5 (783.99 Hz)
-      const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc1.type = "sine";
-      osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
-      osc2.type = "triangle";
-      osc2.frequency.setValueAtTime(783.99, ctx.currentTime + 0.12);
-
-      gain.gain.setValueAtTime(0.25, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc1.start(ctx.currentTime);
-      osc1.stop(ctx.currentTime + 0.2);
-      osc2.start(ctx.currentTime + 0.12);
-      osc2.stop(ctx.currentTime + 0.6);
-    } else if (type === "waiter") {
-      // Triple urgent ringtone: E5, G5, C6
-      const notes = [659.25, 783.99, 1046.5];
-      notes.forEach((freq, i) => {
+      // 3-tone pleasant crisp POS bell (C5 523Hz -> G5 784Hz -> C6 1046Hz)
+      const t = ctx.currentTime;
+      [
+        { freq: 523.25, offset: 0, dur: 0.25, vol: 0.4 },
+        { freq: 783.99, offset: 0.12, dur: 0.3, vol: 0.45 },
+        { freq: 1046.5, offset: 0.25, dur: 0.6, vol: 0.5 },
+      ].forEach(({ freq, offset, dur, vol }) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        const start = ctx.currentTime + i * 0.14;
         osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, start);
-        gain.gain.setValueAtTime(0.35, start);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
+        osc.frequency.setValueAtTime(freq, t + offset);
+        gain.gain.setValueAtTime(vol, t + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + offset + dur);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(start);
-        osc.stop(start + 0.3);
+        osc.start(t + offset);
+        osc.stop(t + offset + dur);
+      });
+    } else if (type === "waiter") {
+      // Triple urgent ringtone: E5, G5, C6
+      const t = ctx.currentTime;
+      [
+        { freq: 659.25, offset: 0, dur: 0.15 },
+        { freq: 783.99, offset: 0.15, dur: 0.15 },
+        { freq: 1046.5, offset: 0.3, dur: 0.4 },
+      ].forEach(({ freq, offset, dur }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, t + offset);
+        gain.gain.setValueAtTime(0.4, t + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + offset + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t + offset);
+        osc.stop(t + offset + dur);
       });
     } else if (type === "success") {
+      // Two-tone rising chime
+      const t = ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.frequency.setValueAtTime(587.33, t); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, t + 0.18); // A5
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
+      osc.start(t);
+      osc.stop(t + 0.35);
     }
   } catch {
-    /* audio context may be blocked before first user gesture */
+    /* ignore audio synthesis issues */
   }
 }
+
+
 
 export interface UseRealtimeOptions {
   restaurantId?: string | number;

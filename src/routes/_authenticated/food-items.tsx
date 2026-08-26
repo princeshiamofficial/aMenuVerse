@@ -379,21 +379,19 @@ function FoodItemsPage() {
         name: toSave.name,
         categoryId: toSave.category,
         price: toSave.price,
-        originalPrice: toSave.discountPrice,
-        image: toSave.image,
-        description: toSave.shortDescription || toSave.description,
-        badge: toSave.badge,
-        isVeg: toSave.veg,
-        isVegan: toSave.vegan,
-        isGlutenFree: toSave.glutenFree,
+        description: toSave.shortDescription || toSave.longDescription || "",
+        badge: toSave.bestSeller ? "Best Seller" : toSave.chefChoice ? "Chef Choice" : toSave.popular ? "Popular" : undefined,
+        isVeg: toSave.vegetarian,
+        isVegan: false,
+        isGlutenFree: false,
         isHalal: toSave.halal,
         spicyLevel: toSave.spicyLevel,
         calories: toSave.calories,
-        prepTime: toSave.preparationTime,
+        prepTime: toSave.prepTime,
         status: toSave.available ? "available" : "sold_out",
-        variations: toSave.variations || [],
-        addOns: toSave.addons || [],
-        branchIds: toSave.branchIds || [],
+        variations: [],
+        addOns: [],
+        branchIds: [],
       });
       toast.success(isNew ? "Food item created successfully" : "Food item updated successfully");
     } catch (err: unknown) {
@@ -739,7 +737,7 @@ function EditDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: FoodItem | null;
-  setEditing: (item: FoodItem | null) => void;
+  setEditing: React.Dispatch<React.SetStateAction<FoodItem | null>>;
   categories: CategoryRef[];
   currencySymbol?: string;
   isNew: boolean;

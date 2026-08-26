@@ -110,7 +110,7 @@ export function getPool(): mysql.Pool {
 /**
  * Helper to run a parameterized query with automatic table creation & retry fallback.
  */
-export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValues): Promise<T> {
+export async function query<T = unknown>(sql: string, params?: any): Promise<T> {
   if (!globalForMysql.__mysql_tables_initialized__) {
     await ensureAllTablesExist();
   }

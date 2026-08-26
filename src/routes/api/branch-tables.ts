@@ -5,6 +5,7 @@ import {
   resolvePrivateTenantContext,
   getUserAssignedBranches,
   getTenantSubscriptionServer,
+  resolvePublicRestaurant,
 } from "../../lib/db-queries.server";
 import { encodeTableToken } from "../../lib/utils";
 import { hasPermission } from "../../lib/permissions";
@@ -21,6 +22,131 @@ export const Route = createFileRoute("/api/branch-tables")({
     handlers: {
       GET: async ({ request }) => {
         try {
+          const url = new URL(request.url);
+          const isValidateRequest = url.searchParams.get("validate") === "true";
+          const restaurantSlug = url.searchParams.get("restaurantSlug") || "";
+          const token = url.searchParams.get("token") || "";
+          const tableId = url.searchParams.get("tableId") || "";
+          const tableNo = url.searchParams.get("tableNo") || "";
+          const rawBranchId = url.searchParams.get("branchId") || "all";
+          const cleanBranchId = rawBranchId.trim();
+
+          // 1. PUBLIC REST API: Table QR Validation Endpoint
+          if (isValidateRequest || (restaurantSlug && (tableId || tableNo || token))) {
+            const pub = await resolvePublicRestaurant(restaurantSlug);
+            if (!pub || pub.restaurantId === 0) {
+              return new Response(
+                JSON.stringify({ success: false, valid: false, reason: "Restaurant not found" }),
+                { status: 200, headers: { "Content-Type": "application/json" } },
+              );
+            }
+
+            let rows: Record<string, unknown>[] = [];
+            if (token) {
+              rows = await query<Record<string, unknown>[]>(
+                "SELECT id, branch_id, table_no, zone, qr_token FROM branch_tables WHERE (qr_token = ? OR id = ?) AND restaurant_id = ? LIMIT 1",
+                [token, token, pub.restaurantId],
+              );
+            }
+
+            if ((!rows || rows.length === 0) && (tableId || tableNo)) {
+              const tSearch = (tableId || tableNo).trim();
+              const bSearch = cleanBranchId;
+
+              const branchIdentifiers: string[] = [];
+              if (bSearch && bSearch !== "all" && bSearch !== "main") {
+                branchIdentifiers.push(bSearch);
+                try {
+                  const bRows = await query<Record<string, unknown>[]>(
+                    `SELECT id, name, menu_id FROM branches 
+                     WHERE restaurant_id = ? 
+                       AND (id = ? OR id LIKE ? OR menu_id = ? OR menu_id LIKE ? OR name = ? OR name LIKE ?)`,
+                    [
+                      pub.restaurantId,
+                      bSearch,
+                      `%${bSearch}%`,
+                      bSearch,
+                      `%${bSearch}%`,
+                      bSearch,
+                      `%${bSearch}%`,
+                    ],
+                  );
+                  for (const b of bRows || []) {
+                    if (b.id) branchIdentifiers.push(String(b.id));
+                    if (b.name) branchIdentifiers.push(String(b.name));
+                    if (b.menu_id) branchIdentifiers.push(String(b.menu_id));
+                  }
+                } catch {
+                  /* ignore */
+                }
+              }
+
+              const idClauses: string[] = ["id = ?", "table_no = ?", "qr_token = ?"];
+              const idParams: (string | number)[] = [tSearch, tSearch, tSearch];
+
+              if (tSearch.length >= 6) {
+                idClauses.push("id LIKE ?");
+                idParams.push(`${tSearch}%`);
+                idClauses.push("id LIKE ?");
+                idParams.push(`%${tSearch}%`);
+              }
+
+              const branchClauses: string[] = [];
+              const branchParams: (string | number)[] = [];
+
+              for (const bId of branchIdentifiers) {
+                branchClauses.push("branch_id = ?");
+                branchParams.push(bId);
+              }
+              if (bSearch) {
+                branchClauses.push("branch_id LIKE ?");
+                branchParams.push(`%${bSearch}%`);
+              }
+
+              const branchCondition =
+                branchClauses.length > 0 ? ` AND (${branchClauses.join(" OR ")})` : "";
+              const queryParams = [pub.restaurantId, ...idParams, ...branchParams];
+
+              rows = await query<Record<string, unknown>[]>(
+                `SELECT id, branch_id, table_no, zone, qr_token 
+                 FROM branch_tables 
+                 WHERE restaurant_id = ? 
+                   AND (${idClauses.join(" OR ")})
+                   ${branchCondition}
+                 LIMIT 1`,
+                queryParams,
+              );
+            }
+
+            if (!rows || rows.length === 0) {
+              return new Response(
+                JSON.stringify({
+                  success: true,
+                  valid: false,
+                  reason: "Invalid Dining Table: Table not found or does not exist for this branch.",
+                }),
+                { status: 200, headers: { "Content-Type": "application/json" } },
+              );
+            }
+
+            const row = rows[0];
+            return new Response(
+              JSON.stringify({
+                success: true,
+                valid: true,
+                data: {
+                  tableId: String(row.id),
+                  branchId: String(row.branch_id || ""),
+                  tableNo: String(row.table_no),
+                  zone: String(row.zone || "MAIN ROOM"),
+                  status: "available",
+                },
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+
+          // 2. AUTHENTICATED REST API: Table Directory
           const user = await verifySession();
           if (!user) {
             return new Response(
@@ -28,10 +154,6 @@ export const Route = createFileRoute("/api/branch-tables")({
               { status: 401, headers: { "Content-Type": "application/json" } },
             );
           }
-
-          const url = new URL(request.url);
-          const rawBranchId = url.searchParams.get("branchId") || "all";
-          const cleanBranchId = rawBranchId.trim();
 
           const tenant = await resolvePrivateTenantContext();
           const assignedInfo = await getUserAssignedBranches(tenant);

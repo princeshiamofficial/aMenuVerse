@@ -104,10 +104,10 @@ export const Route = createFileRoute("/api/waiter-requests")({
 
           try {
             broadcastRealtimeEvent({
-              type: "WAITER_REQUEST_CREATED",
+              type: "waiter:called",
               restaurantId,
               branchId: body.branchId || "branch-main-1",
-              data: {
+              payload: {
                 id: reqId,
                 tableNumber: body.tableNumber,
                 type: body.type || "service",

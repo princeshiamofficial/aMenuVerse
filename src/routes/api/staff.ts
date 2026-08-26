@@ -5,7 +5,9 @@ import {
   resolvePrivateTenantContext,
   getUserAssignedBranches,
   getTenantSubscriptionServer,
+  serverUploadImageToImgBBIfBase64,
 } from "../../lib/db-queries.server";
+import { sanitizeImageUrl } from "../../lib/imgbb";
 import { hasPermission } from "../../lib/permissions";
 import crypto from "crypto";
 
@@ -80,7 +82,7 @@ export const Route = createFileRoute("/api/staff")({
             role: String(r.role || "waiter"),
             branch: r.branch ? String(r.branch) : undefined,
             status: (r.status as string) || "active",
-            avatarUrl: r.avatar_url ? String(r.avatar_url) : undefined,
+            avatarUrl: r.avatar_url ? sanitizeImageUrl(String(r.avatar_url)) : undefined,
             createdAt: r.created_at
               ? new Date(r.created_at as string).toISOString()
               : new Date().toISOString(),

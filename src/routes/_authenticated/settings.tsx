@@ -40,6 +40,7 @@ import {
   Lock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { generateId } from "@/lib/utils";
 
 import { apiGet, apiPost } from "@/lib/api-client";
 import { getSettingsServer, saveSettingsServer } from "@/lib/db-queries.server";

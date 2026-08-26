@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { getCurrentUser, getRestaurantProfile } from "@/lib/db-queries.server";
 import { DashboardShell } from "@/components/menuverse/dashboard-shell";
-import { useRealtime, playChime } from "@/lib/use-realtime";
+import { useRealtime, playChime, flashTabTitle } from "@/lib/use-realtime";
 
 import { SkeletonDashboard } from "@/components/menuverse/skeletons";
 
@@ -114,6 +114,7 @@ function GlobalRealtimeNotifier({
     onEvent: (event) => {
       if (event.type === "order:created") {
         playChime("order");
+        flashTabTitle("🔔 (1) NEW ORDER!");
         const payload = event.payload as Record<string, unknown>;
         const orderNum = payload?.number ? `#${payload.number}` : "New Order";
         const customerName = (payload?.customerName as string) || "Guest";
@@ -124,6 +125,7 @@ function GlobalRealtimeNotifier({
         });
       } else if (event.type === "waiter:called") {
         playChime("waiter");
+        flashTabTitle("🚨 WAITER CALLED!");
         const payload = event.payload as Record<string, unknown>;
         const tableNum = payload?.tableNumber ? `Table ${payload.tableNumber}` : "A table";
 

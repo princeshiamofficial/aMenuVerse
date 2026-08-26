@@ -20,6 +20,7 @@ import {
   getCurrencySymbol,
   generateId,
 } from "@/lib/utils";
+import { useRealtime, playChime } from "@/lib/use-realtime";
 import { BlobImg } from "@/components/ui/blob-img";
 import {
   Star,
@@ -41,8 +42,16 @@ import {
   MoreVertical,
   ChevronLeft,
   ChevronRight,
+  ArrowRight,
   X,
   Sparkles,
+  ChefHat,
+  Flame,
+  Timer,
+  CheckCircle2,
+  AlertCircle,
+  Hourglass,
+  Bell,
 } from "lucide-react";
 import { FoodCard } from "@/components/menuverse/food-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,6 +94,96 @@ function useHorizontalScroll() {
 
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
+}
+
+function OrderInlineTimer({
+  status,
+  prepStartedAt,
+  estimatedPrepMinutes,
+  orderTime,
+}: {
+  status: string;
+  prepStartedAt?: string;
+  estimatedPrepMinutes?: number;
+  orderTime: string;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const st = (status || "pending").toLowerCase();
+  const estMins = estimatedPrepMinutes && estimatedPrepMinutes > 0 ? estimatedPrepMinutes : 15;
+  const startMs = prepStartedAt ? new Date(prepStartedAt).getTime() : now;
+  const totalDurationMs = estMins * 60 * 1000;
+  const elapsedMs = Math.max(0, now - startMs);
+  const remainingMs = Math.max(0, totalDurationMs - elapsedMs);
+  const remainingSecs = Math.floor(remainingMs / 1000);
+  const mins = Math.floor(remainingSecs / 60);
+  const secs = remainingSecs % 60;
+  const isFinished = remainingSecs <= 0;
+
+  if (st === "preparing") {
+    return (
+      <div className="flex flex-col">
+        <div className="flex items-center gap-1.5 text-amber-700">
+          <Timer className="w-4 h-4 text-amber-600 animate-pulse" />
+          <span className="text-sm font-black font-mono tracking-tight text-neutral-900">
+            {isFinished ? (
+              <span className="text-orange-600 animate-pulse text-xs font-black">Almost Ready!</span>
+            ) : (
+              `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+            )}
+          </span>
+        </div>
+        <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
+          {orderTime}
+        </span>
+      </div>
+    );
+  }
+
+  if (st === "ready") {
+    return (
+      <div className="flex flex-col">
+        <div className="flex items-center gap-1 text-emerald-700">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 animate-bounce" />
+          <span className="text-xs font-black tracking-tight">Ready to Serve! 🍽️</span>
+        </div>
+        <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
+          {orderTime}
+        </span>
+      </div>
+    );
+  }
+
+  if (st === "completed") {
+    return (
+      <div className="flex flex-col">
+        <span className="text-xs font-black text-neutral-800">Order Completed</span>
+        <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
+          {orderTime}
+        </span>
+      </div>
+    );
+  }
+
+  // Pending / default
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-center gap-1 text-neutral-800">
+        <Clock className="w-3.5 h-3.5 text-neutral-400" />
+        <span className="text-xs font-black">Order Placed</span>
+      </div>
+      <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
+        {orderTime}
+      </span>
+    </div>
+  );
 }
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -1029,8 +1128,35 @@ export function PublicRestaurantView({
   const [selectedCategory, setSelectedCategory] = useState("All");
   const categoriesScrollRef = useHorizontalScroll();
 
-  const [cart, setCart] = useState<{ [key: string]: number }>({});
+  const [cart, setCart] = useState<{ [key: string]: number }>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(`menuverse:cart:${restaurantUsername}`);
+        if (stored) return JSON.parse(stored);
+      } catch {
+        /* ignore */
+      }
+    }
+    return {};
+  });
+
+  // Keep cart synced with local storage across page refreshes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        if (Object.keys(cart).length === 0) {
+          localStorage.removeItem(`menuverse:cart:${restaurantUsername}`);
+        } else {
+          localStorage.setItem(`menuverse:cart:${restaurantUsername}`, JSON.stringify(cart));
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [cart, restaurantUsername]);
+
   const [isCartExpanded, setIsCartExpanded] = useState(false);
+  const [cartStep, setCartStep] = useState<1 | 2>(1);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [customerName, setCustomerName] = useState(() => {
     if (typeof window !== "undefined") {
@@ -1047,11 +1173,6 @@ export function PublicRestaurantView({
   const [nameError, setNameError] = useState(false);
   const [phoneError, setPhoneError] = useState(false);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
-  const [actionToast, setActionToast] = useState<{
-    text: string;
-    subText: string;
-    type: "success" | "error" | "info";
-  } | null>(null);
 
   const [orders, setOrders] = useState<
     Array<{
@@ -1060,6 +1181,8 @@ export function PublicRestaurantView({
       time: string;
       status: string;
       total: number;
+      estimatedPrepMinutes?: number;
+      prepStartedAt?: string;
     }>
   >(() => {
     if (typeof window !== "undefined") {
@@ -1071,6 +1194,149 @@ export function PublicRestaurantView({
       }
     }
     return [];
+  });
+
+  // Sync initial placed order statuses from database on mount
+  useEffect(() => {
+    if (orders.length === 0) return;
+    const orderIds = orders.map((o) => o.id).join(",");
+    fetch(`/api/orders?orderIds=${encodeURIComponent(orderIds)}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const map = new Map<
+            string,
+            {
+              status: string;
+              estimatedPrepMinutes?: number;
+              prepStartedAt?: string;
+            }
+          >();
+          json.data.forEach(
+            (d: {
+              id: string;
+              status: string;
+              estimatedPrepMinutes?: number;
+              prepStartedAt?: string;
+            }) => {
+              map.set(d.id, d);
+            },
+          );
+          setOrders((prev) => {
+            const updated = prev.map((o) => {
+              const matched = map.get(o.id);
+              if (matched) {
+                return {
+                  ...o,
+                  status: matched.status || o.status,
+                  estimatedPrepMinutes:
+                    matched.estimatedPrepMinutes !== undefined
+                      ? matched.estimatedPrepMinutes
+                      : o.estimatedPrepMinutes,
+                  prepStartedAt: matched.prepStartedAt || o.prepStartedAt,
+                };
+              }
+              return o;
+            });
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem(
+                  `menuverse:placed-orders:${restaurantUsername}`,
+                  JSON.stringify(updated),
+                );
+              } catch {
+                /* ignore */
+              }
+            }
+            return updated;
+          });
+        }
+      })
+      .catch(() => {});
+  }, [restaurantUsername]);
+
+  // Real-time live synchronization for Kitchen Preparation Time and Order Status Updates via WebSocket/SSE
+  useRealtime({
+    restaurantId: restaurantUsername || (restaurant?.id ? String(restaurant?.id) : undefined),
+    branchId: branchId || undefined,
+    eventTypes: ["order:updated", "order:created"],
+    onEvent: (event) => {
+      if (event.type === "order:updated") {
+        const payload = event.payload as {
+          id: string;
+          status: string;
+          estimatedPrepMinutes?: number;
+          prepStartedAt?: string;
+          number?: string | number;
+        };
+        if (payload?.id) {
+          const targetId = String(payload.id).toLowerCase().trim();
+          setOrders((prev) => {
+            const hasOrder = prev.some((o) => {
+              const oId = String(o.id).toLowerCase().trim();
+              return (
+                oId === targetId ||
+                oId.includes(targetId) ||
+                targetId.includes(oId) ||
+                (payload.number && oId.includes(String(payload.number)))
+              );
+            });
+            if (!hasOrder) return prev;
+
+            const updated = prev.map((o) => {
+              const oId = String(o.id).toLowerCase().trim();
+              if (
+                oId === targetId ||
+                oId.includes(targetId) ||
+                targetId.includes(oId) ||
+                (payload.number && oId.includes(String(payload.number)))
+              ) {
+                return {
+                  ...o,
+                  status: payload.status,
+                  estimatedPrepMinutes:
+                    payload.estimatedPrepMinutes !== undefined
+                      ? payload.estimatedPrepMinutes
+                      : o.estimatedPrepMinutes,
+                  prepStartedAt:
+                    payload.prepStartedAt ||
+                    o.prepStartedAt ||
+                    new Date().toISOString(),
+                };
+              }
+              return o;
+            });
+
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem(
+                  `menuverse:placed-orders:${restaurantUsername}`,
+                  JSON.stringify(updated),
+                );
+              } catch {
+                /* ignore */
+              }
+            }
+            return updated;
+          });
+
+          const nextStatus = (payload.status || "").toLowerCase();
+          if (nextStatus === "ready") {
+            try {
+              playChime("order");
+            } catch {
+              /* ignore */
+            }
+          } else if (nextStatus === "preparing") {
+            try {
+              playChime("order");
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+      }
+    },
   });
   const [isCategoriesSticky, setIsCategoriesSticky] = useState(false);
   const [isMenuDropdownOpen, setIsMenuDropdownOpen] = useState(false);
@@ -1092,17 +1358,7 @@ export function PublicRestaurantView({
     window.scrollTo(0, 0);
   }, [activeTab]);
 
-  const triggerToast = (msg: string, subText?: string, type?: "success" | "error" | "info") => {
-    const isError =
-      msg.toLowerCase().includes("fail") ||
-      msg.toLowerCase().includes("error") ||
-      msg.toLowerCase().includes("invalid");
-    setActionToast({
-      text: msg,
-      subText: subText || (isError ? "Something went wrong" : "Success"),
-      type: type || (isError ? "error" : "success"),
-    });
-  };
+  const triggerToast = (_msg?: string, _sub?: string, _type?: string) => {};
 
   const triggerBubbleEffect = (e: React.MouseEvent<HTMLButtonElement>) => {
     const target = e.currentTarget.closest(".btn-bubble");
@@ -1115,13 +1371,6 @@ export function PublicRestaurantView({
       }, 600);
     }
   };
-
-  useEffect(() => {
-    if (actionToast) {
-      const timer = setTimeout(() => setActionToast(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [actionToast]);
 
   const handleShareProfile = () => {
     const url = window.location.href;
@@ -1496,7 +1745,7 @@ export function PublicRestaurantView({
         data: {
           restaurantId: targetSlug,
           branchId: targetBranchId,
-          tableNumber: tableNumber || "1",
+          tableNumber: tableNumber || "",
           totalPrice,
           customerName: trimmedName,
           phone: trimmedPhone,
@@ -1530,7 +1779,12 @@ export function PublicRestaurantView({
       setCart({});
       setIsCartExpanded(false);
       setActiveTab("orders");
-      triggerToast(`Order placed successfully for Table #${tableNumber || "1"}!`);
+      const tableLabel = tableNumber
+        ? tableNumber.toLowerCase().startsWith("table")
+          ? tableNumber
+          : `Table ${tableNumber}`
+        : "Dine-in";
+      triggerToast(`Order placed successfully for ${tableLabel}!`);
     } catch (e: unknown) {
       const err = e as Error;
       triggerToast(err.message || "Connection failed. Please try again.");
@@ -2828,57 +3082,79 @@ export function PublicRestaurantView({
                     </div>
                   ) : (
                     <div className="flex flex-col gap-4">
-                      {orders.map((order) => (
-                        <div
-                          key={order.id}
-                          className="bg-neutral-50 border border-neutral-200/70 rounded-2xl p-4 flex flex-col gap-3 shadow-sm"
-                        >
-                          <div className="flex items-center justify-between border-b border-neutral-200/40 pb-2">
-                            <div className="flex flex-col">
-                              <span className="text-xs font-black text-neutral-800">
-                                {order.id}
-                              </span>
-                              <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
-                                {order.time}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                              <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                                {order.status}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            {order.items.map((itemEntry) => (
-                              <div
-                                key={itemEntry.item.id}
-                                className="flex justify-between items-center text-xs text-neutral-600"
-                              >
-                                <span className="font-semibold">
-                                  {itemEntry.item.name}{" "}
-                                  <span className="text-neutral-400 font-bold ml-1">
-                                    x{itemEntry.quantity}
-                                  </span>
-                                </span>
-                                <span className="font-bold text-neutral-800">
-                                  {cs}
-                                  {(itemEntry.item.price * itemEntry.quantity).toFixed(2)}
+                      {orders.map((order) => {
+                        const st = (order.status || "pending").toLowerCase();
+                        return (
+                          <div
+                            key={order.id}
+                            className="bg-white border border-neutral-200/90 rounded-2xl p-4 sm:p-5 flex flex-col gap-3.5 shadow-sm hover:shadow-md transition-all duration-200"
+                          >
+                            <div className="flex items-center justify-between border-b border-neutral-100 pb-2.5">
+                              <OrderInlineTimer
+                                status={order.status}
+                                prepStartedAt={order.prepStartedAt}
+                                estimatedPrepMinutes={order.estimatedPrepMinutes}
+                                orderTime={order.time}
+                              />
+                              <div className="flex items-center gap-2">
+                                {st === "preparing" && (
+                                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                                )}
+                                {st === "ready" && (
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                                )}
+                                {st === "pending" && (
+                                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                                )}
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider",
+                                    st === "ready"
+                                      ? "text-emerald-700 bg-emerald-50 border border-emerald-200/70"
+                                      : st === "preparing"
+                                        ? "text-amber-800 bg-amber-50 border border-amber-200/80"
+                                        : st === "completed"
+                                          ? "text-neutral-600 bg-neutral-100"
+                                          : st === "cancelled"
+                                            ? "text-rose-600 bg-rose-50 border border-rose-200/60"
+                                            : "text-amber-600 bg-amber-50 border border-amber-200/60",
+                                  )}
+                                >
+                                  {order.status}
                                 </span>
                               </div>
-                            ))}
-                          </div>
+                            </div>
 
-                          <div className="border-t border-neutral-200/40 pt-2.5 flex justify-between items-center font-bold text-sm text-neutral-800">
-                            <span>Total Amount</span>
-                            <span className="font-black" style={{ color: primaryColor }}>
-                              {cs}
-                              {order.total.toFixed(2)}
-                            </span>
+                            <div className="flex flex-col gap-2 pt-1">
+                              {order.items.map((itemEntry) => (
+                                <div
+                                  key={itemEntry.item.id}
+                                  className="flex justify-between items-center text-xs text-neutral-600"
+                                >
+                                  <span className="font-semibold">
+                                    {itemEntry.item.name}{" "}
+                                    <span className="text-neutral-400 font-bold ml-1">
+                                      x{itemEntry.quantity}
+                                    </span>
+                                  </span>
+                                  <span className="font-bold text-neutral-800">
+                                    {cs}
+                                    {(itemEntry.item.price * itemEntry.quantity).toFixed(2)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="border-t border-neutral-100 pt-2.5 flex justify-between items-center font-bold text-sm text-neutral-800">
+                              <span>Total Amount</span>
+                              <span className="font-black" style={{ color: primaryColor }}>
+                                {cs}
+                                {order.total.toFixed(2)}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -2888,17 +3164,43 @@ export function PublicRestaurantView({
         </div>
       </main>
 
-      {/* Floating bottom cart drawer */}
+      {/* Floating bottom cart drawer (Multi-step) */}
       {totalItems > 0 && isCartExpanded && (
-        <div className="fixed bottom-0 md:bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-3xl h-[70vh] md:h-auto z-45 bg-white border border-neutral-200/85 rounded-t-[28px] shadow-[0_-12px_40px_rgba(0,0,0,0.06)] transition-all duration-300 flex flex-col pb-safe">
-          {/* Header with Title and Close X button */}
+        <div className="fixed bottom-0 md:bottom-0 left-0 right-0 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-full md:max-w-3xl h-[72vh] md:h-auto z-45 bg-white border border-neutral-200/85 rounded-t-[28px] shadow-[0_-12px_40px_rgba(0,0,0,0.06)] transition-all duration-300 flex flex-col pb-safe">
+          {/* Header */}
           <div className="flex items-center justify-between px-6 pt-5 pb-3.5 border-b border-neutral-100 shrink-0">
-            <h3 className="text-[15px] font-black text-neutral-900 flex items-center gap-2">
-              <ShoppingBag className="w-4.5 h-4.5 text-neutral-850" />
-              <span>Your Cart</span>
-            </h3>
+            <div className="flex items-center gap-2">
+              {cartStep === 2 && (
+                <button
+                  onClick={() => setCartStep(1)}
+                  className="w-7 h-7 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center cursor-pointer transition-all active:scale-90 mr-0.5"
+                  aria-label="Back to items"
+                >
+                  <ChevronLeft className="w-4 h-4 text-neutral-700" />
+                </button>
+              )}
+              <h3 className="text-[15px] font-black text-neutral-900 flex items-center gap-2">
+                {cartStep === 1 ? (
+                  <>
+                    <ShoppingBag className="w-4.5 h-4.5 text-neutral-850" />
+                    <span>Your Cart</span>
+                  </>
+                ) : (
+                  <>
+                    <User className="w-4.5 h-4.5 text-neutral-850" />
+                    <span>Checkout</span>
+                  </>
+                )}
+              </h3>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                Step {cartStep}/2
+              </span>
+            </div>
             <button
-              onClick={() => setIsCartExpanded(false)}
+              onClick={() => {
+                setIsCartExpanded(false);
+                setCartStep(1);
+              }}
               className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center cursor-pointer transition-all active:scale-90"
               aria-label="Close cart"
             >
@@ -2906,182 +3208,236 @@ export function PublicRestaurantView({
             </button>
           </div>
 
-          {/* Scrollable list of items */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 divide-y divide-neutral-100 animate-in slide-in-from-bottom-8 duration-300">
-            <div className="flex flex-col gap-4">
-              {cartItemsList.map((entry) => (
-                <div
-                  key={entry.item.id}
-                  className="flex items-center justify-between pt-3.5 first:pt-0"
+          {/* Step 1: Items List */}
+          {cartStep === 1 && (
+            <>
+              {/* Scrollable list of items */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 divide-y divide-neutral-100 animate-in fade-in duration-200">
+                <div className="flex flex-col gap-4">
+                  {cartItemsList.map((entry) => (
+                    <div
+                      key={entry.item.id}
+                      className="flex items-center justify-between pt-3.5 first:pt-0"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1 pr-4">
+                        <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-neutral-100 border border-neutral-200">
+                          <BlobImg
+                            src={entry.item.image}
+                            alt={entry.item.name}
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="flex flex-col text-left min-w-0">
+                          <span className="text-sm font-bold text-neutral-900 truncate">
+                            {entry.item.name}
+                          </span>
+                          <span className="text-[11px] font-bold" style={{ color: primaryColor }}>
+                            {cs}
+                            {(entry.item.price * entry.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 bg-neutral-100 rounded-full p-1.5 border border-neutral-200/40">
+                        <button
+                          onClick={() => removeFromCart(entry.item.id)}
+                          className="w-7 h-7 rounded-full bg-white hover:bg-neutral-200 flex items-center justify-center font-bold text-xs text-neutral-700 cursor-pointer transition-colors shadow-xs shrink-0"
+                        >
+                          <Minus className="w-3 h-3" strokeWidth={2.5} />
+                        </button>
+                        <span className="text-base sm:text-lg font-black min-w-6 text-center text-neutral-900 leading-none">
+                          {entry.quantity}
+                        </span>
+                        <button
+                          onClick={() => addToCart(entry.item.id)}
+                          className="w-7 h-7 rounded-full bg-white hover:bg-neutral-200 flex items-center justify-center font-bold text-xs text-neutral-700 cursor-pointer transition-colors shadow-xs shrink-0"
+                        >
+                          <Plus className="w-3 h-3" strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Step 1 Footer */}
+              <div className="mt-auto shrink-0 px-6 pt-4 pb-10 sm:pb-6 border-t border-neutral-100 flex flex-col gap-3.5 bg-white">
+                <div className="flex justify-between items-center px-1 text-sm font-bold text-neutral-800">
+                  <span>Total Amount:</span>
+                  <span className="text-base font-extrabold" style={{ color: primaryColor }}>
+                    {cs}
+                    {totalPrice.toFixed(2)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setCartStep(2)}
+                  className="w-full text-white text-sm font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all duration-200 active:scale-98 shadow-md cursor-pointer hover:opacity-90"
+                  style={{ backgroundColor: primaryColor }}
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 pr-4">
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-neutral-100 border border-neutral-200">
-                      <BlobImg
-                        src={entry.item.image}
-                        alt={entry.item.name}
-                        className="absolute inset-0 h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="flex flex-col text-left min-w-0">
-                      <span className="text-sm font-bold text-neutral-900 truncate">
-                        {entry.item.name}
-                      </span>
-                      <span className="text-[11px] font-bold" style={{ color: primaryColor }}>
-                        {cs}
-                        {(entry.item.price * entry.quantity).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 bg-neutral-100 rounded-full p-1.5 border border-neutral-200/40">
-                    <button
-                      onClick={() => removeFromCart(entry.item.id)}
-                      className="w-7 h-7 rounded-full bg-white hover:bg-neutral-200 flex items-center justify-center font-bold text-xs text-neutral-700 cursor-pointer transition-colors shadow-xs shrink-0"
-                    >
-                      <Minus className="w-3 h-3" strokeWidth={2.5} />
-                    </button>
-                    <span className="text-base sm:text-lg font-black min-w-6 text-center text-neutral-900 leading-none">
-                      {entry.quantity}
-                    </span>
-                    <button
-                      onClick={() => addToCart(entry.item.id)}
-                      className="w-7 h-7 rounded-full bg-white hover:bg-neutral-200 flex items-center justify-center font-bold text-xs text-neutral-700 cursor-pointer transition-colors shadow-xs shrink-0"
-                    >
-                      <Plus className="w-3 h-3" strokeWidth={2.5} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Checkout section */}
-          <div className="mt-auto shrink-0 px-6 pt-4 pb-10 sm:pb-6 border-t border-neutral-100 flex flex-col gap-3.5 bg-white">
-            {/* Customer information input fields */}
-            <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-200/70 flex flex-col gap-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-neutral-600" />
-                  <span>Customer Information</span>
-                </span>
-                <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/60">
-                  * Required
-                </span>
+                  <span>Proceed to Checkout</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div className="flex flex-col gap-1">
-                  <label
-                    htmlFor="customer-name-input"
-                    className="text-[11px] font-bold text-neutral-600 flex items-center gap-1"
-                  >
-                    <span>Full Name</span>
-                    <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <User className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      id="customer-name-input"
-                      type="text"
-                      value={customerName}
-                      onChange={(e) => {
-                        setCustomerName(e.target.value);
-                        if (nameError) setNameError(false);
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("menuverse:customer-name", e.target.value);
-                        }
-                      }}
-                      placeholder="e.g. Tanvir Ahmed"
-                      className={cn(
-                        "w-full h-9.5 pl-8.5 pr-3 text-xs font-semibold rounded-xl bg-white border outline-none transition-all",
-                        nameError
-                          ? "border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/40"
-                          : "border-neutral-200 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200",
-                      )}
-                    />
-                  </div>
-                  {nameError && (
-                    <span className="text-[10px] font-semibold text-rose-600">
-                      Please enter your name
+            </>
+          )}
+
+          {/* Step 2: Customer Information */}
+          {cartStep === 2 && (
+            <>
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 flex flex-col gap-4 animate-in slide-in-from-right duration-250">
+                {/* Order quick summary chip */}
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 text-xs">
+                  <span className="font-bold text-neutral-600 flex items-center gap-1.5">
+                    <ShoppingBag className="w-3.5 h-3.5 text-neutral-500" />
+                    <span>
+                      {totalItems} item{totalItems > 1 ? "s" : ""} in cart
                     </span>
-                  )}
+                  </span>
+                  <button
+                    onClick={() => setCartStep(1)}
+                    className="text-[11px] font-bold underline cursor-pointer hover:opacity-80"
+                    style={{ color: primaryColor }}
+                  >
+                    Edit items
+                  </button>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label
-                    htmlFor="customer-phone-input"
-                    className="text-[11px] font-bold text-neutral-600 flex items-center gap-1"
-                  >
-                    <span>Phone Number</span>
-                    <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Phone className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      id="customer-phone-input"
-                      type="tel"
-                      value={customerPhone}
-                      onChange={(e) => {
-                        setCustomerPhone(e.target.value);
-                        if (phoneError) setPhoneError(false);
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem("menuverse:customer-phone", e.target.value);
-                        }
-                      }}
-                      placeholder="e.g. 01712345678"
-                      className={cn(
-                        "w-full h-9.5 pl-8.5 pr-3 text-xs font-semibold rounded-xl bg-white border outline-none transition-all",
-                        phoneError
-                          ? "border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/40"
-                          : "border-neutral-200 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200",
-                      )}
-                    />
-                  </div>
-                  {phoneError && (
-                    <span className="text-[10px] font-semibold text-rose-600">
-                      Please enter your phone number
+                {/* Customer information input fields */}
+                <div className="bg-neutral-50/80 rounded-2xl p-4 border border-neutral-200/70 flex flex-col gap-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-neutral-600" />
+                      <span>Enter Your Details</span>
                     </span>
-                  )}
+                    <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/60">
+                      * Required
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label
+                        htmlFor="customer-name-input"
+                        className="text-[11px] font-bold text-neutral-600 flex items-center gap-1"
+                      >
+                        <span>Full Name</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <User className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          id="customer-name-input"
+                          type="text"
+                          autoFocus
+                          value={customerName}
+                          onChange={(e) => {
+                            setCustomerName(e.target.value);
+                            if (nameError) setNameError(false);
+                            if (typeof window !== "undefined") {
+                              localStorage.setItem("menuverse:customer-name", e.target.value);
+                            }
+                          }}
+                          placeholder="e.g. Tanvir Ahmed"
+                          className={cn(
+                            "w-full h-10 pl-8.5 pr-3 text-xs font-semibold rounded-xl bg-white border outline-none transition-all",
+                            nameError
+                              ? "border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/40"
+                              : "border-neutral-200 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200",
+                          )}
+                        />
+                      </div>
+                      {nameError && (
+                        <span className="text-[10px] font-semibold text-rose-600">
+                          Please enter your name
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label
+                        htmlFor="customer-phone-input"
+                        className="text-[11px] font-bold text-neutral-600 flex items-center gap-1"
+                      >
+                        <span>Phone Number</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Phone className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          id="customer-phone-input"
+                          type="tel"
+                          value={customerPhone}
+                          onChange={(e) => {
+                            setCustomerPhone(e.target.value);
+                            if (phoneError) setPhoneError(false);
+                            if (typeof window !== "undefined") {
+                              localStorage.setItem("menuverse:customer-phone", e.target.value);
+                            }
+                          }}
+                          placeholder="e.g. 01712345678"
+                          className={cn(
+                            "w-full h-10 pl-8.5 pr-3 text-xs font-semibold rounded-xl bg-white border outline-none transition-all",
+                            phoneError
+                              ? "border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 bg-rose-50/40"
+                              : "border-neutral-200 focus:border-neutral-400 focus:ring-2 focus:ring-neutral-200",
+                          )}
+                        />
+                      </div>
+                      {phoneError && (
+                        <span className="text-[10px] font-semibold text-rose-600">
+                          Please enter your phone number
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex justify-between items-center px-1 text-sm font-bold text-neutral-800">
-              <span>Total Amount:</span>
-              <span className="text-base font-extrabold" style={{ color: primaryColor }}>
-                {cs}
-                {totalPrice.toFixed(2)}
-              </span>
-            </div>
-            <button
-              onClick={handlePlaceOrder}
-              disabled={isSubmittingOrder}
-              className="w-full text-white text-sm font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2.5 transition-all duration-200 active:scale-98 shadow-md cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: primaryColor }}
-            >
-              {isSubmittingOrder ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  <span>Processing Order…</span>
-                </>
-              ) : (
-                <span>Confirm & Place Order</span>
-              )}
-            </button>
-          </div>
+              {/* Step 2 Footer */}
+              <div className="mt-auto shrink-0 px-6 pt-4 pb-10 sm:pb-6 border-t border-neutral-100 flex flex-col gap-3.5 bg-white">
+                <div className="flex justify-between items-center px-1 text-sm font-bold text-neutral-800">
+                  <span>Total Amount:</span>
+                  <span className="text-base font-extrabold" style={{ color: primaryColor }}>
+                    {cs}
+                    {totalPrice.toFixed(2)}
+                  </span>
+                </div>
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={isSubmittingOrder}
+                  className="w-full text-white text-sm font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-2.5 transition-all duration-200 active:scale-98 shadow-md cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {isSubmittingOrder ? (
+                    <>
+                      <svg
+                        className="h-4 w-4 animate-spin text-white"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        />
+                      </svg>
+                      <span>Processing Order…</span>
+                    </>
+                  ) : (
+                    <span>Confirm & Place Order</span>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -3099,7 +3455,11 @@ export function PublicRestaurantView({
               </h3>
               <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
                 <span className="text-xs sm:text-sm font-bold text-emerald-600 bg-emerald-50/70 px-3 py-1 rounded-full border border-emerald-100/50">
-                  Table #{tableNumber || "1"}
+                  {tableNumber
+                    ? tableNumber.toLowerCase().startsWith("table")
+                      ? tableNumber
+                      : `Table ${tableNumber}`
+                    : "Dine-in"}
                 </span>
                 {customerName && (
                   <span className="text-xs sm:text-sm font-bold text-neutral-700 bg-neutral-100 px-3 py-1 rounded-full border border-neutral-200/60">
@@ -3125,17 +3485,7 @@ export function PublicRestaurantView({
         </div>
       )}
 
-      {/* Action toast container */}
-      {actionToast && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <Toast
-            text={actionToast.text}
-            subText={actionToast.subText}
-            type={actionToast.type}
-            onClose={() => setActionToast(null)}
-          />
-        </div>
-      )}
+
 
       {/* Mobile bottom nav bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden select-none filter drop-shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">

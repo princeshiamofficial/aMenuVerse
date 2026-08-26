@@ -334,6 +334,7 @@ function ReservationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [areaFilter, setAreaFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<Reservation | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -855,7 +856,7 @@ function ReservationsPage() {
         </div>
 
         <Button
-          onClick={handleOpenCreate}
+          onClick={handleOpenAdd}
           size="sm"
           className="bg-linear-to-r from-[#D77649] via-[#CB6C3F] to-[#B85C31] hover:from-[#C9693D] hover:to-[#A74E26] text-white shadow-md shadow-amber-900/10 shrink-0 h-9 rounded-md px-5 text-xs font-medium tracking-wide flex items-center gap-1.5 transition-all cursor-pointer"
         >
@@ -874,7 +875,7 @@ function ReservationsPage() {
               Try adjusting your search filters or create a new booking.
             </p>
             <Button
-              onClick={handleOpenCreate}
+              onClick={handleOpenAdd}
               size="sm"
               className="mt-4 gradient-warm text-primary-foreground shadow-elegant rounded-xl"
             >

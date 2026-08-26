@@ -14,6 +14,59 @@ export const Route = createFileRoute("/api/orders")({
           const url = new URL(request.url);
           const customerPhone = url.searchParams.get("customerPhone");
           const customSlugOrEmail = url.searchParams.get("customSlugOrEmail");
+          const orderIdsParam = url.searchParams.get("orderIds") || url.searchParams.get("orderId");
+
+          // Direct Placed Order Status Lookup for Customer Devices
+          if (orderIdsParam) {
+            const idList = orderIdsParam
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            if (idList.length > 0) {
+              const rows = await query<Record<string, unknown>[]>(
+                `SELECT id, order_number, status, total, prep_started_at, estimated_prep_minutes, created_at, lines_json, branch_id, table_number 
+                 FROM pos_orders 
+                 WHERE id IN (${idList.map(() => "?").join(",")})`,
+                idList,
+              );
+
+              return new Response(
+                JSON.stringify({
+                  success: true,
+                  data: (rows || []).map((r) => {
+                    let items = [];
+                    try {
+                      items =
+                        typeof r.lines_json === "string"
+                          ? JSON.parse(r.lines_json)
+                          : r.lines_json || [];
+                    } catch {
+                      /* ignore */
+                    }
+                    return {
+                      id: String(r.id),
+                      orderNumber: String(r.order_number || r.id),
+                      total: Number(r.total || 0),
+                      status: String(r.status || "pending"),
+                      estimatedPrepMinutes: r.estimated_prep_minutes
+                        ? Number(r.estimated_prep_minutes)
+                        : undefined,
+                      prepStartedAt: r.prep_started_at
+                        ? new Date(r.prep_started_at as string).toISOString()
+                        : undefined,
+                      items,
+                      createdAt: r.created_at
+                        ? new Date(r.created_at as string).toISOString()
+                        : new Date().toISOString(),
+                      tableNumber: r.table_number ? String(r.table_number) : undefined,
+                      branchId: r.branch_id ? String(r.branch_id) : undefined,
+                    };
+                  }),
+                }),
+                { status: 200, headers: { "Content-Type": "application/json" } },
+              );
+            }
+          }
 
           // Customer Order History Lookup
           if (customerPhone) {
@@ -43,6 +96,12 @@ export const Route = createFileRoute("/api/orders")({
                     orderNumber: String(r.order_no || r.id),
                     total: Number(r.total_amount || 0),
                     status: (r.status as string) || "pending",
+                    estimatedPrepMinutes: r.estimated_prep_minutes
+                      ? Number(r.estimated_prep_minutes)
+                      : undefined,
+                    prepStartedAt: r.prep_started_at
+                      ? new Date(r.prep_started_at as string).toISOString()
+                      : undefined,
                     items,
                     createdAt: r.created_at
                       ? new Date(r.created_at as string).toISOString()
@@ -108,13 +167,14 @@ export const Route = createFileRoute("/api/orders")({
             params.push(status);
           }
           if (type !== "all") {
-            sql += " AND order_type = ?";
-            params.push(type);
+            sql += " AND (type = ? OR order_type = ?)";
+            params.push(type, type);
           }
           if (search.trim()) {
-            sql += " AND (order_no LIKE ? OR customer_name LIKE ? OR phone LIKE ?)";
+            sql +=
+              " AND (order_number LIKE ? OR order_no LIKE ? OR customer_name LIKE ? OR phone LIKE ?)";
             const s = `%${search.trim()}%`;
-            params.push(s, s, s);
+            params.push(s, s, s, s);
           }
           sql += " ORDER BY created_at DESC LIMIT 200";
 
@@ -130,28 +190,32 @@ export const Route = createFileRoute("/api/orders")({
 
             return {
               id: String(r.id),
-              orderNumber: String(r.order_no || r.id),
+              orderNumber: String(r.order_number || r.order_no || r.id),
               customerName: String(r.customer_name || "Walk-in Customer"),
               customerPhone: String(r.phone || ""),
               status: (r.status as string) || "pending",
-              orderType: (r.order_type as string) || "dine_in",
+              orderType: (r.type as string) || (r.order_type as string) || "dine_in",
               paymentStatus: (r.payment_status as string) || "paid",
-              subtotal: Number(r.subtotal_amount || r.total_amount || 0),
-              tax: Number(r.tax_amount || 0),
+              subtotal: Number(r.subtotal || r.subtotal_amount || r.total || 0),
+              tax: Number(r.tax || r.tax_amount || 0),
               serviceCharge: Number(r.service_charge || 0),
               discount: Number(r.discount_amount || 0),
               deliveryFee: Number(r.delivery_fee || 0),
-              total: Number(r.total_amount || 0),
+              total: Number(r.total || r.total_amount || 0),
               items,
               branchId: r.branch_id ? String(r.branch_id) : undefined,
               branchName: r.branch_id ? String(r.branch_id) : undefined,
-              tableNumber: r.table_no ? String(r.table_no) : undefined,
+              tableNumber: (r.table_number as string) || (r.table_no as string) || undefined,
+              estimatedPrepMinutes: r.estimated_prep_minutes
+                ? Number(r.estimated_prep_minutes)
+                : undefined,
+              prepStartedAt: r.prep_started_at
+                ? new Date(r.prep_started_at as string).toISOString()
+                : undefined,
               createdAt: r.created_at
                 ? new Date(r.created_at as string).toISOString()
                 : new Date().toISOString(),
-              specialInstructions: r.special_instructions
-                ? String(r.special_instructions)
-                : undefined,
+              specialInstructions: (r.notes as string) || (r.special_instructions as string) || undefined,
             };
           });
 
@@ -261,15 +325,18 @@ export const Route = createFileRoute("/api/orders")({
           // Broadcast real-time order creation event
           try {
             broadcastRealtimeEvent({
-              type: "ORDER_CREATED",
+              type: "order:created",
               restaurantId,
               branchId: body.branchId || "branch-main-1",
-              data: {
-                orderId,
-                orderNumber: orderNo,
+              payload: {
+                id: orderId,
+                number: orderNo,
                 customerName: body.customerName || "Walk-in Customer",
                 total,
                 status: body.status || "pending",
+                tableNumber: body.tableNumber || "",
+                lines: body.items,
+                createdAt: new Date().toISOString(),
               },
             });
           } catch {
@@ -318,7 +385,11 @@ export const Route = createFileRoute("/api/orders")({
             );
           }
 
-          const body = (await request.json()) as { id: string; status: string };
+          const body = (await request.json()) as {
+            id: string;
+            status: string;
+            estimatedPrepMinutes?: number;
+          };
           if (!body.id || !body.status) {
             return new Response(
               JSON.stringify({ success: false, error: "Missing required order id or status" }),
@@ -327,19 +398,57 @@ export const Route = createFileRoute("/api/orders")({
           }
 
           const tenant = await resolvePrivateTenantContext();
-          await query("UPDATE pos_orders SET status = ? WHERE id = ? AND restaurant_id = ?", [
-            body.status,
-            body.id,
-            tenant.restaurantId,
-          ]);
+
+          try {
+            await query("ALTER TABLE pos_orders ADD COLUMN prep_time_minutes INT DEFAULT NULL");
+            await query(
+              "ALTER TABLE pos_orders ADD COLUMN prep_started_at TIMESTAMP NULL DEFAULT NULL",
+            );
+            await query(
+              "ALTER TABLE pos_orders ADD COLUMN estimated_prep_minutes INT DEFAULT NULL",
+            );
+          } catch {
+            /* ignore */
+          }
+
+          const nowIso = new Date().toISOString();
+
+          if (body.status === "preparing") {
+            await query(
+              `UPDATE pos_orders 
+               SET status = ?, 
+                   updated_at = NOW(), 
+                   prep_started_at = COALESCE(prep_started_at, NOW()),
+                   estimated_prep_minutes = COALESCE(?, estimated_prep_minutes, 15) 
+               WHERE id = ? AND restaurant_id = ?`,
+              [body.status, body.estimatedPrepMinutes || null, body.id, tenant.restaurantId],
+            );
+          } else if (body.status === "completed") {
+            await query(
+              `UPDATE pos_orders 
+               SET status = ?, 
+                   updated_at = NOW(), 
+                   prep_time_minutes = COALESCE(prep_time_minutes, GREATEST(0, TIMESTAMPDIFF(MINUTE, COALESCE(prep_started_at, created_at), NOW()))) 
+               WHERE id = ? AND restaurant_id = ?`,
+              [body.status, body.id, tenant.restaurantId],
+            );
+          } else {
+            await query(
+              "UPDATE pos_orders SET status = ?, updated_at = NOW() WHERE id = ? AND restaurant_id = ?",
+              [body.status, body.id, tenant.restaurantId],
+            );
+          }
 
           try {
             broadcastRealtimeEvent({
-              type: "ORDER_STATUS_CHANGED",
+              type: "order:updated",
               restaurantId: tenant.restaurantId,
-              data: {
-                orderId: body.id,
+              tenantSlug: tenant.slug,
+              payload: {
+                id: body.id,
                 status: body.status,
+                estimatedPrepMinutes: body.estimatedPrepMinutes,
+                prepStartedAt: nowIso,
               },
             });
           } catch {
@@ -350,7 +459,12 @@ export const Route = createFileRoute("/api/orders")({
             JSON.stringify({
               success: true,
               message: "Order status updated successfully",
-              data: { id: body.id, status: body.status },
+              data: {
+                id: body.id,
+                status: body.status,
+                estimatedPrepMinutes: body.estimatedPrepMinutes,
+                prepStartedAt: nowIso,
+              },
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );

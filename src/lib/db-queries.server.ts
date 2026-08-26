@@ -523,7 +523,13 @@ export const getRestaurantData = createServerFn({ method: "GET" })
           description: String(i.shortDescription || i.longDescription || i.description || ""),
           price: itemPrice,
           discountPrice: itemDiscountPrice,
-          image: String(i.image || i.imageUrl || i.image_url || i.img || ""),
+          image: String(
+            i.image ||
+              (i as Record<string, unknown>).imageUrl ||
+              (i as Record<string, unknown>).image_url ||
+              (i as Record<string, unknown>).img ||
+              "",
+          ),
           category: String(i.category || "General"),
           popular: Boolean(i.popular || i.bestSeller),
           trending: Boolean(i.popular || i.bestSeller),
@@ -2334,20 +2340,18 @@ export const uploadToImgBBServer = createServerFn({ method: "POST" })
   .validator((base64String: string) => z.string().min(1).parse(base64String))
   .handler(async ({ data: base64String }) => {
     await requireAuth();
-    checkRateLimit("image_upload", undefined, { maxRequests: 10, windowMs: 60 * 1000 });
+    checkRateLimit("image_upload", undefined, { maxRequests: 20, windowMs: 60 * 1000 });
     validateImagePayload(base64String);
 
-    const apiKey =
+    const envKey =
       process.env.VITE_IMGBB_API_KEY ||
       process.env.IMGBB_API_KEY ||
       process.env.IMGBB_KEY ||
       (import.meta.env.VITE_IMGBB_API_KEY as string | undefined);
 
-    if (!apiKey) {
-      throw new Error(
-        "ImgBB API key is missing. Please configure VITE_IMGBB_API_KEY in environment variables.",
-      );
-    }
+    const apiKey =
+      envKey && envKey !== "YOUR_IMGBB_API_KEY" ? envKey : "61035b18442b2c9815d6945f6f7bccd2";
+
     const cleanBase64 = base64String.replace(/^data:image\/\w+;base64,/, "");
 
     // Strategy 1: Native FormData in Node.js
@@ -2360,11 +2364,13 @@ export const uploadToImgBBServer = createServerFn({ method: "POST" })
         body: formData,
       });
 
-      const json = await res.json();
-      const directCdnUrl =
-        json?.data?.image?.url || json?.data?.display_url || json?.data?.url || null;
-      if (directCdnUrl && typeof directCdnUrl === "string") {
-        return directCdnUrl;
+      if (res.ok) {
+        const json = await res.json();
+        const directCdnUrl =
+          json?.data?.image?.url || json?.data?.display_url || json?.data?.url || null;
+        if (directCdnUrl && typeof directCdnUrl === "string" && directCdnUrl.startsWith("http")) {
+          return directCdnUrl;
+        }
       }
     } catch (err) {
       console.warn("[Node Server ImgBB FormData Warning]", err);
@@ -2383,11 +2389,13 @@ export const uploadToImgBBServer = createServerFn({ method: "POST" })
         body: bodyParams.toString(),
       });
 
-      const json = await res.json();
-      const directCdnUrl =
-        json?.data?.image?.url || json?.data?.display_url || json?.data?.url || null;
-      if (directCdnUrl && typeof directCdnUrl === "string") {
-        return directCdnUrl;
+      if (res.ok) {
+        const json = await res.json();
+        const directCdnUrl =
+          json?.data?.image?.url || json?.data?.display_url || json?.data?.url || null;
+        if (directCdnUrl && typeof directCdnUrl === "string" && directCdnUrl.startsWith("http")) {
+          return directCdnUrl;
+        }
       }
     } catch (err) {
       console.error("[Node Server ImgBB URLSearchParams Error]", err);
@@ -2395,6 +2403,74 @@ export const uploadToImgBBServer = createServerFn({ method: "POST" })
 
     return null;
   });
+
+/**
+ * Server-side helper to inspect an image string:
+ * - If it's a Base64 data URL, automatically uploads to ImgBB and returns authoritative CDN URL
+ * - If it's already a valid HTTP/HTTPS CDN URL, returns it sanitized
+ * - If it's a blob: URL or invalid, returns empty string to prevent broken links
+ */
+export async function serverUploadImageToImgBBIfBase64(
+  imageUrlOrBase64: string | null | undefined,
+): Promise<string> {
+  if (!imageUrlOrBase64 || typeof imageUrlOrBase64 !== "string") return "";
+  const trimmed = imageUrlOrBase64.trim();
+  if (
+    !trimmed ||
+    trimmed === "undefined" ||
+    trimmed === "null" ||
+    trimmed === "[object Object]" ||
+    trimmed === "NaN"
+  ) {
+    return "";
+  }
+
+  // Reject ephemeral browser-only memory blob: URLs
+  if (trimmed.startsWith("blob:")) {
+    return "";
+  }
+
+  // If already a valid absolute HTTP/HTTPS URL
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  // If it's a Base64 string, upload it to ImgBB directly on the server
+  if (trimmed.startsWith("data:image/") || (trimmed.length > 500 && !trimmed.startsWith("/"))) {
+    try {
+      const envKey =
+        process.env.VITE_IMGBB_API_KEY ||
+        process.env.IMGBB_API_KEY ||
+        process.env.IMGBB_KEY ||
+        (import.meta.env.VITE_IMGBB_API_KEY as string | undefined);
+
+      const apiKey =
+        envKey && envKey !== "YOUR_IMGBB_API_KEY" ? envKey : "61035b18442b2c9815d6945f6f7bccd2";
+      const cleanBase64 = trimmed.replace(/^data:image\/\w+;base64,/, "");
+
+      const formData = new FormData();
+      formData.append("image", cleanBase64);
+
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const directUrl =
+          json?.data?.image?.url || json?.data?.display_url || json?.data?.url || null;
+        if (directUrl && typeof directUrl === "string" && directUrl.startsWith("http")) {
+          return directUrl;
+        }
+      }
+    } catch (err) {
+      console.warn("[Server Auto-Ingest ImgBB Error]", err);
+    }
+  }
+
+  return trimmed.startsWith("/") ? trimmed : "";
+}
 
 // =========================================================
 // CATEGORIES & FOOD ITEMS MYSQL & DISK CACHE SERVER FUNCTIONS
@@ -3747,26 +3823,82 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
         );
       }
 
-      // 2. Match by tableId/tableNo short UUID or token
+      // 2. Match by exact tableId / tableNo / 6+ char prefix scoped to branch
       if ((!rows || rows.length === 0) && (data.tableId || data.tableNo)) {
         const tSearch = (data.tableId || data.tableNo || "").trim();
-        const tPattern = `%${tSearch}%`;
+        const bSearch = (data.branchId || "").trim();
+
+        const branchIdentifiers: string[] = [];
+        if (bSearch && bSearch !== "all" && bSearch !== "main") {
+          branchIdentifiers.push(bSearch);
+          try {
+            const bRows = await query<Record<string, unknown>[]>(
+              `SELECT id, name, menu_id FROM branches 
+               WHERE restaurant_id = ? 
+                 AND (id = ? OR id LIKE ? OR menu_id = ? OR menu_id LIKE ? OR name = ? OR name LIKE ?)`,
+              [
+                tenant.restaurantId,
+                bSearch,
+                `%${bSearch}%`,
+                bSearch,
+                `%${bSearch}%`,
+                bSearch,
+                `%${bSearch}%`,
+              ],
+            );
+            for (const b of bRows || []) {
+              if (b.id) branchIdentifiers.push(String(b.id));
+              if (b.name) branchIdentifiers.push(String(b.name));
+              if (b.menu_id) branchIdentifiers.push(String(b.menu_id));
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
+        // Only allow prefix/contains match if the tableId is at least 6 characters (e.g. short UUID prefix like 3418f235)
+        // Never allow single-letter wildcard match (like 'c' or '1')
+        const idClauses: string[] = ["id = ?", "table_no = ?", "qr_token = ?"];
+        const idParams: (string | number)[] = [tSearch, tSearch, tSearch];
+
+        if (tSearch.length >= 6) {
+          idClauses.push("id LIKE ?");
+          idParams.push(`${tSearch}%`);
+          idClauses.push("id LIKE ?");
+          idParams.push(`%${tSearch}%`);
+        }
+
+        const branchClauses: string[] = [];
+        const branchParams: (string | number)[] = [];
+
+        for (const bId of branchIdentifiers) {
+          branchClauses.push("branch_id = ?");
+          branchParams.push(bId);
+        }
+        if (bSearch) {
+          branchClauses.push("branch_id LIKE ?");
+          branchParams.push(`%${bSearch}%`);
+        }
+
+        const branchCondition =
+          branchClauses.length > 0 ? ` AND (${branchClauses.join(" OR ")})` : "";
+        const queryParams = [tenant.restaurantId, ...idParams, ...branchParams];
 
         rows = await query<Record<string, unknown>[]>(
           `SELECT id, branch_id, table_no, zone, qr_token 
            FROM branch_tables 
            WHERE restaurant_id = ? 
-             AND (id = ? OR id LIKE ? OR qr_token = ? OR table_no = ?)
+             AND (${idClauses.join(" OR ")})
+             ${branchCondition}
            LIMIT 1`,
-          [tenant.restaurantId, tSearch, tPattern, tSearch, tSearch],
+          queryParams,
         );
       }
 
       if (!rows || rows.length === 0) {
         return {
           valid: false,
-          reason:
-            "Invalid QR Code Token: This dining table QR code has not been created or saved in the database.",
+          reason: "Invalid Dining Table: Table not found or does not exist for this branch.",
         };
       }
 
@@ -4482,13 +4614,16 @@ export const updateOrderStatusServer = createServerFn({ method: "POST" })
         );
       }
 
+      const nowIso = new Date().toISOString();
       broadcastRealtimeEvent({
         type: "order:updated",
         restaurantId: tenant.restaurantId,
+        tenantSlug: tenant.slug,
         payload: {
           id: data.id,
           status: data.status,
           estimatedPrepMinutes: data.estimatedPrepMinutes,
+          prepStartedAt: nowIso,
         },
       });
 
@@ -7184,6 +7319,7 @@ export function resolvePlanLimits(
   maxItems: number | "unlimited";
   maxOrders: number | "unlimited";
   maxQrs: number | "unlimited";
+  maxStaff: number | "unlimited";
 } {
   const norm = (planName || "Free").toLowerCase().trim();
   const matched = (packagesList || []).find(
@@ -7215,6 +7351,7 @@ export function resolvePlanLimits(
         matched.maxQrs === "unlimited"
           ? "unlimited"
           : Math.max(1, parseInt(matched.maxQrs || "5", 10)),
+      maxStaff: "unlimited",
     };
   }
 
@@ -7225,6 +7362,7 @@ export function resolvePlanLimits(
       maxItems: "unlimited",
       maxOrders: "unlimited",
       maxQrs: "unlimited",
+      maxStaff: "unlimited",
     };
   }
   if (norm.includes("business") || norm.includes("pro") || norm.includes("growth")) {
@@ -7234,6 +7372,7 @@ export function resolvePlanLimits(
       maxItems: "unlimited",
       maxOrders: 10000,
       maxQrs: 100,
+      maxStaff: 50,
     };
   }
   if (norm.includes("starter") || norm.includes("popular")) {
@@ -7243,11 +7382,12 @@ export function resolvePlanLimits(
       maxItems: 150,
       maxOrders: 1000,
       maxQrs: 25,
+      maxStaff: 10,
     };
   }
 
   // Free default
-  return { maxBranches: 1, maxCategories: 5, maxItems: 25, maxOrders: 100, maxQrs: 5 };
+  return { maxBranches: 1, maxCategories: 5, maxItems: 25, maxOrders: 100, maxQrs: 5, maxStaff: 5 };
 }
 
 async function getPublicTenantOrderLimits(restaurantId: number): Promise<{

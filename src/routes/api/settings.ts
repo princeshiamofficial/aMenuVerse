@@ -100,11 +100,11 @@ export const Route = createFileRoute("/api/settings")({
                app_settings = VALUES(app_settings)`,
             [
               tenant.restaurantId,
-              body.currency || "BDT",
+              String(body.currency || "BDT"),
               body.taxRate != null ? Number(body.taxRate) : 0,
               body.serviceFee != null ? Number(body.serviceFee) : 0,
-              body.themeColor || "amber",
-              body.fontFamily || "sans",
+              String(body.themeColor || "amber"),
+              String(body.fontFamily || "sans"),
               JSON.stringify(body),
             ],
           );

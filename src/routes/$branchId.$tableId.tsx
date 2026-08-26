@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { getSubdomain } from "@/lib/utils";
 import { fetchPublicMenu, fetchPublicMenuSync } from "@/lib/public-menu";
+import { apiGet } from "@/lib/api-client";
 import { validateTableQrServer, resolveTableRestaurantServer } from "@/lib/db-queries.server";
 import { PublicRestaurantView } from "./$restaurantUsername";
 import type { Restaurant } from "@/lib/restaurants-data";
@@ -51,18 +52,40 @@ function BranchTableRoute() {
           return;
         }
 
-        const valRes = await validateTableQrServer({
-          data: {
-            restaurantSlug: targetSlug,
-            branchId,
-            tableId,
-          },
-        });
+        let valRes: {
+          valid?: boolean;
+          reason?: string;
+          branchId?: string;
+          tableNo?: string;
+        } | null = null;
+
+        try {
+          const apiRes = await apiGet<Record<string, unknown>>(
+            `/api/branch-tables?validate=true&restaurantSlug=${encodeURIComponent(targetSlug)}&branchId=${encodeURIComponent(branchId)}&tableId=${encodeURIComponent(tableId)}`,
+          );
+          if (apiRes) {
+            const nestedData = (apiRes.data as Record<string, unknown>) || apiRes;
+            valRes = {
+              valid: apiRes.valid !== false && nestedData.valid !== false,
+              reason: String(apiRes.reason || nestedData.reason || ""),
+              branchId: String(nestedData.branchId || apiRes.branchId || ""),
+              tableNo: String(nestedData.tableNo || apiRes.tableNo || ""),
+            };
+          }
+        } catch {
+          valRes = await validateTableQrServer({
+            data: {
+              restaurantSlug: targetSlug,
+              branchId,
+              tableId,
+            },
+          });
+        }
 
         if (valRes && valRes.valid === false) {
           setQrValid(false);
           setInvalidReason(valRes.reason || "Invalid Table QR Code");
-        } else if (valRes && valRes.valid) {
+        } else if (valRes && valRes.valid !== false) {
           if (valRes.branchId) setResolvedBranchId(valRes.branchId);
           if (valRes.tableNo) setResolvedTableNo(valRes.tableNo);
         }
@@ -90,11 +113,11 @@ function BranchTableRoute() {
     );
   }
 
-  if (loading && !restaurantData) {
+  if (loading) {
     return (
       <div className="mx-auto max-w-2xl p-8 text-center min-h-[60vh] flex flex-col items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent mb-3" />
-        <p className="text-sm font-semibold text-gray-600">Loading digital menu...</p>
+        <p className="text-sm font-semibold text-gray-600">Loading dining table menu...</p>
       </div>
     );
   }
@@ -114,7 +137,7 @@ function BranchTableRoute() {
     <PublicRestaurantView
       initialRestaurant={restaurantData}
       restaurantUsername={activeSlug}
-      tableNumber={resolvedTableNo || "01"}
+      tableNumber={resolvedTableNo || ""}
       branchId={resolvedBranchId || branchId}
     />
   );

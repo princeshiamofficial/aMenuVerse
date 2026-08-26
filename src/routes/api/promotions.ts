@@ -5,7 +5,9 @@ import {
   resolvePrivateTenantContext,
   getUserAssignedBranches,
   resolvePublicRestaurant,
+  serverUploadImageToImgBBIfBase64,
 } from "../../lib/db-queries.server";
+import { sanitizeImageUrl } from "../../lib/imgbb";
 import { hasPermission } from "../../lib/permissions";
 import crypto from "crypto";
 
@@ -70,7 +72,7 @@ export const Route = createFileRoute("/api/promotions")({
               startDate: r.start_date ? String(r.start_date) : undefined,
               endDate: r.end_date ? String(r.end_date) : undefined,
               status: (r.status as string) || "active",
-              bannerUrl: r.banner_url ? String(r.banner_url) : undefined,
+              bannerUrl: r.banner_url ? sanitizeImageUrl(String(r.banner_url)) : undefined,
               kind: (r.kind as string) || "seasonal",
               branchIds,
               popupEnabled: Boolean(r.popup_enabled),
@@ -145,6 +147,7 @@ export const Route = createFileRoute("/api/promotions")({
           const tenant = await resolvePrivateTenantContext();
           const promoId = body.id || `promo-${crypto.randomUUID().slice(0, 8)}`;
           const branchIdsJson = JSON.stringify(body.branchIds || []);
+          const bannerUrl = await serverUploadImageToImgBBIfBase64(body.bannerUrl);
 
           await query(
             `INSERT INTO promotions (
@@ -171,7 +174,7 @@ export const Route = createFileRoute("/api/promotions")({
               body.startDate || null,
               body.endDate || null,
               body.status || "active",
-              body.bannerUrl || "",
+              bannerUrl,
               body.kind || "seasonal",
               branchIdsJson,
               body.popupEnabled ? 1 : 0,

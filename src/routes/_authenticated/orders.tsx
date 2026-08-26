@@ -2018,7 +2018,7 @@ function PrintReceiptDialog({
               </span>
             </div>
             {order.tableNumber && (
-              <div className="text-[11px] font-semibold">Table: #{order.tableNumber}</div>
+              <div className="text-[11px] font-semibold">Table: {order.tableNumber}</div>
             )}
             <div className="flex justify-between text-[11px]">
               <span>Customer: {order.customerName}</span>

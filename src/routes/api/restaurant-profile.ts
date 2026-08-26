@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { query, getPool } from "../../lib/mysql";
 import { verifySession } from "../../lib/auth.server";
-import { resolvePrivateTenantContext, resolvePublicRestaurant } from "../../lib/db-queries.server";
+import {
+  resolvePrivateTenantContext,
+  resolvePublicRestaurant,
+  serverUploadImageToImgBBIfBase64,
+} from "../../lib/db-queries.server";
+import { sanitizeImageUrl } from "../../lib/imgbb";
 import { hasPermission } from "../../lib/permissions";
 
 export const Route = createFileRoute("/api/restaurant-profile")({
@@ -48,8 +53,8 @@ export const Route = createFileRoute("/api/restaurant-profile")({
                     slug: String(r.slug || ""),
                     tagline: String(r.tagline || ""),
                     description: String(r.description || ""),
-                    logoUrl: String(r.logo_url || ""),
-                    coverUrl: String(r.cover_url || ""),
+                    logoUrl: sanitizeImageUrl(String(r.logo_url || "")),
+                    coverUrl: sanitizeImageUrl(String(r.cover_url || "")),
                     phone: String(r.phone || ""),
                     email: String(r.owner_email || ""),
                     currency: String(r.currency || "BDT"),
@@ -86,8 +91,8 @@ export const Route = createFileRoute("/api/restaurant-profile")({
                 slug: String(p.slug || ""),
                 tagline: String(p.tagline || ""),
                 description: String(p.description || ""),
-                logoUrl: String(p.logo_url || ""),
-                coverUrl: String(p.cover_url || ""),
+                logoUrl: sanitizeImageUrl(String(p.logo_url || "")),
+                coverUrl: sanitizeImageUrl(String(p.cover_url || "")),
                 phone: String(p.phone || ""),
                 email: String(p.email || ""),
                 website: String(p.website || ""),
@@ -158,6 +163,9 @@ export const Route = createFileRoute("/api/restaurant-profile")({
             /* ignore */
           }
 
+          const logoUrl = await serverUploadImageToImgBBIfBase64(body.logoUrl);
+          const coverUrl = await serverUploadImageToImgBBIfBase64(body.coverUrl);
+
           await query(
             `INSERT INTO restaurant_profiles (
                restaurant_id, restaurant_name, tagline, description, logo_url, cover_url,
@@ -181,8 +189,8 @@ export const Route = createFileRoute("/api/restaurant-profile")({
               body.restaurantName || "",
               body.tagline || "",
               body.description || "",
-              body.logoUrl || "",
-              body.coverUrl || "",
+              logoUrl,
+              coverUrl,
               body.phone || "",
               body.email || "",
               body.website || "",
