@@ -1984,8 +1984,16 @@ export async function getUserAssignedBranches(tenant: {
     console.warn("[MySQL] getUserAssignedBranches error:", err);
   }
 
-  // 1. Global Admins (Super Admin / Owner) have full visibility of all branches
-  if (tenant.isGlobalAdmin) {
+  // 1. Global Admins (Super Admin) & Restaurant Owners have full visibility of all branches
+  const rClean = (tenant.role || "").toLowerCase().trim();
+  const isOwnerOrSuperAdmin =
+    tenant.isGlobalAdmin ||
+    rClean === "owner" ||
+    rClean === "super_admin" ||
+    rClean === "superadmin" ||
+    rClean === "admin";
+
+  if (isOwnerOrSuperAdmin) {
     return {
       isAll: true,
       branches: allDbBranches,
