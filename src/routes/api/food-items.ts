@@ -186,6 +186,8 @@ export const Route = createFileRoute("/api/food-items")({
             await pool.query(
               "ALTER TABLE food_items ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
             );
+            await pool.query("ALTER TABLE food_items ADD COLUMN image TEXT NULL");
+            await pool.query("ALTER TABLE food_items ADD COLUMN image_url TEXT NULL");
             await pool.query("ALTER TABLE food_items ADD COLUMN addons JSON NULL");
             await pool.query("ALTER TABLE food_items ADD COLUMN branch_ids JSON NULL");
           } catch {
@@ -217,19 +219,21 @@ export const Route = createFileRoute("/api/food-items")({
             }
           }
 
+          const itemImageUrl = String(body.image || "");
+
           await query(
             `INSERT INTO food_items (
-               id, restaurant_id, category_id, name, price, original_price, image, description,
+               id, restaurant_id, category_id, name, price, original_price, image, image_url, description,
                badge, is_veg, is_vegan, is_gluten_free, is_halal, spicy_level, calories, prep_time,
                status, variations, addons, branch_ids
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE 
                category_id = VALUES(category_id),
                name = VALUES(name),
                price = VALUES(price),
                original_price = VALUES(original_price),
                image = VALUES(image),
-               image_url = VALUES(image),
+               image_url = VALUES(image_url),
                description = VALUES(description),
                badge = VALUES(badge),
                is_veg = VALUES(is_veg),
@@ -250,7 +254,8 @@ export const Route = createFileRoute("/api/food-items")({
               body.name.trim(),
               body.price,
               body.originalPrice ?? null,
-              body.image || "",
+              itemImageUrl,
+              itemImageUrl,
               body.description || "",
               body.badge || null,
               body.isVeg ? 1 : 0,
