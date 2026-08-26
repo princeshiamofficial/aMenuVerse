@@ -60,7 +60,9 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCategoriesRouteImport } from './routes/_authenticated/categories'
 import { Route as AuthenticatedBranchesRouteImport } from './routes/_authenticated/branches'
 import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
+import { Route as BranchIdTableIdRouteImport } from './routes/$branchId.$tableId'
 import { Route as RestaurantUsernameETokenRouteImport } from './routes/$restaurantUsername.e.$token'
+import { Route as RestaurantUsernameBranchIdTableIdRouteImport } from './routes/$restaurantUsername.$branchId.$tableId'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -320,10 +322,21 @@ const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const BranchIdTableIdRoute = BranchIdTableIdRouteImport.update({
+  id: '/$branchId/$tableId',
+  path: '/$branchId/$tableId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RestaurantUsernameETokenRoute =
   RestaurantUsernameETokenRouteImport.update({
     id: '/e/$token',
     path: '/e/$token',
+    getParentRoute: () => RestaurantUsernameRoute,
+  } as any)
+const RestaurantUsernameBranchIdTableIdRoute =
+  RestaurantUsernameBranchIdTableIdRouteImport.update({
+    id: '/$branchId/$tableId',
+    path: '/$branchId/$tableId',
     getParentRoute: () => RestaurantUsernameRoute,
   } as any)
 
@@ -333,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/$branchId/$tableId': typeof BranchIdTableIdRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/branches': typeof AuthenticatedBranchesRoute
   '/categories': typeof AuthenticatedCategoriesRoute
@@ -378,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/e/$token': typeof ETokenRoute
   '/m/$slug': typeof MSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/$restaurantUsername/$branchId/$tableId': typeof RestaurantUsernameBranchIdTableIdRoute
   '/$restaurantUsername/e/$token': typeof RestaurantUsernameETokenRoute
 }
 export interface FileRoutesByTo {
@@ -385,6 +400,7 @@ export interface FileRoutesByTo {
   '/$restaurantUsername': typeof RestaurantUsernameRouteWithChildren
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/$branchId/$tableId': typeof BranchIdTableIdRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/branches': typeof AuthenticatedBranchesRoute
   '/categories': typeof AuthenticatedCategoriesRoute
@@ -430,6 +446,7 @@ export interface FileRoutesByTo {
   '/e/$token': typeof ETokenRoute
   '/m/$slug': typeof MSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/$restaurantUsername/$branchId/$tableId': typeof RestaurantUsernameBranchIdTableIdRoute
   '/$restaurantUsername/e/$token': typeof RestaurantUsernameETokenRoute
 }
 export interface FileRoutesById {
@@ -440,6 +457,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/$branchId/$tableId': typeof BranchIdTableIdRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
   '/_authenticated/branches': typeof AuthenticatedBranchesRoute
   '/_authenticated/categories': typeof AuthenticatedCategoriesRoute
@@ -485,6 +503,7 @@ export interface FileRoutesById {
   '/e/$token': typeof ETokenRoute
   '/m/$slug': typeof MSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/$restaurantUsername/$branchId/$tableId': typeof RestaurantUsernameBranchIdTableIdRoute
   '/$restaurantUsername/e/$token': typeof RestaurantUsernameETokenRoute
 }
 export interface FileRouteTypes {
@@ -495,6 +514,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/sitemap.xml'
+    | '/$branchId/$tableId'
     | '/analytics'
     | '/branches'
     | '/categories'
@@ -540,6 +560,7 @@ export interface FileRouteTypes {
     | '/e/$token'
     | '/m/$slug'
     | '/admin/'
+    | '/$restaurantUsername/$branchId/$tableId'
     | '/$restaurantUsername/e/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -547,6 +568,7 @@ export interface FileRouteTypes {
     | '/$restaurantUsername'
     | '/auth'
     | '/sitemap.xml'
+    | '/$branchId/$tableId'
     | '/analytics'
     | '/branches'
     | '/categories'
@@ -592,6 +614,7 @@ export interface FileRouteTypes {
     | '/e/$token'
     | '/m/$slug'
     | '/admin'
+    | '/$restaurantUsername/$branchId/$tableId'
     | '/$restaurantUsername/e/$token'
   id:
     | '__root__'
@@ -601,6 +624,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/sitemap.xml'
+    | '/$branchId/$tableId'
     | '/_authenticated/analytics'
     | '/_authenticated/branches'
     | '/_authenticated/categories'
@@ -646,6 +670,7 @@ export interface FileRouteTypes {
     | '/e/$token'
     | '/m/$slug'
     | '/admin/'
+    | '/$restaurantUsername/$branchId/$tableId'
     | '/$restaurantUsername/e/$token'
   fileRoutesById: FileRoutesById
 }
@@ -656,6 +681,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  BranchIdTableIdRoute: typeof BranchIdTableIdRoute
   ApiAdminStatsRoute: typeof ApiAdminStatsRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiBranchTablesRoute: typeof ApiBranchTablesRoute
@@ -1034,11 +1060,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnalyticsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/$branchId/$tableId': {
+      id: '/$branchId/$tableId'
+      path: '/$branchId/$tableId'
+      fullPath: '/$branchId/$tableId'
+      preLoaderRoute: typeof BranchIdTableIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$restaurantUsername/e/$token': {
       id: '/$restaurantUsername/e/$token'
       path: '/e/$token'
       fullPath: '/$restaurantUsername/e/$token'
       preLoaderRoute: typeof RestaurantUsernameETokenRouteImport
+      parentRoute: typeof RestaurantUsernameRoute
+    }
+    '/$restaurantUsername/$branchId/$tableId': {
+      id: '/$restaurantUsername/$branchId/$tableId'
+      path: '/$branchId/$tableId'
+      fullPath: '/$restaurantUsername/$branchId/$tableId'
+      preLoaderRoute: typeof RestaurantUsernameBranchIdTableIdRouteImport
       parentRoute: typeof RestaurantUsernameRoute
     }
   }
@@ -1086,10 +1126,13 @@ const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface RestaurantUsernameRouteChildren {
+  RestaurantUsernameBranchIdTableIdRoute: typeof RestaurantUsernameBranchIdTableIdRoute
   RestaurantUsernameETokenRoute: typeof RestaurantUsernameETokenRoute
 }
 
 const RestaurantUsernameRouteChildren: RestaurantUsernameRouteChildren = {
+  RestaurantUsernameBranchIdTableIdRoute:
+    RestaurantUsernameBranchIdTableIdRoute,
   RestaurantUsernameETokenRoute: RestaurantUsernameETokenRoute,
 }
 
@@ -1135,6 +1178,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  BranchIdTableIdRoute: BranchIdTableIdRoute,
   ApiAdminStatsRoute: ApiAdminStatsRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiBranchTablesRoute: ApiBranchTablesRoute,
