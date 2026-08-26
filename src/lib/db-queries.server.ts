@@ -3399,6 +3399,7 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
       `);
       try {
+        await query("ALTER TABLE branch_tables CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
         await query("ALTER TABLE branch_tables ADD COLUMN restaurant_id INT DEFAULT 1");
       } catch {
         /* column exists */
@@ -3420,19 +3421,19 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
           }
         }
         rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone FROM branch_tables WHERE (branch_id = ? OR branch_id = ?) AND restaurant_id = ? ORDER BY sort_order ASC, created_at ASC",
-          [branchId, branchId.replace("branch-", ""), tenant.restaurantId],
+          "SELECT id, table_no, zone FROM branch_tables WHERE (branch_id = ? OR branch_id = ? OR branch_id LIKE ?) AND (restaurant_id = ? OR restaurant_id = 0) ORDER BY sort_order ASC, created_at ASC",
+          [branchId, branchId.replace("branch-", ""), `%${branchId}%`, tenant.restaurantId],
         );
       } else if (!assignedInfo.isAll) {
         const branchIds = assignedInfo.branches.flatMap((b) => [b.id, b.name]);
         const placeholders = branchIds.map(() => "?").join(",");
         rows = await query<Record<string, unknown>[]>(
-          `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders})) AND restaurant_id = ? ORDER BY sort_order ASC, created_at ASC`,
+          `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders})) AND (restaurant_id = ? OR restaurant_id = 0) ORDER BY sort_order ASC, created_at ASC`,
           [...branchIds, tenant.restaurantId],
         );
       } else {
         rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone FROM branch_tables WHERE restaurant_id = ? ORDER BY sort_order ASC, created_at ASC",
+          "SELECT id, table_no, zone FROM branch_tables WHERE (restaurant_id = ? OR restaurant_id = 0) ORDER BY sort_order ASC, created_at ASC",
           [tenant.restaurantId],
         );
       }
