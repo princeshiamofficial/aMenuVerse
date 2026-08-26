@@ -3940,67 +3940,87 @@ export const getOrdersServer = createServerFn({ method: "GET" })
       const rows = await query<Record<string, unknown>[]>(sql, params);
 
       if (rows && rows.length > 0) {
-        const dbOrders: FullOrderRecord[] = rows.map((r) => ({
-          id: String(r.id),
-          number: Number(r.order_number || 1),
-          branchId: r.branch_id ? String(r.branch_id) : undefined,
-          createdAt: r.created_at
-            ? new Date(r.created_at as string).toISOString()
-            : new Date().toISOString(),
-          updatedAt: r.updated_at
-            ? new Date(r.updated_at as string).toISOString()
-            : new Date().toISOString(),
-          type: (r.type as FullOrderRecord["type"]) || "dine-in",
-          status: (r.status as FullOrderRecord["status"]) || "pending",
-          tableNumber: r.table_number ? String(r.table_number) : undefined,
-          customerName: String(r.customer_name || "Guest"),
-          phone: String(r.phone || ""),
-          lines: r.lines_json
-            ? (
-                JSON.parse(String(r.lines_json)) as Array<{
-                  itemId?: string;
-                  name?: string;
-                  price?: number;
-                  unitPrice?: number;
-                  qty?: number;
-                  quantity?: number;
-                }>
-              ).map((l) => ({
-                itemId: String(l.itemId || crypto.randomUUID()),
-                name: String(l.name || "Food Item"),
-                price: Number(l.price ?? l.unitPrice ?? 0),
+        const dbOrders: FullOrderRecord[] = rows.map((r) => {
+          let lines: Array<{ itemId: string; name: string; price: number; qty: number }> = [];
+          if (r.lines_json) {
+            if (Array.isArray(r.lines_json)) {
+              lines = r.lines_json.map((l: Record<string, unknown>) => ({
+                itemId: String(l.itemId || l.id || crypto.randomUUID()),
+                name: String(l.name || l.item_name || "Food Item"),
+                price: Number(l.price ?? l.unitPrice ?? l.unit_price ?? 0),
                 qty: Number(l.qty ?? l.quantity ?? 1),
-              }))
-            : [],
-          subtotal: Number(r.subtotal || 0),
-          discountType: (r.discount_type as FullOrderRecord["discountType"]) || "amount",
-          discountValue: Number(r.discount_value || 0),
-          discountAmount: Number(r.discount_amount || 0),
-          tax: Number(r.tax || 0),
-          total: Number(r.total || 0),
-          prepTimeMinutes:
-            r.prep_time_minutes !== null && r.prep_time_minutes !== undefined
-              ? Number(r.prep_time_minutes)
-              : r.status === "completed"
-                ? Math.max(
-                    0,
-                    Math.floor(
-                      ((r.updated_at ? new Date(r.updated_at as string).getTime() : Date.now()) -
-                        (r.prep_started_at || r.created_at
-                          ? new Date((r.prep_started_at || r.created_at) as string).getTime()
-                          : Date.now())) /
-                        60000,
-                    ),
-                  )
+              }));
+            } else if (typeof r.lines_json === "string" && r.lines_json.trim()) {
+              try {
+                const parsed = JSON.parse(r.lines_json.trim());
+                const arr = Array.isArray(parsed)
+                  ? parsed
+                  : typeof parsed === "object" && parsed !== null
+                    ? [parsed]
+                    : [];
+                lines = arr.map((l: Record<string, unknown>) => ({
+                  itemId: String(l.itemId || l.id || crypto.randomUUID()),
+                  name: String(l.name || l.item_name || "Food Item"),
+                  price: Number(l.price ?? l.unitPrice ?? l.unit_price ?? 0),
+                  qty: Number(l.qty ?? l.quantity ?? 1),
+                }));
+              } catch {
+                lines = [];
+              }
+            } else if (typeof r.lines_json === "object" && r.lines_json !== null) {
+              const l = r.lines_json as Record<string, unknown>;
+              lines = [
+                {
+                  itemId: String(l.itemId || l.id || crypto.randomUUID()),
+                  name: String(l.name || l.item_name || "Food Item"),
+                  price: Number(l.price ?? l.unitPrice ?? l.unit_price ?? 0),
+                  qty: Number(l.qty ?? l.quantity ?? 1),
+                },
+              ];
+            }
+          }
+
+          const parseDate = (d: unknown): string => {
+            if (!d) return new Date().toISOString();
+            if (d instanceof Date)
+              return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+            try {
+              const dt = new Date(String(d));
+              return isNaN(dt.getTime()) ? new Date().toISOString() : dt.toISOString();
+            } catch {
+              return new Date().toISOString();
+            }
+          };
+
+          return {
+            id: String(r.id),
+            number: Number(r.order_number || 1),
+            branchId: r.branch_id ? String(r.branch_id) : undefined,
+            createdAt: parseDate(r.created_at),
+            updatedAt: parseDate(r.updated_at),
+            type: (r.type as FullOrderRecord["type"]) || "dine-in",
+            status: (r.status as FullOrderRecord["status"]) || "pending",
+            tableNumber: r.table_number ? String(r.table_number) : undefined,
+            customerName: String(r.customer_name || "Guest"),
+            phone: String(r.phone || ""),
+            lines,
+            subtotal: Number(r.subtotal || 0),
+            discountType: (r.discount_type as FullOrderRecord["discountType"]) || "amount",
+            discountValue: Number(r.discount_value || 0),
+            discountAmount: Number(r.discount_amount || 0),
+            tax: Number(r.tax || 0),
+            total: Number(r.total || 0),
+            prepTimeMinutes:
+              r.prep_time_minutes !== null && r.prep_time_minutes !== undefined
+                ? Number(r.prep_time_minutes)
                 : undefined,
-          prepStartedAt: r.prep_started_at
-            ? new Date(r.prep_started_at as string).toISOString()
-            : undefined,
-          estimatedPrepMinutes:
-            r.estimated_prep_minutes !== null && r.estimated_prep_minutes !== undefined
-              ? Number(r.estimated_prep_minutes)
-              : undefined,
-        }));
+            prepStartedAt: r.prep_started_at ? parseDate(r.prep_started_at) : undefined,
+            estimatedPrepMinutes:
+              r.estimated_prep_minutes !== null && r.estimated_prep_minutes !== undefined
+                ? Number(r.estimated_prep_minutes)
+                : undefined,
+          };
+        });
         return dbOrders;
       }
     } catch (err) {
@@ -6535,46 +6555,69 @@ export const getWaiterActiveOrdersServer = createServerFn({ method: "GET" })
 
       const rows = await query<Record<string, unknown>[]>(sql, params);
 
-      return (rows || []).map((r): FullOrderRecord => ({
-        id: String(r.id),
-        number: Number(r.order_number || 1),
-        branchId: r.branch_id ? String(r.branch_id) : undefined,
-        createdAt: r.created_at
-          ? new Date(r.created_at as string).toISOString()
-          : new Date().toISOString(),
-        updatedAt: r.updated_at
-          ? new Date(r.updated_at as string).toISOString()
-          : new Date().toISOString(),
-        type: "dine-in",
-        status: (r.status as FullOrderRecord["status"]) || "pending",
-        tableNumber: r.table_number ? String(r.table_number) : undefined,
-        customerName: String(r.customer_name || "Guest"),
-        phone: String(r.phone || ""),
-        notes: r.notes ? String(r.notes) : undefined,
-        lines: r.lines_json
-          ? (
-              JSON.parse(String(r.lines_json)) as Array<{
-                itemId?: string;
-                name?: string;
-                price?: number;
-                unitPrice?: number;
-                qty?: number;
-                quantity?: number;
-              }>
-            ).map((l) => ({
-              itemId: String(l.itemId || crypto.randomUUID()),
-              name: String(l.name || "Food Item"),
-              price: Number(l.price ?? l.unitPrice ?? 0),
+      return (rows || []).map((r): FullOrderRecord => {
+        let lines: Array<{ itemId: string; name: string; price: number; qty: number }> = [];
+        if (r.lines_json) {
+          if (Array.isArray(r.lines_json)) {
+            lines = r.lines_json.map((l: Record<string, unknown>) => ({
+              itemId: String(l.itemId || l.id || crypto.randomUUID()),
+              name: String(l.name || l.item_name || "Food Item"),
+              price: Number(l.price ?? l.unitPrice ?? l.unit_price ?? 0),
               qty: Number(l.qty ?? l.quantity ?? 1),
-            }))
-          : [],
-        subtotal: Number(r.subtotal || 0),
-        discountType: (r.discount_type as FullOrderRecord["discountType"]) || "amount",
-        discountValue: Number(r.discount_value || 0),
-        discountAmount: Number(r.discount_amount || 0),
-        tax: Number(r.tax || 0),
-        total: Number(r.total || 0),
-      }));
+            }));
+          } else if (typeof r.lines_json === "string" && r.lines_json.trim()) {
+            try {
+              const parsed = JSON.parse(r.lines_json.trim());
+              const arr = Array.isArray(parsed)
+                ? parsed
+                : typeof parsed === "object" && parsed !== null
+                  ? [parsed]
+                  : [];
+              lines = arr.map((l: Record<string, unknown>) => ({
+                itemId: String(l.itemId || l.id || crypto.randomUUID()),
+                name: String(l.name || l.item_name || "Food Item"),
+                price: Number(l.price ?? l.unitPrice ?? l.unit_price ?? 0),
+                qty: Number(l.qty ?? l.quantity ?? 1),
+              }));
+            } catch {
+              lines = [];
+            }
+          }
+        }
+
+        const parseDate = (d: unknown): string => {
+          if (!d) return new Date().toISOString();
+          if (d instanceof Date)
+            return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+          try {
+            const dt = new Date(String(d));
+            return isNaN(dt.getTime()) ? new Date().toISOString() : dt.toISOString();
+          } catch {
+            return new Date().toISOString();
+          }
+        };
+
+        return {
+          id: String(r.id),
+          number: Number(r.order_number || 1),
+          branchId: r.branch_id ? String(r.branch_id) : undefined,
+          createdAt: parseDate(r.created_at),
+          updatedAt: parseDate(r.updated_at),
+          type: "dine-in",
+          status: (r.status as FullOrderRecord["status"]) || "pending",
+          tableNumber: r.table_number ? String(r.table_number) : undefined,
+          customerName: String(r.customer_name || "Guest"),
+          phone: String(r.phone || ""),
+          notes: r.notes ? String(r.notes) : undefined,
+          lines,
+          subtotal: Number(r.subtotal || 0),
+          discountType: (r.discount_type as FullOrderRecord["discountType"]) || "amount",
+          discountValue: Number(r.discount_value || 0),
+          discountAmount: Number(r.discount_amount || 0),
+          tax: Number(r.tax || 0),
+          total: Number(r.total || 0),
+        };
+      });
     } catch (err) {
       console.warn("[MySQL] getWaiterActiveOrdersServer error:", err);
       return [];
