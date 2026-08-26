@@ -428,5 +428,11 @@ export interface AnalyticsSummary {
   totalRevenue: number;
   avgOrderValue: number;
   conversionRate: number;
-  dailyTrend: Array<{ date: string; scans: number; views: number; orders: number; revenue: number }>;
+  dailyTrend: Array<{
+    date: string;
+    scans: number;
+    views: number;
+    orders: number;
+    revenue: number;
+  }>;
 }

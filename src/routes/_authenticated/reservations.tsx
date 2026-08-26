@@ -574,7 +574,16 @@ function ReservationsPage() {
 
       return matchQuery && matchStatus && matchArea && matchBranch && matchDate;
     });
-  }, [reservations, search, statusFilter, areaFilter, branchFilter, dateFilter, isGlobalOwner, staffBranchName]);
+  }, [
+    reservations,
+    search,
+    statusFilter,
+    areaFilter,
+    branchFilter,
+    dateFilter,
+    isGlobalOwner,
+    staffBranchName,
+  ]);
 
   const handleOpenAdd = () => {
     const today = new Date();

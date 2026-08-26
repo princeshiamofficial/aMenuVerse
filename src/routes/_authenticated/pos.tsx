@@ -254,12 +254,21 @@ function POSPage() {
     async function loadTables() {
       try {
         const targetBId = selectedBranchId || "all";
-        let dbTables: TableRecord[] = [];
+        let dbTables: Array<{
+          id: string;
+          tableNo: string;
+          name?: string;
+          capacity?: number;
+          status?: string;
+        }> = [];
         try {
-          const apiRes = await fetch(`/api/branch-tables?branchId=${encodeURIComponent(targetBId)}`, {
-            method: "GET",
-            headers: { Accept: "application/json" },
-          }).then((r) => r.json());
+          const apiRes = await fetch(
+            `/api/branch-tables?branchId=${encodeURIComponent(targetBId)}`,
+            {
+              method: "GET",
+              headers: { Accept: "application/json" },
+            },
+          ).then((r) => r.json());
           if (apiRes && apiRes.success && Array.isArray(apiRes.data)) {
             dbTables = apiRes.data;
           }

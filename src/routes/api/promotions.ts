@@ -74,7 +74,9 @@ export const Route = createFileRoute("/api/promotions")({
               kind: (r.kind as string) || "seasonal",
               branchIds,
               popupEnabled: Boolean(r.popup_enabled),
-              createdAt: r.created_at ? new Date(r.created_at as string).toISOString() : new Date().toISOString(),
+              createdAt: r.created_at
+                ? new Date(r.created_at as string).toISOString()
+                : new Date().toISOString(),
             };
           });
 
@@ -82,10 +84,7 @@ export const Route = createFileRoute("/api/promotions")({
           const filtered =
             branchId !== "all"
               ? promos.filter(
-                  (p) =>
-                    !p.branchIds ||
-                    p.branchIds.length === 0 ||
-                    p.branchIds.includes(branchId),
+                  (p) => !p.branchIds || p.branchIds.length === 0 || p.branchIds.includes(branchId),
                 )
               : promos;
 

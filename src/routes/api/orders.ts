@@ -1,10 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { query, getPool } from "../../lib/mysql";
 import { verifySession } from "../../lib/auth.server";
-import {
-  resolvePrivateTenantContext,
-  getUserAssignedBranches,
-} from "../../lib/db-queries.server";
+import { resolvePrivateTenantContext, getUserAssignedBranches } from "../../lib/db-queries.server";
 import { hasPermission } from "../../lib/permissions";
 import { broadcastRealtimeEvent } from "../../lib/realtime.server";
 import crypto from "crypto";
@@ -35,7 +32,9 @@ export const Route = createFileRoute("/api/orders")({
                   let items = [];
                   try {
                     items =
-                      typeof r.lines_json === "string" ? JSON.parse(r.lines_json) : r.lines_json || [];
+                      typeof r.lines_json === "string"
+                        ? JSON.parse(r.lines_json)
+                        : r.lines_json || [];
                   } catch {
                     /* ignore */
                   }
@@ -45,7 +44,9 @@ export const Route = createFileRoute("/api/orders")({
                     total: Number(r.total_amount || 0),
                     status: (r.status as string) || "pending",
                     items,
-                    createdAt: r.created_at ? new Date(r.created_at as string).toISOString() : new Date().toISOString(),
+                    createdAt: r.created_at
+                      ? new Date(r.created_at as string).toISOString()
+                      : new Date().toISOString(),
                     customerName: String(r.customer_name || "Guest Customer"),
                     branchId: r.branch_id ? String(r.branch_id) : undefined,
                   };
@@ -121,7 +122,8 @@ export const Route = createFileRoute("/api/orders")({
           const orders = (rows || []).map((r) => {
             let items = [];
             try {
-              items = typeof r.lines_json === "string" ? JSON.parse(r.lines_json) : r.lines_json || [];
+              items =
+                typeof r.lines_json === "string" ? JSON.parse(r.lines_json) : r.lines_json || [];
             } catch {
               /* ignore */
             }
@@ -144,8 +146,12 @@ export const Route = createFileRoute("/api/orders")({
               branchId: r.branch_id ? String(r.branch_id) : undefined,
               branchName: r.branch_id ? String(r.branch_id) : undefined,
               tableNumber: r.table_no ? String(r.table_no) : undefined,
-              createdAt: r.created_at ? new Date(r.created_at as string).toISOString() : new Date().toISOString(),
-              specialInstructions: r.special_instructions ? String(r.special_instructions) : undefined,
+              createdAt: r.created_at
+                ? new Date(r.created_at as string).toISOString()
+                : new Date().toISOString(),
+              specialInstructions: r.special_instructions
+                ? String(r.special_instructions)
+                : undefined,
             };
           });
 
@@ -208,8 +214,7 @@ export const Route = createFileRoute("/api/orders")({
           }
 
           const orderId = `pos-${crypto.randomUUID().slice(0, 10)}`;
-          const orderNo =
-            body.orderNumber || `#${Math.floor(1000 + Math.random() * 9000)}`;
+          const orderNo = body.orderNumber || `#${Math.floor(1000 + Math.random() * 9000)}`;
 
           let calculatedSubtotal = 0;
           for (const item of body.items) {
@@ -220,7 +225,7 @@ export const Route = createFileRoute("/api/orders")({
           const serviceCharge = body.serviceCharge ?? 0;
           const discount = body.discount ?? 0;
           const deliveryFee = body.deliveryFee ?? 0;
-          const total = body.total ?? (subtotal + tax + serviceCharge + deliveryFee - discount);
+          const total = body.total ?? subtotal + tax + serviceCharge + deliveryFee - discount;
 
           const linesJson = JSON.stringify(body.items);
 
@@ -322,10 +327,11 @@ export const Route = createFileRoute("/api/orders")({
           }
 
           const tenant = await resolvePrivateTenantContext();
-          await query(
-            "UPDATE pos_orders SET status = ? WHERE id = ? AND restaurant_id = ?",
-            [body.status, body.id, tenant.restaurantId],
-          );
+          await query("UPDATE pos_orders SET status = ? WHERE id = ? AND restaurant_id = ?", [
+            body.status,
+            body.id,
+            tenant.restaurantId,
+          ]);
 
           try {
             broadcastRealtimeEvent({

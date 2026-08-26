@@ -276,9 +276,11 @@ function RestaurantProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const dbData = await apiGet<Record<string, unknown>>("/api/restaurant-profile").catch(async () => {
-          return await getRestaurantProfile();
-        });
+        const dbData = await apiGet<Record<string, unknown>>("/api/restaurant-profile").catch(
+          async () => {
+            return await getRestaurantProfile();
+          },
+        );
         if (dbData) {
           setBranding((prev) => {
             const updated = { ...prev, ...dbData };

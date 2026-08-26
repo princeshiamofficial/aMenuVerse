@@ -221,7 +221,7 @@ function AdminDashboardShell({ children }: { children: React.ReactNode }) {
 }
 
 function AdminLayoutComponent() {
-  const [restaurantsList, setRestaurantsList] = useState<any[]>([]);
+  const [restaurantsList, setRestaurantsList] = useState<RestaurantEntry[]>([]);
   const [tickets, setTickets] = useState(INITIAL_TICKETS);
   const [flags, setFlags] = useState(INITIAL_FLAGS);
   const [announcements, setAnnouncements] = useState(INITIAL_ANNOUNCEMENTS);

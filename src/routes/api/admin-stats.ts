@@ -9,9 +9,18 @@ export const Route = createFileRoute("/api/admin-stats")({
       GET: async () => {
         try {
           const user = await verifySession().catch(() => null);
-          if (!user || !user.role || !["super_admin", "superadmin"].includes(user.role.toLowerCase().trim().replace(/ /g, "_"))) {
+          if (
+            !user ||
+            !user.role ||
+            !["super_admin", "superadmin"].includes(
+              user.role.toLowerCase().trim().replace(/ /g, "_"),
+            )
+          ) {
             return new Response(
-              JSON.stringify({ success: false, error: "Unauthorized: Super Admin access required." }),
+              JSON.stringify({
+                success: false,
+                error: "Unauthorized: Super Admin access required.",
+              }),
               { status: 403, headers: { "Content-Type": "application/json" } },
             );
           }
@@ -33,7 +42,9 @@ export const Route = createFileRoute("/api/admin-stats")({
 
           for (const r of restRows || []) {
             const plan = String(r.plan || "Starter").trim();
-            const status = String(r.status || "active").toLowerCase().trim();
+            const status = String(r.status || "active")
+              .toLowerCase()
+              .trim();
 
             if (plan.toLowerCase() === "business") {
               planCounts.Business = (planCounts.Business || 0) + 1;

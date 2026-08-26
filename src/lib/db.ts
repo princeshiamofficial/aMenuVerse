@@ -12,7 +12,10 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-export async function query<T = any>(sql: string, params?: any[]): Promise<T> {
+export async function query<T = unknown>(
+  sql: string,
+  params?: (string | number | boolean | null | undefined)[],
+): Promise<T> {
   const [results] = await pool.execute(sql, params);
   return results as T;
 }

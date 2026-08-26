@@ -81,7 +81,7 @@ export const Route = createFileRoute("/api/branch-tables")({
               "branch_id LIKE ?",
               "LOWER(branch_id) = LOWER(?)",
             ];
-            const branchMatchParams: unknown[] = [
+            const branchMatchParams: (string | number | null)[] = [
               cleanBranchId,
               cleanBranchId.replace("branch-", ""),
               `%${cleanBranchId}%`,

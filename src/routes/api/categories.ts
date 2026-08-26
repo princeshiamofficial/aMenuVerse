@@ -39,7 +39,7 @@ export const Route = createFileRoute("/api/categories")({
                      FROM categories c 
                      LEFT JOIN food_items f ON f.category_id = c.id AND f.restaurant_id = c.restaurant_id 
                      WHERE c.restaurant_id = ?`;
-          const params: unknown[] = [restaurantId];
+          const params: (string | number | null)[] = [restaurantId];
 
           if (search.trim()) {
             sql += " AND c.name LIKE ?";
@@ -123,9 +123,7 @@ export const Route = createFileRoute("/api/categories")({
             await pool.query(
               "ALTER TABLE categories ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
             );
-            await pool.query(
-              "ALTER TABLE categories ADD COLUMN branch_ids JSON NULL",
-            );
+            await pool.query("ALTER TABLE categories ADD COLUMN branch_ids JSON NULL");
           } catch {
             /* ignore */
           }
@@ -141,7 +139,10 @@ export const Route = createFileRoute("/api/categories")({
               );
               const catCount = Number(countRows?.[0]?.cnt || 0);
               const sub = await getTenantSubscriptionServer();
-              if (sub.limits.maxCategories !== "unlimited" && catCount >= sub.limits.maxCategories) {
+              if (
+                sub.limits.maxCategories !== "unlimited" &&
+                catCount >= sub.limits.maxCategories
+              ) {
                 return new Response(
                   JSON.stringify({
                     success: false,

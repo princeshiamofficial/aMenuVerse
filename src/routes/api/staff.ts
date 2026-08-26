@@ -81,7 +81,9 @@ export const Route = createFileRoute("/api/staff")({
             branch: r.branch ? String(r.branch) : undefined,
             status: (r.status as string) || "active",
             avatarUrl: r.avatar_url ? String(r.avatar_url) : undefined,
-            createdAt: r.created_at ? new Date(r.created_at as string).toISOString() : new Date().toISOString(),
+            createdAt: r.created_at
+              ? new Date(r.created_at as string).toISOString()
+              : new Date().toISOString(),
           }));
 
           return new Response(JSON.stringify({ success: true, data: staffList }), {

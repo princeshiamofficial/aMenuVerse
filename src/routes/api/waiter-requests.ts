@@ -1,10 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { query, getPool } from "../../lib/mysql";
 import { verifySession } from "../../lib/auth.server";
-import {
-  resolvePrivateTenantContext,
-  getUserAssignedBranches,
-} from "../../lib/db-queries.server";
+import { resolvePrivateTenantContext, getUserAssignedBranches } from "../../lib/db-queries.server";
 import { hasPermission } from "../../lib/permissions";
 import { broadcastRealtimeEvent } from "../../lib/realtime.server";
 import crypto from "crypto";
@@ -48,7 +45,9 @@ export const Route = createFileRoute("/api/waiter-requests")({
             type: String(r.request_type || "service"),
             status: String(r.status || "pending"),
             message: r.message ? String(r.message) : undefined,
-            createdAt: r.created_at ? new Date(r.created_at as string).toISOString() : new Date().toISOString(),
+            createdAt: r.created_at
+              ? new Date(r.created_at as string).toISOString()
+              : new Date().toISOString(),
           }));
 
           return new Response(JSON.stringify({ success: true, data: requests }), {
@@ -154,10 +153,11 @@ export const Route = createFileRoute("/api/waiter-requests")({
           }
 
           const tenant = await resolvePrivateTenantContext();
-          await query(
-            "UPDATE waiter_requests SET status = ? WHERE id = ? AND restaurant_id = ?",
-            [body.status, body.id, tenant.restaurantId],
-          );
+          await query("UPDATE waiter_requests SET status = ? WHERE id = ? AND restaurant_id = ?", [
+            body.status,
+            body.id,
+            tenant.restaurantId,
+          ]);
 
           return new Response(
             JSON.stringify({

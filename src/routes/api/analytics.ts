@@ -1,10 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { query } from "../../lib/mysql";
 import { verifySession } from "../../lib/auth.server";
-import {
-  resolvePrivateTenantContext,
-  getUserAssignedBranches,
-} from "../../lib/db-queries.server";
+import { resolvePrivateTenantContext, getUserAssignedBranches } from "../../lib/db-queries.server";
 import { hasPermission } from "../../lib/permissions";
 
 export const Route = createFileRoute("/api/analytics")({

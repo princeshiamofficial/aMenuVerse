@@ -306,7 +306,9 @@ function UsersComponent() {
         setUsers(fresh);
       } else if (editingUser.id) {
         setUsers((prev) =>
-          prev.map((item) => (item.id === editingUser.id ? (editingUser as UserRoleAccount) : item)),
+          prev.map((item) =>
+            item.id === editingUser.id ? (editingUser as UserRoleAccount) : item,
+          ),
         );
       }
       toast.success(`Saved account & assigned role for ${editingUser.name}`);

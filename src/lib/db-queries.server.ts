@@ -2871,7 +2871,7 @@ export const getCategoriesServer = createServerFn({ method: "GET" })
       const rows = await query<Record<string, unknown>[]>(sql, params);
 
       if (rows && rows.length > 0) {
-        let countsMap: Record<string, number> = {};
+        const countsMap: Record<string, number> = {};
         try {
           const countRows = await query<Record<string, unknown>[]>(
             "SELECT category, COUNT(*) as cnt FROM food_items WHERE restaurant_id = ? GROUP BY category",
@@ -3474,7 +3474,13 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
         try {
           const bRows = await query<Record<string, unknown>[]>(
             "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?)",
-            [tenant.restaurantId, cleanBranchId, cleanBranchId, cleanBranchId, `%${cleanBranchId}%`],
+            [
+              tenant.restaurantId,
+              cleanBranchId,
+              cleanBranchId,
+              cleanBranchId,
+              `%${cleanBranchId}%`,
+            ],
           );
           for (const b of bRows || []) {
             if (b.id) {
@@ -3652,12 +3658,7 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
       try {
         await query(
           "DELETE FROM branch_tables WHERE (branch_id = ? OR branch_id = ? OR branch_id = ?) AND (restaurant_id = ? OR restaurant_id = 0)",
-          [
-            branchId,
-            canonicalBranchId,
-            branchId.replace("branch-", ""),
-            tenant.restaurantId,
-          ],
+          [branchId, canonicalBranchId, branchId.replace("branch-", ""), tenant.restaurantId],
         );
       } catch {
         /* ignore */
@@ -5569,8 +5570,12 @@ export const getStaffServer = createServerFn({ method: "GET" })
       if (rows && rows.length > 0) {
         const dbStaffMap = new Map<string, StaffRecord>();
         rows.forEach((r) => {
-          const rawRole = String(r.role || "").toLowerCase().trim();
-          const email = String(r.email || "").toLowerCase().trim();
+          const rawRole = String(r.role || "")
+            .toLowerCase()
+            .trim();
+          const email = String(r.email || "")
+            .toLowerCase()
+            .trim();
           if (
             rawRole === "super_admin" ||
             rawRole === "superadmin" ||

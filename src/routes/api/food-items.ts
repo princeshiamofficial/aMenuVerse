@@ -184,12 +184,8 @@ export const Route = createFileRoute("/api/food-items")({
             await pool.query(
               "ALTER TABLE food_items ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
             );
-            await pool.query(
-              "ALTER TABLE food_items ADD COLUMN addons JSON NULL",
-            );
-            await pool.query(
-              "ALTER TABLE food_items ADD COLUMN branch_ids JSON NULL",
-            );
+            await pool.query("ALTER TABLE food_items ADD COLUMN addons JSON NULL");
+            await pool.query("ALTER TABLE food_items ADD COLUMN branch_ids JSON NULL");
           } catch {
             /* ignore */
           }

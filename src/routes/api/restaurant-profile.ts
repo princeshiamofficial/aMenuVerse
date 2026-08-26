@@ -1,10 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { query, getPool } from "../../lib/mysql";
 import { verifySession } from "../../lib/auth.server";
-import {
-  resolvePrivateTenantContext,
-  resolvePublicRestaurant,
-} from "../../lib/db-queries.server";
+import { resolvePrivateTenantContext, resolvePublicRestaurant } from "../../lib/db-queries.server";
 import { hasPermission } from "../../lib/permissions";
 
 export const Route = createFileRoute("/api/restaurant-profile")({
