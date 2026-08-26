@@ -258,6 +258,7 @@ function POSPage() {
           id: string;
           tableNo: string;
           name?: string;
+          zone?: string;
           capacity?: number;
           status?: string;
         }> = [];
