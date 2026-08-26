@@ -14,7 +14,7 @@ const pool = mysql.createPool({
 
 export async function query<T = unknown>(
   sql: string,
-  params?: (string | number | boolean | null | undefined)[],
+  params?: mysql.ExecuteValues,
 ): Promise<T> {
   const [results] = await pool.execute(sql, params);
   return results as T;

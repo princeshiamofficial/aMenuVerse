@@ -65,6 +65,7 @@ import {
   type Flag,
   type Announcement,
   type AdminContextType,
+  type RestaurantEntry,
 } from "@/lib/admin-context";
 
 // -------- Parent Layout Route Definition --------
