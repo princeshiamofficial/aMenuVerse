@@ -97,38 +97,7 @@ export const Route = createFileRoute("/api/branches")({
           }
           sql += " ORDER BY is_default DESC, created_at ASC";
 
-          let rows = await query<Record<string, unknown>[]>(sql, params);
-          if (
-            (!rows || rows.length === 0) &&
-            assignedInfo.isAll &&
-            tenant.restaurantId > 0 &&
-            !search.trim()
-          ) {
-            const defaultBranchId = `branch-${tenant.restaurantId}-main`;
-            try {
-              await query(
-                `INSERT INTO branches (id, restaurant_id, name, address, phone, manager, status, is_default, menu_id)
-                 VALUES (?, ?, 'Main Branch', '', '', '', 'open', 1, 'menu-main')
-                 ON DUPLICATE KEY UPDATE is_default = 1`,
-                [defaultBranchId, tenant.restaurantId],
-              );
-              rows = [
-                {
-                  id: defaultBranchId,
-                  name: "Main Branch",
-                  address: "",
-                  phone: "",
-                  manager: "",
-                  status: "open",
-                  isDefault: 1,
-                  menuId: "menu-main",
-                },
-              ];
-            } catch {
-              /* ignore */
-            }
-          }
-
+          const rows = await query<Record<string, unknown>[]>(sql, params);
           return new Response(
             JSON.stringify({
               success: true,

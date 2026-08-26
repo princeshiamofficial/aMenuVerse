@@ -1764,51 +1764,48 @@ export async function resolvePrivateTenantContext(): Promise<{
   let restaurantId: number | null = null;
   let slug = "burgercraftlab";
 
-  // 1. Direct owner match from restaurants table
-  try {
-    const owned = await query<Record<string, unknown>[]>(
-      "SELECT id, slug FROM restaurants WHERE owner_email = ? OR owner_id = ? LIMIT 1",
-      [user.email, user.id],
-    );
-    if (owned && owned.length > 0 && owned[0].id) {
-      restaurantId = Number(owned[0].id);
-      if (owned[0].slug) slug = String(owned[0].slug);
+  if (user.restaurant_id && Number(user.restaurant_id) > 0) {
+    restaurantId = Number(user.restaurant_id);
+  } else {
+    try {
+      const roles = await query<Record<string, unknown>[]>(
+        "SELECT restaurant_id FROM user_roles WHERE user_id = ? AND restaurant_id IS NOT NULL AND restaurant_id > 0 LIMIT 1",
+        [user.id],
+      );
+      if (roles && roles.length > 0 && roles[0].restaurant_id) {
+        restaurantId = Number(roles[0].restaurant_id);
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* ignore */
   }
 
-  // 2. If not owner, check user.restaurant_id or user_roles
   if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
-    if (user.restaurant_id && Number(user.restaurant_id) > 0) {
-      restaurantId = Number(user.restaurant_id);
-    } else {
+    try {
+      const owned = await query<Record<string, unknown>[]>(
+        "SELECT id, slug FROM restaurants WHERE owner_email = ? OR owner_id = ? LIMIT 1",
+        [user.email, user.id],
+      );
+      if (owned && owned.length > 0 && owned[0].id) {
+        restaurantId = Number(owned[0].id);
+        if (owned[0].slug) slug = String(owned[0].slug);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
       try {
-        const roles = await query<Record<string, unknown>[]>(
-          "SELECT restaurant_id FROM user_roles WHERE user_id = ? AND restaurant_id IS NOT NULL AND restaurant_id > 0 LIMIT 1",
-          [user.id],
+        const firstRest = await query<Record<string, unknown>[]>(
+          "SELECT id, slug FROM restaurants ORDER BY id ASC LIMIT 1",
         );
-        if (roles && roles.length > 0 && roles[0].restaurant_id) {
-          restaurantId = Number(roles[0].restaurant_id);
+        if (firstRest && firstRest.length > 0 && firstRest[0].id) {
+          restaurantId = Number(firstRest[0].id);
+          if (firstRest[0].slug) slug = String(firstRest[0].slug);
         }
       } catch {
         /* ignore */
       }
-    }
-  }
-
-  // 3. Fallback to first restaurant or 1
-  if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
-    try {
-      const firstRest = await query<Record<string, unknown>[]>(
-        "SELECT id, slug FROM restaurants ORDER BY id ASC LIMIT 1",
-      );
-      if (firstRest && firstRest.length > 0 && firstRest[0].id) {
-        restaurantId = Number(firstRest[0].id);
-        if (firstRest[0].slug) slug = String(firstRest[0].slug);
-      }
-    } catch {
-      /* ignore */
     }
 
     if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
@@ -2001,32 +1998,6 @@ export async function getUserAssignedBranches(tenant: {
     rClean === "super_admin" ||
     rClean === "superadmin" ||
     rClean === "admin";
-
-  if (allDbBranches.length === 0 && isOwnerOrSuperAdmin && tenant.restaurantId > 0) {
-    const defaultBranchId = `branch-${tenant.restaurantId}-main`;
-    try {
-      await query(
-        `INSERT INTO branches (id, restaurant_id, name, address, phone, manager, status, is_default, menu_id)
-         VALUES (?, ?, 'Main Branch', '', '', '', 'open', 1, 'menu-main')
-         ON DUPLICATE KEY UPDATE is_default = 1`,
-        [defaultBranchId, tenant.restaurantId],
-      );
-      allDbBranches = [
-        {
-          id: defaultBranchId,
-          name: "Main Branch",
-          address: "",
-          phone: "",
-          manager: "",
-          status: "open",
-          isDefault: true,
-          menuId: "menu-main",
-        },
-      ];
-    } catch {
-      /* ignore */
-    }
-  }
 
   if (isOwnerOrSuperAdmin) {
     return {
@@ -3516,63 +3487,101 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
     }
 
     try {
+      try {
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE branch_tables CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+          "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+          "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN location VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(255) DEFAULT 'MAIN ROOM'",
+          "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
+          "ALTER TABLE branch_tables ADD COLUMN qr_token TEXT NULL",
+          "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+          "ALTER TABLE branch_tables ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+          "ALTER TABLE branch_tables ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+          "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
+          "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables MODIFY COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
       let rows: Record<string, unknown>[] | null = null;
       const cleanBranchId = String(branchId || "").trim();
 
       if (cleanBranchId && cleanBranchId !== "all") {
-        const branchIdentifiers = new Set<string>([
+        const target = cleanBranchId.toLowerCase().trim();
+        if (!assignedInfo.isAll) {
+          const isAssigned = assignedInfo.branches.some(
+            (b) =>
+              b.id.toLowerCase() === target ||
+              b.name.toLowerCase() === target ||
+              b.name.toLowerCase().includes(target) ||
+              target.includes(b.name.toLowerCase()),
+          );
+          if (!isAssigned) {
+            return [];
+          }
+        }
+
+        const branchMatchClauses = [
+          "branch_id = ?",
+          "branch_id = ?",
+          "branch_id LIKE ?",
+          "LOWER(branch_id) = LOWER(?)",
+        ];
+        const branchMatchParams: unknown[] = [
           cleanBranchId,
           cleanBranchId.replace("branch-", ""),
-          cleanBranchId.toLowerCase(),
-        ]);
+          `%${cleanBranchId}%`,
+          cleanBranchId,
+        ];
 
         try {
-          const allBranches = await query<Record<string, unknown>[]>(
-            "SELECT id, name, menu_id, is_default FROM branches WHERE restaurant_id = ?",
-            [tenant.restaurantId],
+          const bRows = await query<Record<string, unknown>[]>(
+            "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?)",
+            [
+              tenant.restaurantId,
+              cleanBranchId,
+              cleanBranchId,
+              cleanBranchId,
+              `%${cleanBranchId}%`,
+            ],
           );
-          if (allBranches && allBranches.length > 0) {
-            const isSingleBranch = allBranches.length === 1;
-            for (const b of allBranches) {
-              const bId = String(b.id || "");
-              const bName = String(b.name || "");
-              const bMenu = String(b.menu_id || "");
-              const isMatch =
-                isSingleBranch ||
-                bId === cleanBranchId ||
-                bId.toLowerCase() === cleanBranchId.toLowerCase() ||
-                bName.toLowerCase() === cleanBranchId.toLowerCase() ||
-                bMenu.toLowerCase() === cleanBranchId.toLowerCase() ||
-                cleanBranchId === "branch-downtown" ||
-                cleanBranchId === "1" ||
-                cleanBranchId === "main";
-
-              if (isMatch) {
-                if (bId) branchIdentifiers.add(bId);
-                if (bName) branchIdentifiers.add(bName);
-                if (bMenu) branchIdentifiers.add(bMenu);
-                branchIdentifiers.add(bId.replace("branch-", ""));
-                branchIdentifiers.add("1");
-                branchIdentifiers.add("branch-downtown");
-              }
+          for (const b of bRows || []) {
+            if (b.id) {
+              branchMatchClauses.push("branch_id = ?");
+              branchMatchParams.push(String(b.id));
+            }
+            if (b.name) {
+              branchMatchClauses.push("LOWER(branch_id) = LOWER(?)");
+              branchMatchParams.push(String(b.name));
             }
           }
         } catch {
           /* ignore */
         }
 
-        const idList = Array.from(branchIdentifiers).filter(Boolean);
-        const placeholders = idList.map(() => "?").join(",");
-
         const sql = `SELECT id, 
                             COALESCE(NULLIF(table_no, ''), NULLIF(table_number, ''), NULLIF(name, ''), '01') as table_no, 
                             COALESCE(NULLIF(zone, ''), NULLIF(location, ''), 'MAIN ROOM') as zone 
                      FROM branch_tables 
-                     WHERE (branch_id IN (${placeholders}) OR branch_id IS NULL OR branch_id = '') 
-                       AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) 
+                     WHERE (${branchMatchClauses.join(" OR ")}) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) 
                      ORDER BY sort_order ASC, created_at ASC`;
         rows = await query<Record<string, unknown>[]>(sql, [
-          ...idList,
+          ...branchMatchParams,
           tenant.restaurantId,
         ]);
       } else if (!assignedInfo.isAll) {
@@ -3654,6 +3663,37 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
     const tenant = await resolvePrivateTenantContext();
     saveTablesToFile(branchId, tables);
     try {
+      try {
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE branch_tables CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+          "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+          "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN location VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(255) DEFAULT 'MAIN ROOM'",
+          "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
+          "ALTER TABLE branch_tables ADD COLUMN qr_token TEXT NULL",
+          "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+          "ALTER TABLE branch_tables ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+          "ALTER TABLE branch_tables ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+          "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
+          "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables MODIFY COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
       // Check QR Code package limit for tenant
       try {
         const otherTables = await query<Record<string, unknown>[]>(

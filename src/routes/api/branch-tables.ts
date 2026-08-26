@@ -199,59 +199,52 @@ export const Route = createFileRoute("/api/branch-tables")({
 
           let rows: Record<string, unknown>[] | null = null;
           if (cleanBranchId && cleanBranchId !== "all") {
-            const branchIdentifiers = new Set<string>([
+            const branchMatchClauses = [
+              "branch_id = ?",
+              "branch_id = ?",
+              "branch_id LIKE ?",
+              "LOWER(branch_id) = LOWER(?)",
+            ];
+            const branchMatchParams: (string | number | null)[] = [
               cleanBranchId,
               cleanBranchId.replace("branch-", ""),
-              cleanBranchId.toLowerCase(),
-            ]);
+              `%${cleanBranchId}%`,
+              cleanBranchId,
+            ];
 
             try {
-              const allBranches = await query<Record<string, unknown>[]>(
-                "SELECT id, name, menu_id, is_default FROM branches WHERE restaurant_id = ?",
-                [tenant.restaurantId],
+              const bRows = await query<Record<string, unknown>[]>(
+                "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?)",
+                [
+                  tenant.restaurantId,
+                  cleanBranchId,
+                  cleanBranchId,
+                  cleanBranchId,
+                  `%${cleanBranchId}%`,
+                ],
               );
-              if (allBranches && allBranches.length > 0) {
-                const isSingleBranch = allBranches.length === 1;
-                for (const b of allBranches) {
-                  const bId = String(b.id || "");
-                  const bName = String(b.name || "");
-                  const bMenu = String(b.menu_id || "");
-                  const isMatch =
-                    isSingleBranch ||
-                    bId === cleanBranchId ||
-                    bId.toLowerCase() === cleanBranchId.toLowerCase() ||
-                    bName.toLowerCase() === cleanBranchId.toLowerCase() ||
-                    bMenu.toLowerCase() === cleanBranchId.toLowerCase() ||
-                    cleanBranchId === "branch-downtown" ||
-                    cleanBranchId === "1" ||
-                    cleanBranchId === "main";
-
-                  if (isMatch) {
-                    if (bId) branchIdentifiers.add(bId);
-                    if (bName) branchIdentifiers.add(bName);
-                    if (bMenu) branchIdentifiers.add(bMenu);
-                    branchIdentifiers.add(bId.replace("branch-", ""));
-                    branchIdentifiers.add("1");
-                    branchIdentifiers.add("branch-downtown");
-                  }
+              for (const b of bRows || []) {
+                if (b.id) {
+                  branchMatchClauses.push("branch_id = ?");
+                  branchMatchParams.push(String(b.id));
+                }
+                if (b.name) {
+                  branchMatchClauses.push("LOWER(branch_id) = LOWER(?)");
+                  branchMatchParams.push(String(b.name));
                 }
               }
             } catch {
               /* ignore */
             }
 
-            const idList = Array.from(branchIdentifiers).filter(Boolean);
-            const placeholders = idList.map(() => "?").join(",");
-
             const sql = `SELECT id, 
                                 COALESCE(NULLIF(table_no, ''), NULLIF(table_number, ''), NULLIF(name, ''), '01') as table_no, 
                                 COALESCE(NULLIF(zone, ''), NULLIF(location, ''), 'MAIN ROOM') as zone 
                          FROM branch_tables 
-                         WHERE (branch_id IN (${placeholders}) OR branch_id IS NULL OR branch_id = '') 
-                           AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) 
+                         WHERE (${branchMatchClauses.join(" OR ")}) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) 
                          ORDER BY sort_order ASC, created_at ASC`;
             rows = await query<Record<string, unknown>[]>(sql, [
-              ...idList,
+              ...branchMatchParams,
               tenant.restaurantId,
             ]);
           } else {
@@ -331,6 +324,36 @@ export const Route = createFileRoute("/api/branch-tables")({
           }
 
           const tenant = await resolvePrivateTenantContext();
+
+          // Ensure table columns exist
+          try {
+            const pool = getPool();
+            const alters = [
+              "ALTER TABLE branch_tables CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+              "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+              "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+              "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+              "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(255) NULL",
+              "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL",
+              "ALTER TABLE branch_tables ADD COLUMN location VARCHAR(255) NULL",
+              "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(255) DEFAULT 'MAIN ROOM'",
+              "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
+              "ALTER TABLE branch_tables ADD COLUMN qr_token TEXT NULL",
+              "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+              "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
+              "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+              "ALTER TABLE branch_tables MODIFY COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+            ];
+            for (const alt of alters) {
+              try {
+                await pool.query(alt);
+              } catch {
+                /* ignore */
+              }
+            }
+          } catch {
+            /* ignore */
+          }
 
           // Check subscription limits
           try {

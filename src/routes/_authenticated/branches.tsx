@@ -872,7 +872,6 @@ type TableItem = {
 
 function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: () => void }) {
   const [tables, setTables] = useState<TableItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newTableNo, setNewTableNo] = useState("");
   const [newTableZone, setNewTableZone] = useState("MAIN ROOM");
@@ -881,34 +880,28 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
   useEffect(() => {
     if (!branch) return;
     const currentBranchId = branch.id;
-    setLoading(true);
     async function loadTables() {
       try {
-        const [dbTables, tenantRes] = await Promise.all([
-          getBranchTablesServer({ data: currentBranchId }),
+        const [apiRes, tenantRes] = await Promise.all([
+          apiGet<TableItem[]>(
+            `/api/branch-tables?branchId=${encodeURIComponent(currentBranchId)}`,
+          ).catch(() => null),
           getCurrentTenantSlugServer().catch(() => null),
         ]);
 
-        if (Array.isArray(dbTables)) {
-          setTables(dbTables);
+        if (Array.isArray(apiRes) && apiRes.length > 0) {
+          setTables(apiRes);
+        } else {
+          const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
+          setTables(Array.isArray(dbTables) ? dbTables : []);
         }
 
         if (tenantRes && tenantRes.slug) {
           setRestaurantSlug(tenantRes.slug);
         }
       } catch {
-        try {
-          const apiRes = await apiGet<TableItem[]>(
-            `/api/branch-tables?branchId=${encodeURIComponent(currentBranchId)}`,
-          );
-          if (Array.isArray(apiRes)) {
-            setTables(apiRes);
-          }
-        } catch {
-          setTables([]);
-        }
-      } finally {
-        setLoading(false);
+        const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
+        setTables(Array.isArray(dbTables) ? dbTables : []);
       }
     }
     loadTables();
@@ -924,17 +917,17 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = [...tables, newTable];
     if (branch) {
       try {
-        await saveBranchTablesServer({
-          data: {
-            branchId: branch.id,
-            tables: nextTables,
-          },
-        });
-        apiPost("/api/branch-tables", {
+        await apiPost("/api/branch-tables", {
           branchId: branch.id,
           tables: nextTables,
-        }).catch(() => {});
-
+        }).catch(async () => {
+          await saveBranchTablesServer({
+            data: {
+              branchId: branch.id,
+              tables: nextTables,
+            },
+          });
+        });
         setTables(nextTables);
         setNewTableNo("");
         setAddDialogOpen(false);
@@ -948,25 +941,25 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
 
   const deleteTable = async (id: string, num: string) => {
     const nextTables = tables.filter((t) => t.id !== id);
+    setTables(nextTables);
     if (branch) {
       try {
-        await saveBranchTablesServer({
-          data: {
-            branchId: branch.id,
-            tables: nextTables,
-          },
-        });
-        apiPost("/api/branch-tables", {
+        await apiPost("/api/branch-tables", {
           branchId: branch.id,
           tables: nextTables,
-        }).catch(() => {});
-        setTables(nextTables);
-        toast.success(`Table ${num} deleted`);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Failed to delete table";
-        toast.error(msg);
+        }).catch(async () => {
+          await saveBranchTablesServer({
+            data: {
+              branchId: branch.id,
+              tables: nextTables,
+            },
+          });
+        });
+      } catch {
+        /* ignore */
       }
     }
+    toast.success(`Table ${num} deleted`);
   };
 
   const getTableUrl = (tNo: string, tableId?: string) => {
@@ -1038,20 +1031,7 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
 
         {/* Table Cards Grid wrapped in ScrollArea */}
         <ScrollArea className="max-h-[60vh] pr-3 my-2">
-          {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 p-1">
-              {[1, 2, 3, 4].map((i) => (
-                <div
-                  key={i}
-                  className="rounded-2xl border border-gray-200/70 p-4 bg-white/70 animate-pulse space-y-3"
-                >
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto" />
-                  <div className="w-28 h-28 bg-gray-200 rounded-xl mx-auto" />
-                  <div className="h-3 bg-gray-200 rounded w-3/4 mx-auto" />
-                </div>
-              ))}
-            </div>
-          ) : tables.length === 0 ? (
+          {tables.length === 0 ? (
             <div className="py-12 text-center border-2 border-dashed border-gray-200 rounded-2xl p-8 bg-gray-50/50">
               <QrCode className="mx-auto h-10 w-10 text-gray-400/80 mb-3" />
               <h4 className="text-sm font-bold text-gray-900">No Dining Tables Created</h4>
