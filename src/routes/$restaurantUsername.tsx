@@ -725,7 +725,12 @@ export function PublicRestaurantView({
             description: String(item.shortDescription || item.longDescription || ""),
             price: Number(item.price) || 0,
             discountPrice: item.discountPrice != null ? Number(item.discountPrice) : null,
-            image: String(item.image || ""),
+            image: String(
+              item.image ||
+                (item as unknown as { imageUrl?: string; image_url?: string }).imageUrl ||
+                (item as unknown as { image_url?: string }).image_url ||
+                "",
+            ),
             category: String(item.category || "General"),
             popular: Boolean(item.popular || item.bestSeller),
             trending: Boolean(item.popular || item.bestSeller),

@@ -523,7 +523,7 @@ export const getRestaurantData = createServerFn({ method: "GET" })
           description: String(i.shortDescription || i.longDescription || i.description || ""),
           price: itemPrice,
           discountPrice: itemDiscountPrice,
-          image: String(i.image || ""),
+          image: String(i.image || i.imageUrl || i.image_url || i.img || ""),
           category: String(i.category || "General"),
           popular: Boolean(i.popular || i.bestSeller),
           trending: Boolean(i.popular || i.bestSeller),
