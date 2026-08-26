@@ -134,15 +134,15 @@ function OrderInlineTimer({
           <Timer className="w-4 h-4 text-amber-600 animate-pulse" />
           <span className="text-sm font-black font-mono tracking-tight text-neutral-900">
             {isFinished ? (
-              <span className="text-orange-600 animate-pulse text-xs font-black">Almost Ready!</span>
+              <span className="text-orange-600 animate-pulse text-xs font-black">
+                Almost Ready!
+              </span>
             ) : (
               `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
             )}
           </span>
         </div>
-        <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
-          {orderTime}
-        </span>
+        <span className="text-[10px] font-bold text-neutral-400 mt-0.5">{orderTime}</span>
       </div>
     );
   }
@@ -154,9 +154,7 @@ function OrderInlineTimer({
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 animate-bounce" />
           <span className="text-xs font-black tracking-tight">Ready to Serve! 🍽️</span>
         </div>
-        <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
-          {orderTime}
-        </span>
+        <span className="text-[10px] font-bold text-neutral-400 mt-0.5">{orderTime}</span>
       </div>
     );
   }
@@ -165,9 +163,7 @@ function OrderInlineTimer({
     return (
       <div className="flex flex-col">
         <span className="text-xs font-black text-neutral-800">Order Completed</span>
-        <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
-          {orderTime}
-        </span>
+        <span className="text-[10px] font-bold text-neutral-400 mt-0.5">{orderTime}</span>
       </div>
     );
   }
@@ -179,9 +175,7 @@ function OrderInlineTimer({
         <Clock className="w-3.5 h-3.5 text-neutral-400" />
         <span className="text-xs font-black">Order Placed</span>
       </div>
-      <span className="text-[10px] font-bold text-neutral-400 mt-0.5">
-        {orderTime}
-      </span>
+      <span className="text-[10px] font-bold text-neutral-400 mt-0.5">{orderTime}</span>
     </div>
   );
 }
@@ -1299,9 +1293,7 @@ export function PublicRestaurantView({
                       ? payload.estimatedPrepMinutes
                       : o.estimatedPrepMinutes,
                   prepStartedAt:
-                    payload.prepStartedAt ||
-                    o.prepStartedAt ||
-                    new Date().toISOString(),
+                    payload.prepStartedAt || o.prepStartedAt || new Date().toISOString(),
                 };
               }
               return o;
@@ -3484,8 +3476,6 @@ export function PublicRestaurantView({
           </div>
         </div>
       )}
-
-
 
       {/* Mobile bottom nav bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden select-none filter drop-shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">

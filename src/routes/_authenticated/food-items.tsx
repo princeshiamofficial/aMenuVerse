@@ -380,7 +380,13 @@ function FoodItemsPage() {
         categoryId: toSave.category,
         price: toSave.price,
         description: toSave.shortDescription || toSave.longDescription || "",
-        badge: toSave.bestSeller ? "Best Seller" : toSave.chefChoice ? "Chef Choice" : toSave.popular ? "Popular" : undefined,
+        badge: toSave.bestSeller
+          ? "Best Seller"
+          : toSave.chefChoice
+            ? "Chef Choice"
+            : toSave.popular
+              ? "Popular"
+              : undefined,
         isVeg: toSave.vegetarian,
         isVegan: false,
         isGlutenFree: false,
@@ -744,9 +750,9 @@ function EditDialog({
   onSave: () => void;
   onDelete: () => void;
 }) {
-  if (!editing) return null;
-
   const [isUploading, setIsUploading] = useState(false);
+
+  if (!editing) return null;
 
   const handleMainFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -900,7 +906,9 @@ function EditDialog({
                   placeholder="Or paste direct image URL (https://...)"
                   className="h-9 bg-[#FFFBF5] border border-stone-200/90 rounded-xl text-xs px-3 focus-visible:ring-amber-500"
                 />
-                <p className="text-[11px] text-stone-400">Upload JPG, PNG, WebP or paste an online image link.</p>
+                <p className="text-[11px] text-stone-400">
+                  Upload JPG, PNG, WebP or paste an online image link.
+                </p>
               </div>
             </div>
           </div>
