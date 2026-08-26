@@ -5435,11 +5435,14 @@ export const getStaffServer = createServerFn({ method: "GET" })
         }
       }
 
+      // Always exclude global SaaS Super Admin accounts from restaurant tenant staff lists
+      sql +=
+        " AND LOWER(COALESCE(ur.role, u.role, '')) NOT IN ('super_admin', 'superadmin') AND LOWER(u.email) != 'admin@menuverse.app'";
+
       const isTenantOwner =
         tenant.isGlobalAdmin || (tenant.role || "").toLowerCase().trim() === "owner";
       if (!isTenantOwner) {
-        sql +=
-          " AND LOWER(COALESCE(ur.role, u.role, '')) != 'owner' AND LOWER(COALESCE(ur.role, u.role, '')) != 'super_admin'";
+        sql += " AND LOWER(COALESCE(ur.role, u.role, '')) != 'owner'";
       }
 
       if (filter.role && filter.role !== "all") {
@@ -5470,8 +5473,17 @@ export const getStaffServer = createServerFn({ method: "GET" })
       if (rows && rows.length > 0) {
         const dbStaffMap = new Map<string, StaffRecord>();
         rows.forEach((r) => {
+          const rawRole = String(r.role || "").toLowerCase().trim();
+          const email = String(r.email || "").toLowerCase().trim();
+          if (
+            rawRole === "super_admin" ||
+            rawRole === "superadmin" ||
+            email === "admin@menuverse.app"
+          ) {
+            return; // Skip platform super admin from staff list
+          }
+
           let roleName: StaffRecord["role"] = "Waiter";
-          const rawRole = String(r.role || "").toLowerCase();
           if (rawRole === "owner") roleName = "Owner";
           else if (rawRole === "manager") roleName = "Manager";
           else if (rawRole === "cashier") roleName = "Cashier";

@@ -521,7 +521,16 @@ function StaffPage() {
     const q = search.toLowerCase().trim();
     const map = new Map<string, StaffMember>();
     staff.forEach((s) => {
-      if (isManager && (s.role === "Owner" || s.role.toLowerCase() === "owner")) {
+      const sRoleLower = (s.role || "").toLowerCase().trim();
+      const sEmailLower = (s.email || "").toLowerCase().trim();
+      if (
+        sRoleLower === "super_admin" ||
+        sRoleLower === "superadmin" ||
+        sEmailLower === "admin@menuverse.app"
+      ) {
+        return;
+      }
+      if (isManager && (s.role === "Owner" || sRoleLower === "owner")) {
         return;
       }
       const matchSearch =
