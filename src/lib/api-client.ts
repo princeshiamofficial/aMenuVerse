@@ -27,11 +27,32 @@ function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("menuverse_session");
-    if (token && token !== "logged_out" && token.trim() !== "") {
-      headers["Authorization"] = `Bearer ${token.trim()}`;
-      headers["x-session-token"] = token.trim();
+  if (typeof document !== "undefined") {
+    let token = "";
+    // 1. Try parsing menuverse_session from document.cookie
+    try {
+      const match = document.cookie.match(/menuverse_session=([^;]+)/);
+      if (match && match[1] && match[1] !== "logged_out") {
+        token = decodeURIComponent(match[1].trim());
+      }
+    } catch {
+      /* ignore */
+    }
+
+    // 2. Fallback to localStorage
+    if (!token && typeof localStorage !== "undefined") {
+      const lsToken =
+        localStorage.getItem("menuverse_session") ||
+        localStorage.getItem("session_token") ||
+        localStorage.getItem("token");
+      if (lsToken && lsToken !== "logged_out") {
+        token = lsToken.trim();
+      }
+    }
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      headers["x-session-token"] = token;
     }
   }
   return headers;

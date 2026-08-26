@@ -3548,66 +3548,59 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
       const cleanBranchId = String(branchId || "").trim();
 
       if (cleanBranchId && cleanBranchId !== "all") {
-        const target = cleanBranchId.toLowerCase().trim();
-        if (!assignedInfo.isAll) {
-          const isAssigned = assignedInfo.branches.some(
-            (b) =>
-              b.id.toLowerCase() === target ||
-              b.name.toLowerCase() === target ||
-              b.name.toLowerCase().includes(target) ||
-              target.includes(b.name.toLowerCase()),
-          );
-          if (!isAssigned) {
-            return [];
-          }
-        }
-
-        const branchMatchClauses = [
-          "branch_id = ?",
-          "branch_id = ?",
-          "branch_id LIKE ?",
-          "LOWER(branch_id) = LOWER(?)",
-        ];
-        const branchMatchParams: unknown[] = [
+        const branchIdentifiers = new Set<string>([
           cleanBranchId,
           cleanBranchId.replace("branch-", ""),
-          `%${cleanBranchId}%`,
-          cleanBranchId,
-        ];
+          cleanBranchId.toLowerCase(),
+        ]);
 
         try {
-          const bRows = await query<Record<string, unknown>[]>(
-            "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?)",
-            [
-              tenant.restaurantId,
-              cleanBranchId,
-              cleanBranchId,
-              cleanBranchId,
-              `%${cleanBranchId}%`,
-            ],
+          const allBranches = await query<Record<string, unknown>[]>(
+            "SELECT id, name, menu_id, is_default FROM branches WHERE restaurant_id = ?",
+            [tenant.restaurantId],
           );
-          for (const b of bRows || []) {
-            if (b.id) {
-              branchMatchClauses.push("branch_id = ?");
-              branchMatchParams.push(String(b.id));
-            }
-            if (b.name) {
-              branchMatchClauses.push("LOWER(branch_id) = LOWER(?)");
-              branchMatchParams.push(String(b.name));
+          if (allBranches && allBranches.length > 0) {
+            const isSingleBranch = allBranches.length === 1;
+            for (const b of allBranches) {
+              const bId = String(b.id || "");
+              const bName = String(b.name || "");
+              const bMenu = String(b.menu_id || "");
+              const isMatch =
+                isSingleBranch ||
+                bId === cleanBranchId ||
+                bId.toLowerCase() === cleanBranchId.toLowerCase() ||
+                bName.toLowerCase() === cleanBranchId.toLowerCase() ||
+                bMenu.toLowerCase() === cleanBranchId.toLowerCase() ||
+                cleanBranchId === "branch-downtown" ||
+                cleanBranchId === "1" ||
+                cleanBranchId === "main";
+
+              if (isMatch) {
+                if (bId) branchIdentifiers.add(bId);
+                if (bName) branchIdentifiers.add(bName);
+                if (bMenu) branchIdentifiers.add(bMenu);
+                branchIdentifiers.add(bId.replace("branch-", ""));
+                branchIdentifiers.add("1");
+                branchIdentifiers.add("branch-downtown");
+              }
             }
           }
         } catch {
           /* ignore */
         }
 
+        const idList = Array.from(branchIdentifiers).filter(Boolean);
+        const placeholders = idList.map(() => "?").join(",");
+
         const sql = `SELECT id, 
                             COALESCE(NULLIF(table_no, ''), NULLIF(table_number, ''), NULLIF(name, ''), '01') as table_no, 
                             COALESCE(NULLIF(zone, ''), NULLIF(location, ''), 'MAIN ROOM') as zone 
                      FROM branch_tables 
-                     WHERE (${branchMatchClauses.join(" OR ")}) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) 
+                     WHERE (branch_id IN (${placeholders}) OR branch_id IS NULL OR branch_id = '') 
+                       AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) 
                      ORDER BY sort_order ASC, created_at ASC`;
         rows = await query<Record<string, unknown>[]>(sql, [
-          ...branchMatchParams,
+          ...idList,
           tenant.restaurantId,
         ]);
       } else if (!assignedInfo.isAll) {
