@@ -3384,7 +3384,23 @@ function saveTablesToFile(_branchId: string, _data: TableRecord[]) {
 }
 
 export const getBranchTablesServer = createServerFn({ method: "POST" })
-  .validator((branchId: string) => z.string().parse(branchId))
+  .validator((input?: unknown) => {
+    if (typeof input === "string") return input;
+    if (typeof input === "number") return String(input);
+    if (input && typeof input === "object") {
+      const obj = input as Record<string, unknown>;
+      if ("branchId" in obj) return String(obj.branchId || "all");
+      if ("data" in obj) {
+        const d = obj.data;
+        if (typeof d === "string") return d;
+        if (typeof d === "number") return String(d);
+        if (d && typeof d === "object" && "branchId" in d) {
+          return String((d as Record<string, unknown>).branchId || "all");
+        }
+      }
+    }
+    return "all";
+  })
   .handler(async ({ data: branchId }) => {
     await requireAuth();
     const tenant = await resolvePrivateTenantContext();
@@ -3425,8 +3441,10 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
       }
 
       let rows: Record<string, unknown>[] | null = null;
-      if (branchId && branchId !== "all") {
-        const target = branchId.toLowerCase().trim();
+      const cleanBranchId = String(branchId || "").trim();
+
+      if (cleanBranchId && cleanBranchId !== "all") {
+        const target = cleanBranchId.toLowerCase().trim();
         if (!assignedInfo.isAll) {
           const isAssigned = assignedInfo.branches.some(
             (b) =>
@@ -3447,16 +3465,16 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
           "LOWER(branch_id) = LOWER(?)",
         ];
         const branchMatchParams: unknown[] = [
-          branchId,
-          branchId.replace("branch-", ""),
-          `%${branchId}%`,
-          branchId,
+          cleanBranchId,
+          cleanBranchId.replace("branch-", ""),
+          `%${cleanBranchId}%`,
+          cleanBranchId,
         ];
 
         try {
           const bRows = await query<Record<string, unknown>[]>(
             "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?)",
-            [tenant.restaurantId, branchId, branchId, branchId, `%${branchId}%`],
+            [tenant.restaurantId, cleanBranchId, cleanBranchId, cleanBranchId, `%${cleanBranchId}%`],
           );
           for (const b of bRows || []) {
             if (b.id) {
@@ -3476,7 +3494,7 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
                             COALESCE(NULLIF(table_no, ''), NULLIF(table_number, ''), NULLIF(name, ''), '01') as table_no, 
                             COALESCE(NULLIF(zone, ''), NULLIF(location, ''), 'MAIN ROOM') as zone 
                      FROM branch_tables 
-                     WHERE (${branchMatchClauses.join(" OR ")}) AND (restaurant_id = ? OR restaurant_id = 0) 
+                     WHERE (${branchMatchClauses.join(" OR ")}) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) 
                      ORDER BY sort_order ASC, created_at ASC`;
         rows = await query<Record<string, unknown>[]>(sql, [
           ...branchMatchParams,
@@ -3490,7 +3508,7 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
                   COALESCE(NULLIF(table_no, ''), NULLIF(table_number, ''), NULLIF(name, ''), '01') as table_no, 
                   COALESCE(NULLIF(zone, ''), NULLIF(location, ''), 'MAIN ROOM') as zone 
            FROM branch_tables 
-           WHERE (branch_id IN (${placeholders})) AND (restaurant_id = ? OR restaurant_id = 0) 
+           WHERE (branch_id IN (${placeholders})) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) 
            ORDER BY sort_order ASC, created_at ASC`,
           [...branchIds, tenant.restaurantId],
         );
@@ -3500,7 +3518,7 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
                   COALESCE(NULLIF(table_no, ''), NULLIF(table_number, ''), NULLIF(name, ''), '01') as table_no, 
                   COALESCE(NULLIF(zone, ''), NULLIF(location, ''), 'MAIN ROOM') as zone 
            FROM branch_tables 
-           WHERE (restaurant_id = ? OR restaurant_id = 0) 
+           WHERE (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) 
            ORDER BY sort_order ASC, created_at ASC`,
           [tenant.restaurantId],
         );
@@ -3531,20 +3549,30 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
   });
 
 export const saveBranchTablesServer = createServerFn({ method: "POST" })
-  .validator((data: { branchId: string; tables: TableRecord[] }) =>
-    z
+  .validator((input: unknown) => {
+    let payload = input;
+    if (
+      input &&
+      typeof input === "object" &&
+      "data" in input &&
+      (input as Record<string, unknown>).data &&
+      typeof (input as Record<string, unknown>).data === "object"
+    ) {
+      payload = (input as Record<string, unknown>).data;
+    }
+    return z
       .object({
-        branchId: z.string(),
+        branchId: z.union([z.string(), z.number()]).transform(String),
         tables: z.array(
           z.object({
-            id: z.string(),
-            tableNo: z.string(),
-            zone: z.string(),
+            id: z.union([z.string(), z.number()]).transform(String),
+            tableNo: z.union([z.string(), z.number()]).transform(String),
+            zone: z.string().optional().default("MAIN ROOM"),
           }),
         ),
       })
-      .parse(data),
-  )
+      .parse(payload);
+  })
   .handler(async ({ data }) => {
     await requirePermission("branch_tables:manage");
     const { branchId, tables } = data;
