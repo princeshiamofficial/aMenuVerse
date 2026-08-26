@@ -9,10 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125RouteImport } from './routes/{$restaurantUsername}-{$branchId}-{$tableNo}'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AdminAuthRouteImport } from './routes/admin-auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as RestaurantUsernameRouteImport } from './routes/$restaurantUsername'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
@@ -61,18 +59,8 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCategoriesRouteImport } from './routes/_authenticated/categories'
 import { Route as AuthenticatedBranchesRouteImport } from './routes/_authenticated/branches'
 import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
-import { Route as BranchIdTableIdRouteImport } from './routes/$branchId.$tableId'
 import { Route as RestaurantUsernameETokenRouteImport } from './routes/$restaurantUsername.e.$token'
-import { Route as RestaurantUsernameBranchIdTableIdRouteImport } from './routes/$restaurantUsername.$branchId.$tableId'
 
-const Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route =
-  Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125RouteImport.update(
-    {
-      id: '/{$restaurantUsername}-{$branchId}-{$tableNo}',
-      path: '/{$restaurantUsername}-{$branchId}-{$tableNo}',
-      getParentRoute: () => rootRouteImport,
-    } as any,
-  )
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -81,11 +69,6 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminAuthRoute = AdminAuthRouteImport.update({
-  id: '/admin-auth',
-  path: '/admin-auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -331,21 +314,10 @@ const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const BranchIdTableIdRoute = BranchIdTableIdRouteImport.update({
-  id: '/$branchId/$tableId',
-  path: '/$branchId/$tableId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RestaurantUsernameETokenRoute =
   RestaurantUsernameETokenRouteImport.update({
     id: '/e/$token',
     path: '/e/$token',
-    getParentRoute: () => RestaurantUsernameRoute,
-  } as any)
-const RestaurantUsernameBranchIdTableIdRoute =
-  RestaurantUsernameBranchIdTableIdRouteImport.update({
-    id: '/$branchId/$tableId',
-    path: '/$branchId/$tableId',
     getParentRoute: () => RestaurantUsernameRoute,
   } as any)
 
@@ -353,11 +325,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$restaurantUsername': typeof RestaurantUsernameRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
-  '/admin-auth': typeof AdminAuthRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/{$restaurantUsername}-{$branchId}-{$tableNo}': typeof Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route
-  '/$branchId/$tableId': typeof BranchIdTableIdRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/branches': typeof AuthenticatedBranchesRoute
   '/categories': typeof AuthenticatedCategoriesRoute
@@ -402,17 +371,13 @@ export interface FileRoutesByFullPath {
   '/e/$token': typeof ETokenRoute
   '/m/$slug': typeof MSlugRoute
   '/admin/': typeof AdminIndexRoute
-  '/$restaurantUsername/$branchId/$tableId': typeof RestaurantUsernameBranchIdTableIdRoute
   '/$restaurantUsername/e/$token': typeof RestaurantUsernameETokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$restaurantUsername': typeof RestaurantUsernameRouteWithChildren
-  '/admin-auth': typeof AdminAuthRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/{$restaurantUsername}-{$branchId}-{$tableNo}': typeof Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route
-  '/$branchId/$tableId': typeof BranchIdTableIdRoute
   '/analytics': typeof AuthenticatedAnalyticsRoute
   '/branches': typeof AuthenticatedBranchesRoute
   '/categories': typeof AuthenticatedCategoriesRoute
@@ -457,7 +422,6 @@ export interface FileRoutesByTo {
   '/e/$token': typeof ETokenRoute
   '/m/$slug': typeof MSlugRoute
   '/admin': typeof AdminIndexRoute
-  '/$restaurantUsername/$branchId/$tableId': typeof RestaurantUsernameBranchIdTableIdRoute
   '/$restaurantUsername/e/$token': typeof RestaurantUsernameETokenRoute
 }
 export interface FileRoutesById {
@@ -466,11 +430,8 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/$restaurantUsername': typeof RestaurantUsernameRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
-  '/admin-auth': typeof AdminAuthRoute
   '/auth': typeof AuthRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/{$restaurantUsername}-{$branchId}-{$tableNo}': typeof Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route
-  '/$branchId/$tableId': typeof BranchIdTableIdRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
   '/_authenticated/branches': typeof AuthenticatedBranchesRoute
   '/_authenticated/categories': typeof AuthenticatedCategoriesRoute
@@ -515,7 +476,6 @@ export interface FileRoutesById {
   '/e/$token': typeof ETokenRoute
   '/m/$slug': typeof MSlugRoute
   '/admin/': typeof AdminIndexRoute
-  '/$restaurantUsername/$branchId/$tableId': typeof RestaurantUsernameBranchIdTableIdRoute
   '/$restaurantUsername/e/$token': typeof RestaurantUsernameETokenRoute
 }
 export interface FileRouteTypes {
@@ -524,11 +484,8 @@ export interface FileRouteTypes {
     | '/'
     | '/$restaurantUsername'
     | '/admin'
-    | '/admin-auth'
     | '/auth'
     | '/sitemap.xml'
-    | '/{$restaurantUsername}-{$branchId}-{$tableNo}'
-    | '/$branchId/$tableId'
     | '/analytics'
     | '/branches'
     | '/categories'
@@ -573,17 +530,13 @@ export interface FileRouteTypes {
     | '/e/$token'
     | '/m/$slug'
     | '/admin/'
-    | '/$restaurantUsername/$branchId/$tableId'
     | '/$restaurantUsername/e/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/$restaurantUsername'
-    | '/admin-auth'
     | '/auth'
     | '/sitemap.xml'
-    | '/{$restaurantUsername}-{$branchId}-{$tableNo}'
-    | '/$branchId/$tableId'
     | '/analytics'
     | '/branches'
     | '/categories'
@@ -628,7 +581,6 @@ export interface FileRouteTypes {
     | '/e/$token'
     | '/m/$slug'
     | '/admin'
-    | '/$restaurantUsername/$branchId/$tableId'
     | '/$restaurantUsername/e/$token'
   id:
     | '__root__'
@@ -636,11 +588,8 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/$restaurantUsername'
     | '/admin'
-    | '/admin-auth'
     | '/auth'
     | '/sitemap.xml'
-    | '/{$restaurantUsername}-{$branchId}-{$tableNo}'
-    | '/$branchId/$tableId'
     | '/_authenticated/analytics'
     | '/_authenticated/branches'
     | '/_authenticated/categories'
@@ -685,7 +634,6 @@ export interface FileRouteTypes {
     | '/e/$token'
     | '/m/$slug'
     | '/admin/'
-    | '/$restaurantUsername/$branchId/$tableId'
     | '/$restaurantUsername/e/$token'
   fileRoutesById: FileRoutesById
 }
@@ -694,11 +642,8 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   RestaurantUsernameRoute: typeof RestaurantUsernameRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
-  AdminAuthRoute: typeof AdminAuthRoute
   AuthRoute: typeof AuthRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route: typeof Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route
-  BranchIdTableIdRoute: typeof BranchIdTableIdRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   ApiBranchTablesRoute: typeof ApiBranchTablesRoute
   ApiBranchesRoute: typeof ApiBranchesRoute
@@ -719,13 +664,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/{$restaurantUsername}-{$branchId}-{$tableNo}': {
-      id: '/{$restaurantUsername}-{$branchId}-{$tableNo}'
-      path: '/{$restaurantUsername}-{$branchId}-{$tableNo}'
-      fullPath: '/{$restaurantUsername}-{$branchId}-{$tableNo}'
-      preLoaderRoute: typeof Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125RouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -738,13 +676,6 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin-auth': {
-      id: '/admin-auth'
-      path: '/admin-auth'
-      fullPath: '/admin-auth'
-      preLoaderRoute: typeof AdminAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -1083,25 +1014,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnalyticsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/$branchId/$tableId': {
-      id: '/$branchId/$tableId'
-      path: '/$branchId/$tableId'
-      fullPath: '/$branchId/$tableId'
-      preLoaderRoute: typeof BranchIdTableIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/$restaurantUsername/e/$token': {
       id: '/$restaurantUsername/e/$token'
       path: '/e/$token'
       fullPath: '/$restaurantUsername/e/$token'
       preLoaderRoute: typeof RestaurantUsernameETokenRouteImport
-      parentRoute: typeof RestaurantUsernameRoute
-    }
-    '/$restaurantUsername/$branchId/$tableId': {
-      id: '/$restaurantUsername/$branchId/$tableId'
-      path: '/$branchId/$tableId'
-      fullPath: '/$restaurantUsername/$branchId/$tableId'
-      preLoaderRoute: typeof RestaurantUsernameBranchIdTableIdRouteImport
       parentRoute: typeof RestaurantUsernameRoute
     }
   }
@@ -1149,13 +1066,10 @@ const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
 interface RestaurantUsernameRouteChildren {
-  RestaurantUsernameBranchIdTableIdRoute: typeof RestaurantUsernameBranchIdTableIdRoute
   RestaurantUsernameETokenRoute: typeof RestaurantUsernameETokenRoute
 }
 
 const RestaurantUsernameRouteChildren: RestaurantUsernameRouteChildren = {
-  RestaurantUsernameBranchIdTableIdRoute:
-    RestaurantUsernameBranchIdTableIdRoute,
   RestaurantUsernameETokenRoute: RestaurantUsernameETokenRoute,
 }
 
@@ -1199,12 +1113,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   RestaurantUsernameRoute: RestaurantUsernameRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
-  AdminAuthRoute: AdminAuthRoute,
   AuthRoute: AuthRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route:
-    Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route,
-  BranchIdTableIdRoute: BranchIdTableIdRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   ApiBranchTablesRoute: ApiBranchTablesRoute,
   ApiBranchesRoute: ApiBranchesRoute,
