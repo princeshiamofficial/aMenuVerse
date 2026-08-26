@@ -63,6 +63,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiGet, apiPost } from "@/lib/api-client";
 
 import { cn, generateId, getEncryptedTableUrl } from "@/lib/utils";
 import { SkeletonBranchesPage } from "@/components/menuverse/skeletons";
@@ -344,7 +345,7 @@ function BranchesPage() {
     setDialogOpen(true);
   };
 
-  const saveBranch = () => {
+  const saveBranch = async () => {
     if (!editing) return;
     if (!editing.name.trim()) {
       toast.error("Branch name is required");
@@ -357,37 +358,57 @@ function BranchesPage() {
       );
       return;
     }
-    setBranches((list) => {
-      const exists = list.some((b) => b.id === editing.id);
-      let next = exists ? list.map((b) => (b.id === editing.id ? editing : b)) : [...list, editing];
-      if (editing.isDefault) {
-        next = next.map((b) => ({ ...b, isDefault: b.id === editing.id }));
-      }
-      if (!next.some((b) => b.isDefault) && next.length > 0) {
-        next[0] = { ...next[0], isDefault: true };
-      }
-      return next;
-    });
+    const exists = branches.some((b) => b.id === editing.id);
+    let next = exists
+      ? branches.map((b) => (b.id === editing.id ? editing : b))
+      : [...branches, editing];
+    if (editing.isDefault) {
+      next = next.map((b) => ({ ...b, isDefault: b.id === editing.id }));
+    }
+    if (!next.some((b) => b.isDefault) && next.length > 0) {
+      next[0] = { ...next[0], isDefault: true };
+    }
+    setBranches(next);
     setDialogOpen(false);
-    toast.success(branches.some((b) => b.id === editing.id) ? "Branch updated" : "Branch created");
+    try {
+      await apiPost("/api/branches", { branches: next }).catch(async () => {
+        await updateBranchesServer({ data: next });
+      });
+      toast.success(exists ? "Branch updated" : "Branch created");
+    } catch {
+      toast.success(exists ? "Branch updated" : "Branch created");
+    }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteId) return;
-    setBranches((list) => {
-      const target = list.find((b) => b.id === deleteId);
-      const next = list.filter((b) => b.id !== deleteId);
-      if ((target?.isDefault || !next.some((b) => b.isDefault)) && next.length > 0) {
-        next[0] = { ...next[0], isDefault: true };
-      }
-      return next;
-    });
+    const target = branches.find((b) => b.id === deleteId);
+    let next = branches.filter((b) => b.id !== deleteId);
+    if ((target?.isDefault || !next.some((b) => b.isDefault)) && next.length > 0) {
+      next[0] = { ...next[0], isDefault: true };
+    }
+    setBranches(next);
     setDeleteId(null);
+    try {
+      await apiPost("/api/branches", { branches: next }).catch(async () => {
+        await updateBranchesServer({ data: next });
+      });
+    } catch {
+      /* ignore */
+    }
     toast.success("Branch deleted");
   };
 
-  const setDefault = (id: string) => {
-    setBranches((list) => list.map((b) => ({ ...b, isDefault: b.id === id })));
+  const setDefault = async (id: string) => {
+    const next = branches.map((b) => ({ ...b, isDefault: b.id === id }));
+    setBranches(next);
+    try {
+      await apiPost("/api/branches", { branches: next }).catch(async () => {
+        await updateBranchesServer({ data: next });
+      });
+    } catch {
+      /* ignore */
+    }
     toast.success("Default branch updated");
   };
 
@@ -862,19 +883,15 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     async function loadTables() {
       try {
         const [apiRes, tenantRes] = await Promise.all([
-          fetch(`/api/branch-tables?branchId=${encodeURIComponent(currentBranchId)}`, {
-            method: "GET",
-            headers: { Accept: "application/json" },
-          })
-            .then((r) => r.json())
-            .catch(() => null),
+          apiGet<TableItem[]>(
+            `/api/branch-tables?branchId=${encodeURIComponent(currentBranchId)}`,
+          ).catch(() => null),
           getCurrentTenantSlugServer().catch(() => null),
         ]);
 
-        if (apiRes && apiRes.success && Array.isArray(apiRes.data)) {
-          setTables(apiRes.data);
+        if (Array.isArray(apiRes) && apiRes.length > 0) {
+          setTables(apiRes);
         } else {
-          // Fallback to serverFn
           const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
           setTables(Array.isArray(dbTables) ? dbTables : []);
         }
@@ -883,7 +900,8 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
           setRestaurantSlug(tenantRes.slug);
         }
       } catch {
-        setTables([]);
+        const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
+        setTables(Array.isArray(dbTables) ? dbTables : []);
       }
     }
     loadTables();
@@ -899,18 +917,17 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = [...tables, newTable];
     if (branch) {
       try {
-        const res = await fetch("/api/branch-tables", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ branchId: branch.id, tables: nextTables }),
+        await apiPost("/api/branch-tables", {
+          branchId: branch.id,
+          tables: nextTables,
+        }).catch(async () => {
+          await saveBranchTablesServer({
+            data: {
+              branchId: branch.id,
+              tables: nextTables,
+            },
+          });
         });
-        const json = (await res.json().catch(() => ({}))) as {
-          success?: boolean;
-          error?: string;
-        };
-        if (!res.ok || json.success === false) {
-          throw new Error(json.error || "Failed to add table QR code");
-        }
         setTables(nextTables);
         setNewTableNo("");
         setAddDialogOpen(false);
@@ -926,11 +943,21 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = tables.filter((t) => t.id !== id);
     setTables(nextTables);
     if (branch) {
-      fetch("/api/branch-tables", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ branchId: branch.id, tables: nextTables }),
-      }).catch(() => {});
+      try {
+        await apiPost("/api/branch-tables", {
+          branchId: branch.id,
+          tables: nextTables,
+        }).catch(async () => {
+          await saveBranchTablesServer({
+            data: {
+              branchId: branch.id,
+              tables: nextTables,
+            },
+          });
+        });
+      } catch {
+        /* ignore */
+      }
     }
     toast.success(`Table ${num} deleted`);
   };

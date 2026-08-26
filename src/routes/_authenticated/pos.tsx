@@ -42,6 +42,7 @@ import {
 } from "@/lib/db-queries.server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRealtime, playChime } from "@/lib/use-realtime";
+import { apiGet, apiPost } from "@/lib/api-client";
 
 export const Route = createFileRoute("/_authenticated/pos")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -263,15 +264,18 @@ function POSPage() {
           status?: string;
         }> = [];
         try {
-          const apiRes = await fetch(
-            `/api/branch-tables?branchId=${encodeURIComponent(targetBId)}`,
-            {
-              method: "GET",
-              headers: { Accept: "application/json" },
-            },
-          ).then((r) => r.json());
-          if (apiRes && apiRes.success && Array.isArray(apiRes.data)) {
-            dbTables = apiRes.data;
+          const apiRes = await apiGet<
+            Array<{
+              id: string;
+              tableNo: string;
+              name?: string;
+              zone?: string;
+              capacity?: number;
+              status?: string;
+            }>
+          >(`/api/branch-tables?branchId=${encodeURIComponent(targetBId)}`);
+          if (Array.isArray(apiRes) && apiRes.length > 0) {
+            dbTables = apiRes;
           }
         } catch {
           /* fallback */
