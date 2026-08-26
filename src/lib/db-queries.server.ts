@@ -3,6 +3,8 @@ import { z } from "zod";
 import type { PermissionKey } from "./permissions";
 import { RESTAURANTS, type Restaurant } from "./restaurants-data";
 import { toISODateString, isTimeInWindow, decodeTableToken, encodeTableToken } from "./utils";
+import type { DbRestaurantRecord } from "../types";
+export * from "../types";
 
 // Lazy server module loaders (prevents Node/mysql2/ioredis modules from leaking into client Vite bundle graph)
 const query = async <T = unknown>(sql: string, params?: unknown): Promise<T> => {
@@ -235,17 +237,7 @@ export const signOutAction = createServerFn({ method: "POST" }).handler(async ()
   return { success: true };
 });
 
-export type DbRestaurantRecord = {
-  id: string | number;
-  name: string;
-  slug?: string | null;
-  description?: string | null;
-  logo_url?: string | null;
-  cover_url?: string | null;
-  cuisine?: string | null;
-  phone?: string | null;
-  status?: string | null;
-};
+export * from "../types";
 
 // =========================================================
 // DATA FETCHING SERVER FUNCTIONS
