@@ -1764,48 +1764,51 @@ export async function resolvePrivateTenantContext(): Promise<{
   let restaurantId: number | null = null;
   let slug = "burgercraftlab";
 
-  if (user.restaurant_id && Number(user.restaurant_id) > 0) {
-    restaurantId = Number(user.restaurant_id);
-  } else {
-    try {
-      const roles = await query<Record<string, unknown>[]>(
-        "SELECT restaurant_id FROM user_roles WHERE user_id = ? AND restaurant_id IS NOT NULL AND restaurant_id > 0 LIMIT 1",
-        [user.id],
-      );
-      if (roles && roles.length > 0 && roles[0].restaurant_id) {
-        restaurantId = Number(roles[0].restaurant_id);
-      }
-    } catch {
-      /* ignore */
+  // 1. Direct owner match from restaurants table
+  try {
+    const owned = await query<Record<string, unknown>[]>(
+      "SELECT id, slug FROM restaurants WHERE owner_email = ? OR owner_id = ? LIMIT 1",
+      [user.email, user.id],
+    );
+    if (owned && owned.length > 0 && owned[0].id) {
+      restaurantId = Number(owned[0].id);
+      if (owned[0].slug) slug = String(owned[0].slug);
     }
+  } catch {
+    /* ignore */
   }
 
+  // 2. If not owner, check user.restaurant_id or user_roles
   if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
-    try {
-      const owned = await query<Record<string, unknown>[]>(
-        "SELECT id, slug FROM restaurants WHERE owner_email = ? OR owner_id = ? LIMIT 1",
-        [user.email, user.id],
-      );
-      if (owned && owned.length > 0 && owned[0].id) {
-        restaurantId = Number(owned[0].id);
-        if (owned[0].slug) slug = String(owned[0].slug);
-      }
-    } catch {
-      /* ignore */
-    }
-
-    if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
+    if (user.restaurant_id && Number(user.restaurant_id) > 0) {
+      restaurantId = Number(user.restaurant_id);
+    } else {
       try {
-        const firstRest = await query<Record<string, unknown>[]>(
-          "SELECT id, slug FROM restaurants ORDER BY id ASC LIMIT 1",
+        const roles = await query<Record<string, unknown>[]>(
+          "SELECT restaurant_id FROM user_roles WHERE user_id = ? AND restaurant_id IS NOT NULL AND restaurant_id > 0 LIMIT 1",
+          [user.id],
         );
-        if (firstRest && firstRest.length > 0 && firstRest[0].id) {
-          restaurantId = Number(firstRest[0].id);
-          if (firstRest[0].slug) slug = String(firstRest[0].slug);
+        if (roles && roles.length > 0 && roles[0].restaurant_id) {
+          restaurantId = Number(roles[0].restaurant_id);
         }
       } catch {
         /* ignore */
       }
+    }
+  }
+
+  // 3. Fallback to first restaurant or 1
+  if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {
+    try {
+      const firstRest = await query<Record<string, unknown>[]>(
+        "SELECT id, slug FROM restaurants ORDER BY id ASC LIMIT 1",
+      );
+      if (firstRest && firstRest.length > 0 && firstRest[0].id) {
+        restaurantId = Number(firstRest[0].id);
+        if (firstRest[0].slug) slug = String(firstRest[0].slug);
+      }
+    } catch {
+      /* ignore */
     }
 
     if (!restaurantId || isNaN(restaurantId) || restaurantId <= 0) {

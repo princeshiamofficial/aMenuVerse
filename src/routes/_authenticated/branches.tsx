@@ -882,26 +882,29 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const currentBranchId = branch.id;
     async function loadTables() {
       try {
-        const [apiRes, tenantRes] = await Promise.all([
-          apiGet<TableItem[]>(
-            `/api/branch-tables?branchId=${encodeURIComponent(currentBranchId)}`,
-          ).catch(() => null),
+        const [dbTables, tenantRes] = await Promise.all([
+          getBranchTablesServer({ data: currentBranchId }),
           getCurrentTenantSlugServer().catch(() => null),
         ]);
 
-        if (Array.isArray(apiRes) && apiRes.length > 0) {
-          setTables(apiRes);
-        } else {
-          const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
-          setTables(Array.isArray(dbTables) ? dbTables : []);
+        if (Array.isArray(dbTables)) {
+          setTables(dbTables);
         }
 
         if (tenantRes && tenantRes.slug) {
           setRestaurantSlug(tenantRes.slug);
         }
       } catch {
-        const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
-        setTables(Array.isArray(dbTables) ? dbTables : []);
+        try {
+          const apiRes = await apiGet<TableItem[]>(
+            `/api/branch-tables?branchId=${encodeURIComponent(currentBranchId)}`,
+          );
+          if (Array.isArray(apiRes)) {
+            setTables(apiRes);
+          }
+        } catch {
+          setTables([]);
+        }
       }
     }
     loadTables();
@@ -917,17 +920,17 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = [...tables, newTable];
     if (branch) {
       try {
-        await apiPost("/api/branch-tables", {
+        await saveBranchTablesServer({
+          data: {
+            branchId: branch.id,
+            tables: nextTables,
+          },
+        });
+        apiPost("/api/branch-tables", {
           branchId: branch.id,
           tables: nextTables,
-        }).catch(async () => {
-          await saveBranchTablesServer({
-            data: {
-              branchId: branch.id,
-              tables: nextTables,
-            },
-          });
-        });
+        }).catch(() => {});
+
         setTables(nextTables);
         setNewTableNo("");
         setAddDialogOpen(false);
@@ -941,25 +944,25 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
 
   const deleteTable = async (id: string, num: string) => {
     const nextTables = tables.filter((t) => t.id !== id);
-    setTables(nextTables);
     if (branch) {
       try {
-        await apiPost("/api/branch-tables", {
+        await saveBranchTablesServer({
+          data: {
+            branchId: branch.id,
+            tables: nextTables,
+          },
+        });
+        apiPost("/api/branch-tables", {
           branchId: branch.id,
           tables: nextTables,
-        }).catch(async () => {
-          await saveBranchTablesServer({
-            data: {
-              branchId: branch.id,
-              tables: nextTables,
-            },
-          });
-        });
-      } catch {
-        /* ignore */
+        }).catch(() => {});
+        setTables(nextTables);
+        toast.success(`Table ${num} deleted`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to delete table";
+        toast.error(msg);
       }
     }
-    toast.success(`Table ${num} deleted`);
   };
 
   const getTableUrl = (tNo: string, tableId?: string) => {
