@@ -1999,6 +1999,32 @@ export async function getUserAssignedBranches(tenant: {
     rClean === "superadmin" ||
     rClean === "admin";
 
+  if (allDbBranches.length === 0 && isOwnerOrSuperAdmin && tenant.restaurantId > 0) {
+    const defaultBranchId = `branch-${tenant.restaurantId}-main`;
+    try {
+      await query(
+        `INSERT INTO branches (id, restaurant_id, name, address, phone, manager, status, is_default, menu_id)
+         VALUES (?, ?, 'Main Branch', '', '', '', 'open', 1, 'menu-main')
+         ON DUPLICATE KEY UPDATE is_default = 1`,
+        [defaultBranchId, tenant.restaurantId],
+      );
+      allDbBranches = [
+        {
+          id: defaultBranchId,
+          name: "Main Branch",
+          address: "",
+          phone: "",
+          manager: "",
+          status: "open",
+          isDefault: true,
+          menuId: "menu-main",
+        },
+      ];
+    } catch {
+      /* ignore */
+    }
+  }
+
   if (isOwnerOrSuperAdmin) {
     return {
       isAll: true,
