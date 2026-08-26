@@ -293,6 +293,34 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       INDEX idx_audit_restaurant (restaurant_id),
       INDEX idx_audit_date (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    // 17. Restaurant Profiles Table
+    `CREATE TABLE IF NOT EXISTS restaurant_profiles (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      restaurant_id INT NOT NULL UNIQUE,
+      restaurant_name VARCHAR(255),
+      slug VARCHAR(255),
+      tagline TEXT,
+      description TEXT,
+      intro TEXT,
+      about TEXT,
+      logo_url TEXT,
+      cover_url TEXT,
+      favicon_url TEXT,
+      social_preview_url TEXT,
+      phone VARCHAR(50),
+      email VARCHAR(255),
+      website VARCHAR(255),
+      currency VARCHAR(20) DEFAULT 'BDT',
+      address TEXT,
+      social_links JSON,
+      business_hours JSON,
+      facilities TEXT,
+      opening_hours VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_restaurant_profiles_tenant (restaurant_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
   ];
 
   for (const stmt of tableStatements) {
@@ -568,6 +596,19 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       await pool.query(alter);
     } catch {
       /* Column already exists */
+    }
+  }
+
+  // Ensure all restaurant_profiles table columns and uniqueness exist across legacy schemas
+  const restaurantProfilesColumnAlters = [
+    "ALTER TABLE restaurant_profiles ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+    "ALTER TABLE restaurant_profiles ADD UNIQUE KEY uq_restaurant_profiles_tenant (restaurant_id)",
+  ];
+  for (const alter of restaurantProfilesColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column/key already exists */
     }
   }
 

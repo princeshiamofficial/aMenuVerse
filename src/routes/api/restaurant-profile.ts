@@ -201,12 +201,27 @@ export const Route = createFileRoute("/api/restaurant-profile")({
             ],
           );
 
-          // Update parent restaurants table
-          if (body.restaurantName) {
-            await query("UPDATE restaurants SET name = ? WHERE id = ?", [
-              body.restaurantName.trim(),
-              tenant.restaurantId,
-            ]);
+          // Keep restaurants table fully synchronized with profile updates
+          try {
+            await query(
+              `UPDATE restaurants SET 
+                 name = COALESCE(NULLIF(?, ''), name),
+                 phone = COALESCE(NULLIF(?, ''), phone),
+                 location = COALESCE(NULLIF(?, ''), location),
+                 logo_url = COALESCE(NULLIF(?, ''), logo_url),
+                 cover_url = COALESCE(NULLIF(?, ''), cover_url)
+               WHERE id = ?`,
+              [
+                body.restaurantName?.trim() || "",
+                body.phone?.trim() || "",
+                body.address?.trim() || "",
+                logoUrl || "",
+                coverUrl || "",
+                tenant.restaurantId,
+              ],
+            );
+          } catch {
+            /* ignore */
           }
 
           return new Response(

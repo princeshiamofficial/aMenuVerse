@@ -23,12 +23,25 @@ export class ApiError extends Error {
   }
 }
 
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  };
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("menuverse_session");
+    if (token && token !== "logged_out" && token.trim() !== "") {
+      headers["Authorization"] = `Bearer ${token.trim()}`;
+      headers["x-session-token"] = token.trim();
+    }
+  }
+  return headers;
+}
+
 export async function apiGet<T = unknown>(url: string): Promise<T> {
   const res = await fetch(url, {
     method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
+    headers: getAuthHeaders(),
+    credentials: "include",
   });
 
   const json = (await res.json().catch(() => ({}))) as ApiResponse<T>;
@@ -45,12 +58,13 @@ export async function apiGet<T = unknown>(url: string): Promise<T> {
 }
 
 export async function apiPost<T = unknown, B = unknown>(url: string, body?: B): Promise<T> {
+  const headers = getAuthHeaders();
+  headers["Content-Type"] = "application/json";
+
   const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers,
+    credentials: "include",
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
@@ -68,12 +82,13 @@ export async function apiPost<T = unknown, B = unknown>(url: string, body?: B): 
 }
 
 export async function apiPut<T = unknown, B = unknown>(url: string, body?: B): Promise<T> {
+  const headers = getAuthHeaders();
+  headers["Content-Type"] = "application/json";
+
   const res = await fetch(url, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers,
+    credentials: "include",
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
@@ -93,9 +108,8 @@ export async function apiPut<T = unknown, B = unknown>(url: string, body?: B): P
 export async function apiDelete<T = unknown>(url: string): Promise<T> {
   const res = await fetch(url, {
     method: "DELETE",
-    headers: {
-      Accept: "application/json",
-    },
+    headers: getAuthHeaders(),
+    credentials: "include",
   });
 
   const json = (await res.json().catch(() => ({}))) as ApiResponse<T>;

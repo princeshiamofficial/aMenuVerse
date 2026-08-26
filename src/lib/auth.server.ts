@@ -280,15 +280,22 @@ export async function verifySession(explicitToken?: string): Promise<Authenticat
     let sessionToken =
       explicitToken && explicitToken.trim() !== "" ? explicitToken.trim() : getCookie(COOKIE_NAME);
 
-    // Fallback: parse raw cookie header from Web Request if getCookie is empty
+    // Fallback: parse headers from Web Request if getCookie is empty
     if (!sessionToken || sessionToken === "logged_out" || sessionToken.trim() === "") {
       try {
         const req = getRequest();
         if (req) {
-          const cookieHeader = req.headers.get("cookie") || "";
-          const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
-          if (match && match[1] && match[1] !== "logged_out") {
-            sessionToken = match[1].trim();
+          const authHeader =
+            req.headers.get("authorization") || req.headers.get("x-session-token") || "";
+          if (authHeader) {
+            sessionToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+          }
+          if (!sessionToken || sessionToken === "logged_out") {
+            const cookieHeader = req.headers.get("cookie") || "";
+            const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
+            if (match && match[1] && match[1] !== "logged_out") {
+              sessionToken = match[1].trim();
+            }
           }
         }
       } catch {
@@ -296,7 +303,7 @@ export async function verifySession(explicitToken?: string): Promise<Authenticat
       }
     }
 
-    // If session cookie is missing or explicitly logged_out, return null
+    // If session token is missing or explicitly logged_out, return null
     if (!sessionToken || sessionToken === "logged_out" || sessionToken.trim() === "") {
       return null;
     }
