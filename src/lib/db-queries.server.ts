@@ -5346,24 +5346,49 @@ export const getStaffServer = createServerFn({ method: "GET" })
 
     try {
       try {
-        await query("ALTER TABLE users ADD COLUMN avatar_url TEXT");
-        await query("ALTER TABLE users ADD COLUMN branch VARCHAR(100) DEFAULT 'Main Branch'");
+        await query(
+          "ALTER TABLE users CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+        );
+        await query(
+          "ALTER TABLE user_roles CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+        );
+        await query("ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL");
+        await query("ALTER TABLE users ADD COLUMN name VARCHAR(255) NULL");
+        await query("ALTER TABLE users ADD COLUMN phone VARCHAR(50) NULL");
+        await query("ALTER TABLE users ADD COLUMN avatar_url TEXT NULL");
+        await query("ALTER TABLE users ADD COLUMN branch VARCHAR(255) DEFAULT 'Main Branch'");
+        await query("ALTER TABLE users ADD COLUMN assigned_branch_id VARCHAR(255) NULL");
         await query("ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'active'");
         await query("ALTER TABLE users ADD COLUMN shift VARCHAR(100) DEFAULT 'Full Day'");
+        await query("ALTER TABLE users ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1");
+        await query("ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'waiter'");
+        await query("ALTER TABLE user_roles ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1");
       } catch {
         /* ignore if columns already exist */
       }
 
-      let sql = `SELECT u.id, u.email, u.full_name as name, u.phone, ur.role, 
+      let bRows: Record<string, unknown>[] = [];
+      try {
+        bRows = await query<Record<string, unknown>[]>(
+          "SELECT id, name FROM branches WHERE restaurant_id = ? OR restaurant_id = 0",
+          [tenant.restaurantId],
+        );
+      } catch {
+        /* ignore */
+      }
+
+      let sql = `SELECT u.id, u.email, COALESCE(u.full_name, u.name, 'Staff Member') as name, u.phone, 
+                COALESCE(ur.role, u.role, 'waiter') as role, 
                 COALESCE(u.avatar_url, '') as avatar_url,
                 COALESCE(u.branch, 'Main Branch') as branch,
+                COALESCE(u.assigned_branch_id, '') as assigned_branch_id,
                 COALESCE(u.status, 'active') as status,
                 COALESCE(u.shift, 'Full Day') as shift,
                 DATE_FORMAT(u.created_at, '%b %Y') as join_date
          FROM users u
-         JOIN user_roles ur ON u.id = ur.user_id
-         WHERE ur.restaurant_id = ?`;
-      const params: unknown[] = [tenant.restaurantId];
+         LEFT JOIN user_roles ur ON u.id = ur.user_id
+         WHERE (u.restaurant_id = ? OR u.restaurant_id = 0 OR ur.restaurant_id = ? OR ur.restaurant_id = 0)`;
+      const params: unknown[] = [tenant.restaurantId, tenant.restaurantId];
 
       if (filter.branch && filter.branch !== "all") {
         const target = filter.branch.toLowerCase().trim();
@@ -5379,13 +5404,39 @@ export const getStaffServer = createServerFn({ method: "GET" })
             return [];
           }
         }
-        sql += " AND (u.branch = ? OR u.branch = ? OR u.branch LIKE ?)";
-        params.push(filter.branch, filter.branch.replace("branch-", ""), `%${filter.branch}%`);
+        const matchedBranchIds = (bRows || [])
+          .filter(
+            (b) =>
+              String(b.id || "").toLowerCase() === target ||
+              String(b.name || "").toLowerCase() === target ||
+              String(b.name || "")
+                .toLowerCase()
+                .includes(target) ||
+              target.includes(String(b.name || "").toLowerCase()),
+          )
+          .map((b) => String(b.id));
+
+        const branchClauses = [
+          "LOWER(u.branch) = ?",
+          "LOWER(u.branch) LIKE ?",
+          "LOWER(u.assigned_branch_id) = ?",
+        ];
+        params.push(target, `%${target}%`, target);
+        for (const bid of matchedBranchIds) {
+          branchClauses.push("u.branch = ?", "u.assigned_branch_id = ?");
+          params.push(bid, bid);
+        }
+        sql += ` AND (${branchClauses.join(" OR ")})`;
       } else if (!assignedInfo.isAll) {
         const branchClauses: string[] = [];
         for (const b of assignedInfo.branches) {
-          branchClauses.push("u.branch = ?", "u.branch = ?", "u.branch LIKE ?");
-          params.push(b.id, b.name, `%${b.name}%`);
+          branchClauses.push(
+            "u.branch = ?",
+            "u.branch = ?",
+            "u.branch LIKE ?",
+            "u.assigned_branch_id = ?",
+          );
+          params.push(b.id, b.name, `%${b.name}%`, b.id);
         }
         if (branchClauses.length > 0) {
           sql += ` AND (${branchClauses.join(" OR ")})`;
@@ -5395,12 +5446,13 @@ export const getStaffServer = createServerFn({ method: "GET" })
       const isTenantOwner =
         tenant.isGlobalAdmin || (tenant.role || "").toLowerCase().trim() === "owner";
       if (!isTenantOwner) {
-        sql += " AND LOWER(ur.role) != 'owner' AND LOWER(ur.role) != 'super_admin'";
+        sql +=
+          " AND LOWER(COALESCE(ur.role, u.role, '')) != 'owner' AND LOWER(COALESCE(ur.role, u.role, '')) != 'super_admin'";
       }
 
       if (filter.role && filter.role !== "all") {
-        sql += " AND LOWER(ur.role) = LOWER(?)";
-        params.push(filter.role);
+        sql += " AND (LOWER(ur.role) = LOWER(?) OR LOWER(u.role) = LOWER(?))";
+        params.push(filter.role, filter.role);
       }
 
       if (filter.status && filter.status !== "all") {
@@ -5409,9 +5461,9 @@ export const getStaffServer = createServerFn({ method: "GET" })
       }
 
       if (filter.search && filter.search.trim()) {
-        sql += " AND (u.full_name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)";
+        sql += " AND (u.full_name LIKE ? OR u.name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?)";
         const s = `%${filter.search.trim()}%`;
-        params.push(s, s, s);
+        params.push(s, s, s, s);
       }
 
       sql += ` GROUP BY u.id, ur.role ORDER BY u.created_at DESC`;
@@ -5435,13 +5487,21 @@ export const getStaffServer = createServerFn({ method: "GET" })
           else if (rawRole === "waiter") roleName = "Waiter";
           else if (rawRole === "host") roleName = "Host";
 
+          const rawBranch = String(r.branch || r.assigned_branch_id || "Main Branch");
+          const matched = (bRows || []).find(
+            (b) =>
+              String(b.id).toLowerCase() === rawBranch.toLowerCase() ||
+              String(b.name).toLowerCase() === rawBranch.toLowerCase(),
+          );
+          const finalBranchName = matched ? String(matched.name) : rawBranch;
+
           const rec: StaffRecord = {
             id: String(r.id),
             name: String(r.name || "Staff Member"),
             email: String(r.email || ""),
             phone: String(r.phone || ""),
             role: roleName,
-            branch: String(r.branch || "Main Branch"),
+            branch: finalBranchName,
             status: (r.status as StaffRecord["status"]) || "active",
             shift: String(r.shift || "Full Day"),
             joinDate: String(r.join_date || "Jan 2026"),
@@ -5500,6 +5560,7 @@ export const saveStaffServer = createServerFn({ method: "POST" })
         const pool = await getPool();
         const alters = [
           "ALTER TABLE users CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+          "ALTER TABLE user_roles CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
           "ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL",
           "ALTER TABLE users ADD COLUMN name VARCHAR(255) NULL",
           "ALTER TABLE users ADD COLUMN phone VARCHAR(50) NULL",
@@ -5527,25 +5588,23 @@ export const saveStaffServer = createServerFn({ method: "POST" })
       const sanitizedName = sanitizeText(s.name);
       const sanitizedEmail = s.email.toLowerCase().trim();
       const sanitizedPhone = sanitizeText(s.phone || "");
-      let sanitizedBranch = sanitizeText(s.branch || "Main Branch");
+      let rawBranch = sanitizeText(s.branch || "Main Branch");
       if (isManager && managerBranch) {
-        sanitizedBranch = sanitizeText(managerBranch);
+        rawBranch = sanitizeText(managerBranch);
       }
 
-      // Always resolve to the authoritative branch UUID if available
+      let resolvedBranchName = rawBranch;
+      let resolvedBranchId = rawBranch;
+
+      // Authoritatively resolve both Branch Name and Branch UUID
       try {
         const bRows = await query<Record<string, unknown>[]>(
           "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?) LIMIT 1",
-          [
-            tenant.restaurantId,
-            sanitizedBranch,
-            sanitizedBranch,
-            sanitizedBranch,
-            `%${sanitizedBranch}%`,
-          ],
+          [tenant.restaurantId, rawBranch, rawBranch, rawBranch, `%${rawBranch}%`],
         );
         if (bRows && bRows.length > 0 && bRows[0].id) {
-          sanitizedBranch = String(bRows[0].id);
+          resolvedBranchId = String(bRows[0].id);
+          resolvedBranchName = String(bRows[0].name || rawBranch);
         }
       } catch {
         /* ignore */
@@ -5603,8 +5662,8 @@ export const saveStaffServer = createServerFn({ method: "POST" })
               passHash,
               sanitizedPhone,
               sanitizedAvatar,
-              sanitizedBranch,
-              sanitizedBranch,
+              resolvedBranchName,
+              resolvedBranchId,
               s.status || "active",
               sanitizedShift,
               tenant.restaurantId,
@@ -5621,8 +5680,8 @@ export const saveStaffServer = createServerFn({ method: "POST" })
               sanitizedName,
               sanitizedPhone,
               sanitizedAvatar,
-              sanitizedBranch,
-              sanitizedBranch,
+              resolvedBranchName,
+              resolvedBranchId,
               s.status || "active",
               sanitizedShift,
               tenant.restaurantId,
@@ -5659,8 +5718,8 @@ export const saveStaffServer = createServerFn({ method: "POST" })
             sanitizedName,
             sanitizedPhone,
             sanitizedAvatar,
-            sanitizedBranch,
-            sanitizedBranch,
+            resolvedBranchName,
+            resolvedBranchId,
             s.status || "active",
             sanitizedShift,
             tenant.restaurantId,
@@ -5797,17 +5856,14 @@ export const deleteStaffServer = createServerFn({ method: "POST" })
         throw new Error("Forbidden: Managers cannot delete Owner accounts.");
       }
 
-      await query("DELETE FROM user_roles WHERE user_id = ? AND restaurant_id = ?", [
-        id,
-        tenant.restaurantId,
-      ]);
-      const remainingRoles = await query<Record<string, unknown>[]>(
-        "SELECT id FROM user_roles WHERE user_id = ?",
-        [id],
+      await query(
+        "DELETE FROM user_roles WHERE user_id = ? AND (restaurant_id = ? OR restaurant_id = 0)",
+        [id, tenant.restaurantId],
       );
-      if (!remainingRoles || remainingRoles.length === 0) {
-        await query("DELETE FROM users WHERE id = ?", [id]);
-      }
+      await query(
+        "DELETE FROM users WHERE (id = ? OR email = ?) AND (restaurant_id = ? OR restaurant_id = 0)",
+        [id, id, tenant.restaurantId],
+      );
       return { success: true };
     } catch (err) {
       console.error("[MySQL] deleteStaffServer query error:", err);
