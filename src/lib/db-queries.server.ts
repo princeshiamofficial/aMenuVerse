@@ -3395,22 +3395,33 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
     }
 
     try {
-      await query(`
-        CREATE TABLE IF NOT EXISTS branch_tables (
-          id VARCHAR(100) PRIMARY KEY,
-          restaurant_id INT DEFAULT 1,
-          branch_id VARCHAR(100) NOT NULL,
-          table_no VARCHAR(50) NOT NULL,
-          zone VARCHAR(100) DEFAULT 'MAIN ROOM',
-          sort_order INT DEFAULT 0,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-      `);
       try {
-        await query("ALTER TABLE branch_tables CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-        await query("ALTER TABLE branch_tables ADD COLUMN restaurant_id INT DEFAULT 1");
+        const pool = await getPool();
+        const alters = [
+          "ALTER TABLE branch_tables CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
+          "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+          "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+          "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN location VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(255) DEFAULT 'MAIN ROOM'",
+          "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
+          "ALTER TABLE branch_tables ADD COLUMN qr_token TEXT NULL",
+          "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+          "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
+          "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables MODIFY COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
+        ];
+        for (const alt of alters) {
+          try {
+            await pool.query(alt);
+          } catch {
+            /* ignore */
+          }
+        }
       } catch {
-        /* column exists */
+        /* ignore */
       }
 
       let rows: Record<string, unknown>[] | null = null;
@@ -3428,20 +3439,69 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
             return [];
           }
         }
-        rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone FROM branch_tables WHERE (branch_id = ? OR branch_id = ? OR branch_id LIKE ?) AND (restaurant_id = ? OR restaurant_id = 0) ORDER BY sort_order ASC, created_at ASC",
-          [branchId, branchId.replace("branch-", ""), `%${branchId}%`, tenant.restaurantId],
-        );
+
+        const branchMatchClauses = [
+          "branch_id = ?",
+          "branch_id = ?",
+          "branch_id LIKE ?",
+          "LOWER(branch_id) = LOWER(?)",
+        ];
+        const branchMatchParams: unknown[] = [
+          branchId,
+          branchId.replace("branch-", ""),
+          `%${branchId}%`,
+          branchId,
+        ];
+
+        try {
+          const bRows = await query<Record<string, unknown>[]>(
+            "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?)",
+            [tenant.restaurantId, branchId, branchId, branchId, `%${branchId}%`],
+          );
+          for (const b of bRows || []) {
+            if (b.id) {
+              branchMatchClauses.push("branch_id = ?");
+              branchMatchParams.push(String(b.id));
+            }
+            if (b.name) {
+              branchMatchClauses.push("LOWER(branch_id) = LOWER(?)");
+              branchMatchParams.push(String(b.name));
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+
+        const sql = `SELECT id, 
+                            COALESCE(NULLIF(table_no, ''), NULLIF(table_number, ''), NULLIF(name, ''), '01') as table_no, 
+                            COALESCE(NULLIF(zone, ''), NULLIF(location, ''), 'MAIN ROOM') as zone 
+                     FROM branch_tables 
+                     WHERE (${branchMatchClauses.join(" OR ")}) AND (restaurant_id = ? OR restaurant_id = 0) 
+                     ORDER BY sort_order ASC, created_at ASC`;
+        rows = await query<Record<string, unknown>[]>(sql, [
+          ...branchMatchParams,
+          tenant.restaurantId,
+        ]);
       } else if (!assignedInfo.isAll) {
         const branchIds = assignedInfo.branches.flatMap((b) => [b.id, b.name]);
         const placeholders = branchIds.map(() => "?").join(",");
         rows = await query<Record<string, unknown>[]>(
-          `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders})) AND (restaurant_id = ? OR restaurant_id = 0) ORDER BY sort_order ASC, created_at ASC`,
+          `SELECT id, 
+                  COALESCE(NULLIF(table_no, ''), NULLIF(table_number, ''), NULLIF(name, ''), '01') as table_no, 
+                  COALESCE(NULLIF(zone, ''), NULLIF(location, ''), 'MAIN ROOM') as zone 
+           FROM branch_tables 
+           WHERE (branch_id IN (${placeholders})) AND (restaurant_id = ? OR restaurant_id = 0) 
+           ORDER BY sort_order ASC, created_at ASC`,
           [...branchIds, tenant.restaurantId],
         );
       } else {
         rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone FROM branch_tables WHERE (restaurant_id = ? OR restaurant_id = 0) ORDER BY sort_order ASC, created_at ASC",
+          `SELECT id, 
+                  COALESCE(NULLIF(table_no, ''), NULLIF(table_number, ''), NULLIF(name, ''), '01') as table_no, 
+                  COALESCE(NULLIF(zone, ''), NULLIF(location, ''), 'MAIN ROOM') as zone 
+           FROM branch_tables 
+           WHERE (restaurant_id = ? OR restaurant_id = 0) 
+           ORDER BY sort_order ASC, created_at ASC`,
           [tenant.restaurantId],
         );
       }
@@ -3494,16 +3554,20 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
       try {
         const pool = await getPool();
         const alters = [
+          "ALTER TABLE branch_tables CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci",
           "ALTER TABLE branch_tables ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
           "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
-          "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
-          "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(50) NULL",
-          "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(100) DEFAULT 'MAIN ROOM'",
+          "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN location VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(255) DEFAULT 'MAIN ROOM'",
           "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
-          "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL",
+          "ALTER TABLE branch_tables ADD COLUMN qr_token TEXT NULL",
           "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
           "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
-          "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(255) NOT NULL DEFAULT '01'",
+          "ALTER TABLE branch_tables MODIFY COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
         ];
         for (const alt of alters) {
           try {
@@ -3536,83 +3600,78 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
         }
       }
 
-      await transaction(async (conn) => {
-        try {
-          await conn.execute(
-            "DELETE FROM branch_tables WHERE branch_id = ? AND restaurant_id = ?",
-            [branchId, tenant.restaurantId],
-          );
-        } catch {
-          await conn.execute("DELETE FROM branch_tables WHERE branch_id = ?", [branchId]);
-        }
-
-        let bSlug = branchId;
-        try {
-          const bRow = await query<Record<string, unknown>[]>(
-            "SELECT name FROM branches WHERE id = ? AND restaurant_id = ? LIMIT 1",
-            [branchId, tenant.restaurantId],
-          );
-          if (bRow && bRow.length > 0 && bRow[0].name) {
+      let canonicalBranchId = branchId;
+      let bSlug = branchId;
+      try {
+        const bRow = await query<Record<string, unknown>[]>(
+          "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?) LIMIT 1",
+          [tenant.restaurantId, branchId, branchId, branchId, `%${branchId}%`],
+        );
+        if (bRow && bRow.length > 0) {
+          if (bRow[0].id) canonicalBranchId = String(bRow[0].id);
+          if (bRow[0].name) {
             bSlug = String(bRow[0].name)
               .toLowerCase()
               .replace(/[^a-z0-9]+/g, "-")
               .replace(/^-|-$/g, "");
           }
-        } catch {
-          /* fallback */
         }
+      } catch {
+        /* fallback */
+      }
 
-        for (let idx = 0; idx < tables.length; idx++) {
-          const t = tables[idx];
-          const tableId =
-            t.id.startsWith(branchId) || t.id.length > 15 ? t.id : `${branchId}-${t.id}`;
-          const qrToken = encodeTableToken(bSlug || branchId, t.tableNo);
-          try {
-            await conn.execute(
-              `INSERT INTO branch_tables (id, restaurant_id, branch_id, table_no, zone, sort_order, qr_token) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)
-               ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
-              [
-                tableId,
-                tenant.restaurantId,
-                branchId,
-                t.tableNo,
-                t.zone || "MAIN ROOM",
-                idx,
-                qrToken,
-              ],
-            );
-          } catch (insertErr) {
-            console.warn(
-              "[MySQL] Primary branch_tables insert notice, trying fallback:",
-              insertErr,
-            );
-            try {
-              await conn.execute(
-                `INSERT INTO branch_tables (id, branch_id, table_no, zone, sort_order, qr_token) 
-                 VALUES (?, ?, ?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), table_no = VALUES(table_no), zone = VALUES(zone), sort_order = VALUES(sort_order), qr_token = VALUES(qr_token)`,
-                [tableId, branchId, t.tableNo, t.zone || "MAIN ROOM", idx, qrToken],
-              );
-            } catch (fallbackErr) {
-              console.warn(
-                "[MySQL] Secondary branch_tables insert notice, trying legacy name fallback:",
-                fallbackErr,
-              );
-              try {
-                await conn.execute(
-                  `INSERT INTO branch_tables (id, branch_id, name, location, status) 
-                   VALUES (?, ?, ?, ?, ?)
-                   ON DUPLICATE KEY UPDATE branch_id = VALUES(branch_id), name = VALUES(name), location = VALUES(location)`,
-                  [tableId, branchId, t.tableNo, t.zone || "MAIN ROOM", "available"],
-                );
-              } catch (finalErr) {
-                console.error("[MySQL] Final branch_tables insert fallback error:", finalErr);
-              }
-            }
-          }
-        }
-      });
+      // Delete existing tables for this branch across all identifier forms
+      try {
+        await query(
+          "DELETE FROM branch_tables WHERE (branch_id = ? OR branch_id = ? OR branch_id = ?) AND (restaurant_id = ? OR restaurant_id = 0)",
+          [
+            branchId,
+            canonicalBranchId,
+            branchId.replace("branch-", ""),
+            tenant.restaurantId,
+          ],
+        );
+      } catch {
+        /* ignore */
+      }
+
+      for (let idx = 0; idx < tables.length; idx++) {
+        const t = tables[idx];
+        const tableId = t.id && t.id.length > 5 ? t.id : crypto.randomUUID();
+        const qrToken = encodeTableToken(bSlug || branchId, t.tableNo);
+        const tNo = String(t.tableNo || String(idx + 1).padStart(2, "0")).trim();
+        const tZone = String(t.zone || "MAIN ROOM").trim();
+
+        await query(
+          `INSERT INTO branch_tables (id, restaurant_id, branch_id, table_no, table_number, name, zone, location, sort_order, qr_token, status) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE 
+             restaurant_id = VALUES(restaurant_id),
+             branch_id = VALUES(branch_id),
+             table_no = VALUES(table_no),
+             table_number = VALUES(table_number),
+             name = VALUES(name),
+             zone = VALUES(zone),
+             location = VALUES(location),
+             sort_order = VALUES(sort_order),
+             qr_token = VALUES(qr_token),
+             status = VALUES(status)`,
+          [
+            tableId,
+            tenant.restaurantId,
+            canonicalBranchId,
+            tNo,
+            tNo,
+            tNo,
+            tZone,
+            tZone,
+            idx,
+            qrToken,
+            "available",
+          ],
+        );
+      }
+
       return { success: true };
     } catch (err: unknown) {
       console.error("[MySQL] saveBranchTablesServer query error:", err);
