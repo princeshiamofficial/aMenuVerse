@@ -253,7 +253,25 @@ function POSPage() {
   useEffect(() => {
     async function loadTables() {
       try {
-        const dbTables = await getBranchTablesServer({ data: selectedBranchId || "all" });
+        const targetBId = selectedBranchId || "all";
+        let dbTables: TableRecord[] = [];
+        try {
+          const apiRes = await fetch(`/api/branch-tables?branchId=${encodeURIComponent(targetBId)}`, {
+            method: "GET",
+            headers: { Accept: "application/json" },
+          }).then((r) => r.json());
+          if (apiRes && apiRes.success && Array.isArray(apiRes.data)) {
+            dbTables = apiRes.data;
+          }
+        } catch {
+          /* fallback */
+        }
+
+        if (dbTables.length === 0) {
+          const serverRes = await getBranchTablesServer({ data: targetBId }).catch(() => []);
+          dbTables = Array.isArray(serverRes) ? serverRes : [];
+        }
+
         if (dbTables && Array.isArray(dbTables) && dbTables.length > 0) {
           const seen = new Set<string>();
           const uniqueTables: { value: string; label: string }[] = [];

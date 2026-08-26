@@ -23,6 +23,7 @@ import { Route as ETokenRouteImport } from './routes/e.$token'
 import { Route as ApiRealtimeRouteImport } from './routes/api/realtime'
 import { Route as ApiImageProxyRouteImport } from './routes/api/image-proxy'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiBranchTablesRouteImport } from './routes/api/branch-tables'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as AdminSupportRouteImport } from './routes/admin/support'
 import { Route as AdminSubscriptionsRouteImport } from './routes/admin/subscriptions'
@@ -124,6 +125,11 @@ const ApiImageProxyRoute = ApiImageProxyRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBranchTablesRoute = ApiBranchTablesRouteImport.update({
+  id: '/api/branch-tables',
+  path: '/api/branch-tables',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -319,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/branch-tables': typeof ApiBranchTablesRoute
   '/api/health': typeof ApiHealthRoute
   '/api/image-proxy': typeof ApiImageProxyRoute
   '/api/realtime': typeof ApiRealtimeRoute
@@ -363,6 +370,7 @@ export interface FileRoutesByTo {
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/branch-tables': typeof ApiBranchTablesRoute
   '/api/health': typeof ApiHealthRoute
   '/api/image-proxy': typeof ApiImageProxyRoute
   '/api/realtime': typeof ApiRealtimeRoute
@@ -410,6 +418,7 @@ export interface FileRoutesById {
   '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/support': typeof AdminSupportRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/branch-tables': typeof ApiBranchTablesRoute
   '/api/health': typeof ApiHealthRoute
   '/api/image-proxy': typeof ApiImageProxyRoute
   '/api/realtime': typeof ApiRealtimeRoute
@@ -457,6 +466,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/support'
     | '/admin/users'
+    | '/api/branch-tables'
     | '/api/health'
     | '/api/image-proxy'
     | '/api/realtime'
@@ -501,6 +511,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/support'
     | '/admin/users'
+    | '/api/branch-tables'
     | '/api/health'
     | '/api/image-proxy'
     | '/api/realtime'
@@ -547,6 +558,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/support'
     | '/admin/users'
+    | '/api/branch-tables'
     | '/api/health'
     | '/api/image-proxy'
     | '/api/realtime'
@@ -567,6 +579,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route: typeof Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route
   BranchIdTableIdRoute: typeof BranchIdTableIdRoute
+  ApiBranchTablesRoute: typeof ApiBranchTablesRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiImageProxyRoute: typeof ApiImageProxyRoute
   ApiRealtimeRoute: typeof ApiRealtimeRoute
@@ -672,6 +685,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/branch-tables': {
+      id: '/api/branch-tables'
+      path: '/api/branch-tables'
+      fullPath: '/api/branch-tables'
+      preLoaderRoute: typeof ApiBranchTablesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -985,6 +1005,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route:
     Char123restaurantUsernameChar125Char123branchIdChar125Char123tableNoChar125Route,
   BranchIdTableIdRoute: BranchIdTableIdRoute,
+  ApiBranchTablesRoute: ApiBranchTablesRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiImageProxyRoute: ApiImageProxyRoute,
   ApiRealtimeRoute: ApiRealtimeRoute,

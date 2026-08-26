@@ -1742,11 +1742,11 @@ async function resolvePublicRestaurant(
   };
 }
 
-async function resolvePrivateTenantContext(): Promise<{
+export async function resolvePrivateTenantContext(): Promise<{
   restaurantId: number;
-  slug: string;
   userId: string;
   role: string | null;
+  slug: string;
   branch: string | null;
   isGlobalAdmin: boolean;
 }> {

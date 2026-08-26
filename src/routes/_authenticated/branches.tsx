@@ -861,15 +861,24 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const currentBranchId = branch.id;
     async function loadTables() {
       try {
-        const [dbTables, tenantRes] = await Promise.all([
-          getBranchTablesServer({ data: currentBranchId }),
+        const [apiRes, tenantRes] = await Promise.all([
+          fetch(`/api/branch-tables?branchId=${encodeURIComponent(currentBranchId)}`, {
+            method: "GET",
+            headers: { Accept: "application/json" },
+          })
+            .then((r) => r.json())
+            .catch(() => null),
           getCurrentTenantSlugServer().catch(() => null),
         ]);
-        if (dbTables && Array.isArray(dbTables)) {
-          setTables(dbTables);
+
+        if (apiRes && apiRes.success && Array.isArray(apiRes.data)) {
+          setTables(apiRes.data);
         } else {
-          setTables([]);
+          // Fallback to serverFn
+          const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
+          setTables(Array.isArray(dbTables) ? dbTables : []);
         }
+
         if (tenantRes && tenantRes.slug) {
           setRestaurantSlug(tenantRes.slug);
         }
@@ -890,7 +899,18 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = [...tables, newTable];
     if (branch) {
       try {
-        await saveBranchTablesServer({ data: { branchId: branch.id, tables: nextTables } });
+        const res = await fetch("/api/branch-tables", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ branchId: branch.id, tables: nextTables }),
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          success?: boolean;
+          error?: string;
+        };
+        if (!res.ok || json.success === false) {
+          throw new Error(json.error || "Failed to add table QR code");
+        }
         setTables(nextTables);
         setNewTableNo("");
         setAddDialogOpen(false);
@@ -906,9 +926,11 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = tables.filter((t) => t.id !== id);
     setTables(nextTables);
     if (branch) {
-      await saveBranchTablesServer({ data: { branchId: branch.id, tables: nextTables } }).catch(
-        () => {},
-      );
+      fetch("/api/branch-tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ branchId: branch.id, tables: nextTables }),
+      }).catch(() => {});
     }
     toast.success(`Table ${num} deleted`);
   };
