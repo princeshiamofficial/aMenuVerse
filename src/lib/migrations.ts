@@ -455,6 +455,8 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
   const userColumnAlters = [
     "ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL",
     "ALTER TABLE users ADD COLUMN name VARCHAR(255) NULL",
+    "ALTER TABLE users MODIFY COLUMN name VARCHAR(255) NULL",
+    "ALTER TABLE users MODIFY COLUMN full_name VARCHAR(255) NULL",
     "ALTER TABLE users ADD COLUMN avatar_url TEXT NULL",
     "ALTER TABLE users ADD COLUMN avatar VARCHAR(512) NULL",
     "ALTER TABLE users ADD COLUMN phone VARCHAR(50) NULL",
@@ -521,10 +523,13 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
     "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
     "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(50) NULL",
+    "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL",
     "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(100) DEFAULT 'MAIN ROOM'",
     "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
     "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL",
     "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+    "ALTER TABLE branch_tables ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+    "ALTER TABLE branch_tables ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
     "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
     "ALTER TABLE branch_tables MODIFY COLUMN restaurant_id INT NOT NULL DEFAULT 1",
@@ -736,8 +741,8 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       if (!Array.isArray(existing) || existing.length === 0) {
         const pHash = hashPwd(u.pwd);
         await pool.execute(
-          "INSERT INTO users (id, email, password_hash, full_name, phone, branch) VALUES (?, ?, ?, ?, ?, ?)",
-          [u.id, u.email, pHash, u.name, u.phone, u.branch],
+          "INSERT INTO users (id, email, password_hash, name, full_name, phone, branch) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [u.id, u.email, pHash, u.name, u.name, u.phone, u.branch],
         );
         await pool.execute(
           "INSERT INTO user_roles (user_id, role, restaurant_id) VALUES (?, ?, ?)",
