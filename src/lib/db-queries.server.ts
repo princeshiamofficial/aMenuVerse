@@ -7846,3 +7846,271 @@ export const resendAnnouncementPushServer = createServerFn({ method: "POST" })
     return { success: true, sentCount: pushResult.sent };
   });
 
+// =========================================================
+// FCM & WEB PUSH ADMIN MANAGEMENT SERVER FUNCTIONS
+// =========================================================
+
+export type FcmSubscriberRecord = {
+  id: string;
+  restaurantId: number;
+  restaurantName?: string;
+  restaurantSlug?: string;
+  branchId?: string | null;
+  userId?: string | null;
+  role?: string | null;
+  endpoint: string;
+  userAgent?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const getFcmStatsServer = createServerFn({ method: "GET" })
+  .handler(async () => {
+    await requireRole(["super_admin", "owner"]);
+
+    const [countRows, restRows] = await Promise.all([
+      query<
+        Array<{
+          total: number;
+          customers: number;
+          staff: number;
+          owners: number;
+          unique_restaurants: number;
+        }>
+      >(
+        `SELECT 
+          COUNT(*) as total,
+          SUM(CASE WHEN LOWER(role) = 'customer' THEN 1 ELSE 0 END) as customers,
+          SUM(CASE WHEN LOWER(role) IN ('manager', 'cashier', 'chef', 'waiter', 'host') THEN 1 ELSE 0 END) as staff,
+          SUM(CASE WHEN LOWER(role) = 'owner' THEN 1 ELSE 0 END) as owners,
+          COUNT(DISTINCT restaurant_id) as unique_restaurants
+        FROM push_subscriptions`,
+      ),
+      query<
+        Array<{
+          restaurant_id: number;
+          name: string;
+          slug: string;
+          subscribers: number;
+        }>
+      >(
+        `SELECT 
+          ps.restaurant_id,
+          COALESCE(r.name, CONCAT('Restaurant #', ps.restaurant_id)) as name,
+          COALESCE(r.slug, 'unknown') as slug,
+          COUNT(*) as subscribers
+        FROM push_subscriptions ps
+        LEFT JOIN restaurants r ON ps.restaurant_id = r.id
+        GROUP BY ps.restaurant_id, r.name, r.slug
+        ORDER BY subscribers DESC`,
+      ),
+    ]);
+
+    const stats = countRows?.[0] || {
+      total: 0,
+      customers: 0,
+      staff: 0,
+      owners: 0,
+      unique_restaurants: 0,
+    };
+
+    return {
+      totalDevices: Number(stats.total) || 0,
+      customerDevices: Number(stats.customers) || 0,
+      staffDevices: Number(stats.staff) || 0,
+      ownerDevices: Number(stats.owners) || 0,
+      uniqueRestaurants: Number(stats.unique_restaurants) || 0,
+      restaurants: restRows || [],
+      vapidPublicKey:
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+        "BFCWjOYUAdv3FqiTopV07F48-nmqk7g-NJkkd-1ZU4XVwhXSXirasbeJpi8qEMIj50WKQ6h8lay1wOGKWxuGhjM",
+      gatewayStatus: "Online (Google FCM / WebPush RFC 8292)",
+    };
+  });
+
+export const getFcmSubscribersServer = createServerFn({ method: "GET" })
+  .validator((input?: { search?: string; role?: string; restaurantId?: string }) =>
+    z
+      .object({
+        search: z.string().optional(),
+        role: z.string().optional(),
+        restaurantId: z.string().optional(),
+      })
+      .optional()
+      .parse(input),
+  )
+  .handler(async ({ data: filter }) => {
+    await requireRole(["super_admin", "owner"]);
+
+    let sql = `
+      SELECT 
+        ps.id,
+        ps.restaurant_id,
+        ps.branch_id,
+        ps.user_id,
+        ps.role,
+        ps.endpoint,
+        ps.user_agent,
+        ps.created_at,
+        ps.updated_at,
+        COALESCE(r.name, CONCAT('Restaurant #', ps.restaurant_id)) as restaurant_name,
+        COALESCE(r.slug, 'unknown') as restaurant_slug
+      FROM push_subscriptions ps
+      LEFT JOIN restaurants r ON ps.restaurant_id = r.id
+      WHERE 1=1
+    `;
+    const params: unknown[] = [];
+
+    if (filter?.restaurantId && filter.restaurantId !== "all") {
+      sql += " AND ps.restaurant_id = ?";
+      params.push(Number(filter.restaurantId));
+    }
+
+    if (filter?.role && filter.role !== "all") {
+      sql += " AND LOWER(ps.role) = ?";
+      params.push(filter.role.toLowerCase());
+    }
+
+    if (filter?.search && filter.search.trim()) {
+      sql += " AND (ps.id LIKE ? OR ps.user_agent LIKE ? OR r.name LIKE ?)";
+      const q = `%${filter.search.trim()}%`;
+      params.push(q, q, q);
+    }
+
+    sql += " ORDER BY ps.created_at DESC LIMIT 200";
+
+    const rows = await query<
+      Array<{
+        id: string;
+        restaurant_id: number;
+        branch_id: string | null;
+        user_id: string | null;
+        role: string | null;
+        endpoint: string;
+        user_agent: string | null;
+        created_at: string;
+        updated_at: string;
+        restaurant_name: string;
+        restaurant_slug: string;
+      }>
+    >(sql, params);
+
+    return rows.map((r) => ({
+      id: r.id,
+      restaurantId: r.restaurant_id,
+      restaurantName: r.restaurant_name,
+      restaurantSlug: r.restaurant_slug,
+      branchId: r.branch_id,
+      userId: r.user_id,
+      role: r.role || "customer",
+      endpoint: r.endpoint,
+      userAgent: r.user_agent,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    }));
+  });
+
+export const deleteFcmSubscriberServer = createServerFn({ method: "POST" })
+  .validator((data: { id: string }) => z.object({ id: z.string() }).parse(data))
+  .handler(async ({ data }) => {
+    await requireRole(["super_admin", "owner"]);
+    await query("DELETE FROM push_subscriptions WHERE id = ?", [data.id]);
+    return { success: true };
+  });
+
+export const sendFcmCustomBroadcastServer = createServerFn({ method: "POST" })
+  .validator((data: {
+    title: string;
+    body: string;
+    audience?: string;
+    restaurantId?: string;
+    sound?: string;
+    url?: string;
+  }) =>
+    z
+      .object({
+        title: z.string().min(1, "Title is required"),
+        body: z.string().min(1, "Message body is required"),
+        audience: z.string().default("all"),
+        restaurantId: z.string().default("all"),
+        sound: z.string().default("chime"),
+        url: z.string().default("/dashboard"),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    await requireRole(["super_admin", "owner"]);
+    const m = await import("./web-push.server");
+    const res = await m.sendSystemAnnouncementPushServer({
+      title: data.title,
+      body: data.body,
+      audience: data.audience,
+      restaurantId: data.restaurantId,
+      sound: data.sound,
+      url: data.url,
+    });
+    return { success: true, sent: res.sent, failed: res.failed };
+  });
+
+export const testSingleFcmSubscriberServer = createServerFn({ method: "POST" })
+  .validator((data: { id: string; sound?: string }) =>
+    z
+      .object({
+        id: z.string(),
+        sound: z.string().default("chime"),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    await requireRole(["super_admin", "owner"]);
+    const rows = await query<
+      Array<{
+        id: string;
+        endpoint: string;
+        p256dh: string;
+        auth: string;
+        role: string;
+      }>
+    >("SELECT * FROM push_subscriptions WHERE id = ? LIMIT 1", [data.id]);
+
+    if (!rows || rows.length === 0) {
+      throw new Error("Subscriber endpoint not found");
+    }
+
+    const sub = rows[0];
+    const webpush = (await import("web-push")).default;
+
+    const payload = JSON.stringify({
+      title: "🔔 Test FCM Push Alert",
+      body: "Your device is successfully receiving instant Web Push alerts from MenuVerse!",
+      icon: "/placeholder.svg",
+      badge: "/placeholder.svg",
+      sound: data.sound || "chime",
+      url: "/dashboard",
+      vibrate: [200, 100, 200, 100, 300],
+      tag: `test-fcm-${Date.now()}`,
+    });
+
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        },
+        payload,
+        { urgency: "high", TTL: 3600 },
+      );
+      return { success: true };
+    } catch (err: unknown) {
+      const statusCode = (err as { statusCode?: number })?.statusCode;
+      if (statusCode === 404 || statusCode === 410) {
+        await query("DELETE FROM push_subscriptions WHERE id = ?", [data.id]);
+        throw new Error("Subscription has expired on client browser (removed from DB).");
+      }
+      throw new Error((err as Error).message || "Failed to deliver test push.");
+    }
+  });
+

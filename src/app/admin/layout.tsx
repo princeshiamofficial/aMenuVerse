@@ -55,6 +55,7 @@ import {
   MoreHorizontal,
   LogOut,
   Globe,
+  BellRing,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -99,11 +100,12 @@ function AdminSidebar() {
     { to: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
     { to: "/admin/revenue", label: "Revenue", icon: DollarSign },
     { to: "/admin/users", label: "Users", icon: Users },
+    { to: "/admin/fcm", label: "FCM & Push Alerts", icon: BellRing },
+    { to: "/admin/announcements", label: "Announcements", icon: Megaphone },
     { to: "/admin/qr", label: "QR Usage", icon: QrCode },
     { to: "/admin/seo", label: "SEO & Metadata", icon: Globe },
     { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
     { to: "/admin/support", label: "Support", icon: LifeBuoy },
-    { to: "/admin/announcements", label: "Announcements", icon: Megaphone },
     { to: "/admin/logs", label: "Logs", icon: ScrollText },
   ];
 
