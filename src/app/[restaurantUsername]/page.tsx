@@ -1430,12 +1430,19 @@ export function PublicRestaurantView({
   const categories = useMemo(() => {
     const catSet = new Set<string>();
     if (adminCategories.length > 0) {
-      adminCategories.forEach((c) => catSet.add(c.name));
+      adminCategories.forEach((c) => {
+        const lower = (c.name || "").toLowerCase().trim();
+        if (lower !== "all" && lower !== "popular") {
+          catSet.add(c.name);
+        }
+      });
     } else if (restaurant?.categories && Array.isArray(restaurant.categories)) {
-      restaurant.categories.forEach((c: { name: string }) => catSet.add(c.name));
-    }
-    if (catSet.size === 0) {
-      return ["All", "Popular"];
+      restaurant.categories.forEach((c: { name: string }) => {
+        const lower = (c.name || "").toLowerCase().trim();
+        if (lower !== "all" && lower !== "popular") {
+          catSet.add(c.name);
+        }
+      });
     }
     return ["All", "Popular", ...Array.from(catSet)];
   }, [adminCategories, restaurant]);
