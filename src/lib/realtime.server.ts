@@ -15,6 +15,7 @@ export type RealtimeEventType =
   | "reservation:updated"
   | "reservation:deleted"
   | "table:updated"
+  | "announcement:created"
   | "ping";
 
 export interface RealtimeEvent<T = unknown> {

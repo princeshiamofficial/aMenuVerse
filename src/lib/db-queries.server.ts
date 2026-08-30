@@ -7754,6 +7754,24 @@ export const publishAnnouncementServer = createServerFn({ method: "POST" })
         ],
       );
 
+      try {
+        const { broadcastRealtimeEvent } = await import("./realtime.server");
+        broadcastRealtimeEvent({
+          type: "announcement:created",
+          restaurantId: "all",
+          payload: {
+            id,
+            title: data.title.trim(),
+            body: data.body.trim(),
+            sound: data.sound || "chime",
+            url: data.url || "/dashboard",
+            audience: data.audience,
+          },
+        });
+      } catch {
+        /* ignore */
+      }
+
       return { success: true, id, sentCount };
     } catch (err) {
       console.error("[MySQL] publishAnnouncementServer error:", err);
@@ -7806,6 +7824,24 @@ export const resendAnnouncementPushServer = createServerFn({ method: "POST" })
       "UPDATE announcements SET sent_count = sent_count + ? WHERE id = ?",
       [pushResult.sent, data.id],
     );
+
+    try {
+      const { broadcastRealtimeEvent } = await import("./realtime.server");
+      broadcastRealtimeEvent({
+        type: "announcement:created",
+        restaurantId: "all",
+        payload: {
+          id: data.id,
+          title: String(ann.title || "Announcement"),
+          body: String(ann.body || ""),
+          sound: String(ann.sound || "chime"),
+          url: String(ann.url || "/dashboard"),
+          audience: String(ann.audience || "all"),
+        },
+      });
+    } catch {
+      /* ignore */
+    }
 
     return { success: true, sentCount: pushResult.sent };
   });

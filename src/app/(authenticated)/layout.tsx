@@ -95,15 +95,47 @@ function GlobalRealtimeNotifier({
             navigator.serviceWorker.ready.then((reg) => {
               reg.showNotification(`🚨 Waiter Call! ${tableNum}`, {
                 body: "Guest needs assistance",
-                icon: "/favicon.ico",
-                badge: "/favicon.ico",
+                icon: "/placeholder.svg",
+                badge: "/placeholder.svg",
                 tag: `waiter-${payload?.id || Date.now()}`,
                 data: { url: "/waiter-panel" },
               });
             }).catch(() => {
               new Notification(`🚨 Waiter Call! ${tableNum}`, {
                 body: "Guest needs assistance",
-                icon: "/favicon.ico",
+                icon: "/placeholder.svg",
+              });
+            });
+          } catch {
+            /* ignore */
+          }
+        }
+      } else if (event.type === "announcement:created") {
+        const payload = event.payload as Record<string, unknown>;
+        const sound = (payload?.sound as string) || "chime";
+        import("@/lib/push-notifications").then((m) => {
+          m.playNotificationSound(sound as any);
+        });
+
+        toast.info(`📢 ${(payload?.title as string) || "Announcement"}`, {
+          description: (payload?.body as string) || "New system announcement published",
+          duration: 9000,
+        });
+
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          try {
+            navigator.serviceWorker.ready.then((reg) => {
+              reg.showNotification(`📢 ${(payload?.title as string) || "Announcement"}`, {
+                body: (payload?.body as string) || "New system update",
+                icon: "/placeholder.svg",
+                badge: "/placeholder.svg",
+                tag: `announcement-${payload?.id || Date.now()}`,
+                data: { url: (payload?.url as string) || "/dashboard" },
+              });
+            }).catch(() => {
+              new Notification(`📢 ${(payload?.title as string) || "Announcement"}`, {
+                body: (payload?.body as string) || "New system update",
+                icon: "/placeholder.svg",
               });
             });
           } catch {

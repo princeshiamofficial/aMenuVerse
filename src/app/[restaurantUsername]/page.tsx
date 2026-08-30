@@ -1230,9 +1230,47 @@ export function PublicRestaurantView({
   useRealtime({
     restaurantId: restaurantUsername || (restaurant?.id ? String(restaurant?.id) : undefined),
     branchId: branchId || undefined,
-    eventTypes: ["order:updated", "order:created"],
+    eventTypes: ["order:updated", "order:created", "announcement:created"],
     onEvent: (event) => {
-      if (event.type === "order:updated") {
+      if (event.type === "announcement:created") {
+        const payload = event.payload as Record<string, unknown>;
+        const sound = (payload?.sound as string) || "chime";
+        import("@/lib/push-notifications").then((m) => {
+          m.playNotificationSound(sound as any);
+        });
+
+        toast.info(`📢 ${(payload?.title as string) || "Announcement"}`, {
+          description: (payload?.body as string) || "New announcement published",
+          duration: 9000,
+        });
+
+        if (
+          typeof window !== "undefined" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          try {
+            navigator.serviceWorker.ready
+              .then((reg) => {
+                reg.showNotification(`📢 ${(payload?.title as string) || "Announcement"}`, {
+                  body: (payload?.body as string) || "New announcement",
+                  icon: "/placeholder.svg",
+                  badge: "/placeholder.svg",
+                  tag: `announcement-${payload?.id || Date.now()}`,
+                  data: { url: (payload?.url as string) || window.location.pathname },
+                });
+              })
+              .catch(() => {
+                new Notification(`📢 ${(payload?.title as string) || "Announcement"}`, {
+                  body: (payload?.body as string) || "New announcement",
+                  icon: "/placeholder.svg",
+                });
+              });
+          } catch {
+            /* ignore */
+          }
+        }
+      } else if (event.type === "order:updated") {
         const payload = event.payload as {
           id: string;
           status: string;
