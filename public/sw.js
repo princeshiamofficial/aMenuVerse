@@ -16,8 +16,8 @@ self.addEventListener("push", (event) => {
   let data = {
     title: "🔔 aMenuVerse Alert",
     body: "You have a new update.",
-    icon: "/placeholder.svg",
-    badge: "/placeholder.svg",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
     url: "/dashboard",
     sound: "chime",
     unreadCount: 1,
@@ -63,11 +63,11 @@ self.addEventListener("push", (event) => {
     })
     .catch(() => {});
 
-  // C. Display the OS-level System Notification
+  // C. Display the OS-level System Notification (Must use PNG/ICO, never SVG)
   const options = {
     body: data.body,
-    icon: data.icon || "/placeholder.svg",
-    badge: data.badge || "/placeholder.svg",
+    icon: data.icon && !data.icon.endsWith(".svg") ? data.icon : "/icon-192.png",
+    badge: data.badge && !data.badge.endsWith(".svg") ? data.badge : "/icon-192.png",
     vibrate: data.vibrate || [200, 100, 200, 100, 400],
     tag: data.tag || `alert-${Date.now()}`,
     renotify: true,

@@ -256,8 +256,8 @@ export async function sendSystemAnnouncementPushServer(params: {
     const notificationPayload = JSON.stringify({
       title: `📢 ${params.title}`,
       body: params.body,
-      icon: "/placeholder.svg",
-      badge: "/placeholder.svg",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
       url: params.url || "/dashboard",
       sound: params.sound || "chime",
       unreadCount: 1,
@@ -337,8 +337,8 @@ export async function sendSinglePushToSubscriberServer(
     const notificationPayload = JSON.stringify({
       title: options?.title || "🔔 MenuVerse FCM Live Ping",
       body: options?.body || "Your device is connected and receiving high-priority push notifications!",
-      icon: "/placeholder.svg",
-      badge: "/placeholder.svg",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
       sound: options?.sound || "chime",
       url: "/dashboard",
       vibrate: [200, 100, 200, 100, 300],
