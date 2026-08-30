@@ -71,6 +71,7 @@ import {
   getReservationsServer,
   saveReservationsServer,
 } from "@/lib/db-queries.server";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api-client";
 import { SkeletonReservations } from "@/components/menuverse/skeletons";
 import { useRealtime } from "@/lib/use-realtime";
 
@@ -332,6 +333,7 @@ export default function ReservationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [areaFilter, setAreaFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<Reservation | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -441,7 +443,10 @@ export default function ReservationsPage() {
       }
 
       try {
-        const dbRes = await getReservationsServer({ data: {} });
+        const dbRes = await apiGet<Reservation[]>("/api/reservations").catch(async () => {
+          const res = await getReservationsServer({ data: {} });
+          return (res || []) as unknown as Reservation[];
+        });
         if (dbRes && Array.isArray(dbRes)) {
           setReservations(dbRes as unknown as Reservation[]);
         } else {
@@ -465,14 +470,25 @@ export default function ReservationsPage() {
             : branchFilter !== "all"
               ? branchFilter
               : undefined;
-        const dbRes = await getReservationsServer({
-          data: {
-            branchId: effectiveBranch,
-            status: statusFilter !== "all" ? statusFilter : undefined,
-            seatingArea: areaFilter !== "all" ? areaFilter : undefined,
-            search: search.trim() || undefined,
-          },
+
+        const params = new URLSearchParams();
+        if (effectiveBranch) params.set("branchId", effectiveBranch);
+        if (statusFilter !== "all") params.set("status", statusFilter);
+        if (search.trim()) params.set("search", search.trim());
+
+        const url = `/api/reservations${params.toString() ? `?${params.toString()}` : ""}`;
+        const dbRes = await apiGet<Reservation[]>(url).catch(async () => {
+          const res = await getReservationsServer({
+            data: {
+              branchId: effectiveBranch,
+              status: statusFilter !== "all" ? statusFilter : undefined,
+              seatingArea: areaFilter !== "all" ? areaFilter : undefined,
+              search: search.trim() || undefined,
+            },
+          });
+          return (res || []) as unknown as Reservation[];
         });
+
         if (dbRes && Array.isArray(dbRes)) {
           setReservations(dbRes as unknown as Reservation[]);
         }
@@ -537,40 +553,26 @@ export default function ReservationsPage() {
         r.phone.toLowerCase().includes(q) ||
         r.id.toLowerCase().includes(q) ||
         (r.tableNumber && r.tableNumber.toLowerCase().includes(q));
+
       const matchStatus = statusFilter === "all" || r.status === statusFilter;
       const matchArea = areaFilter === "all" || r.seatingArea === areaFilter;
 
       let matchBranch = true;
       if (effectiveBranchFilter !== "all") {
-        const rBranch = ((r as { branchName?: string }).branchName || "").toLowerCase().trim();
-        const rBranchId = ((r as { branchId?: string }).branchId || "").toLowerCase().trim();
-        const targetBranch = effectiveBranchFilter.toLowerCase().trim();
-        const matchedBranchObj = branches.find(
-          (b) =>
-            b.name.toLowerCase().trim() === targetBranch ||
-            b.id.toLowerCase().trim() === targetBranch,
-        );
-        const targetNames = [
-          targetBranch,
-          matchedBranchObj?.name.toLowerCase().trim(),
-          matchedBranchObj?.id.toLowerCase().trim(),
-        ].filter(Boolean) as string[];
-
-        const isDefaultBranch =
-          targetBranch === (branches[0]?.name || "").toLowerCase().trim() ||
-          targetBranch === (branches[0]?.id || "").toLowerCase().trim();
-
-        if (rBranch || rBranchId) {
-          matchBranch = targetNames.some(
-            (t) =>
-              (rBranch && (rBranch === t || rBranch.includes(t) || t.includes(rBranch))) ||
-              (rBranchId && rBranchId === t),
-          );
-        } else {
-          matchBranch = isDefaultBranch;
-        }
+        const fbLower = effectiveBranchFilter.toLowerCase().trim();
+        const rBranchLower = (r.branchName || r.branchId || "").toLowerCase().trim();
+        matchBranch =
+          rBranchLower === fbLower ||
+          rBranchLower.includes(fbLower) ||
+          fbLower.includes(rBranchLower);
       }
-      return matchQuery && matchStatus && matchArea && matchBranch;
+
+      let matchDate = true;
+      if (dateFilter) {
+        matchDate = r.date === dateFilter;
+      }
+
+      return matchQuery && matchStatus && matchArea && matchBranch && matchDate;
     });
   }, [
     reservations,
@@ -578,22 +580,24 @@ export default function ReservationsPage() {
     statusFilter,
     areaFilter,
     branchFilter,
+    dateFilter,
     isGlobalOwner,
     staffBranchName,
-    branches,
   ]);
 
-  const handleOpenCreate = () => {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const defaultBranchObj =
+  const handleOpenAdd = () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+    const defaultBranch =
       !isGlobalOwner && staffBranchName
-        ? branches.find((b) => b.name === staffBranchName) || branches[0]
+        ? staffBranchName
         : branchFilter !== "all"
-          ? branches.find((b) => b.name === branchFilter || b.id === branchFilter) || branches[0]
-          : branches.find((b) => b.isDefault) || branches[0];
+          ? branchFilter
+          : branches[0]?.name || "Main Branch";
 
-    const defaultBranch = defaultBranchObj?.name || "Main Branch";
-    const defaultBranchId = defaultBranchObj?.id;
+    const defaultBranchId =
+      branches.find((b) => b.name.toLowerCase().trim() === defaultBranch.toLowerCase().trim())
+        ?.id || defaultBranch;
 
     setEditing({
       id: `RES-${Math.floor(100 + Math.random() * 900)}`,
@@ -643,23 +647,62 @@ export default function ReservationsPage() {
     const updated = isNew
       ? [toSave, ...reservations]
       : reservations.map((r) => (r.id === toSave.id ? toSave : r));
-    await saveReservationsList(updated);
+
+    setReservations(updated);
     setSheetOpen(false);
-    toast.success(isNew ? "Reservation created" : "Reservation updated");
+
+    try {
+      await apiPost("/api/reservations", {
+        id: toSave.id,
+        guestName: toSave.guestName,
+        phone: toSave.phone,
+        email: toSave.email,
+        guests: toSave.partySize,
+        date: toSave.date,
+        time: toSave.time,
+        status: toSave.status,
+        branchId: toSave.branchId,
+        tableNumber: toSave.tableNumber,
+        specialRequests: toSave.specialNotes,
+      }).catch(async () => {
+        await saveReservationsList(updated);
+      });
+      toast.success(isNew ? "Reservation created" : "Reservation updated");
+    } catch {
+      await saveReservationsList(updated);
+      toast.success(isNew ? "Reservation created" : "Reservation updated");
+    }
   };
 
   const updateStatus = async (id: string, status: ReservationStatus) => {
     const updated = reservations.map((r) => (r.id === id ? { ...r, status } : r));
-    await saveReservationsList(updated);
-    toast.success(`Booking status updated to ${status}`);
+    setReservations(updated);
+    try {
+      await apiPut("/api/reservations", { id, status }).catch(async () => {
+        await saveReservationsList(updated);
+      });
+      toast.success(`Booking status updated to ${status}`);
+    } catch {
+      await saveReservationsList(updated);
+      toast.success(`Booking status updated to ${status}`);
+    }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    const updated = reservations.filter((r) => r.id !== deleteId);
-    await saveReservationsList(updated);
+    const targetId = deleteId;
+    const updated = reservations.filter((r) => r.id !== targetId);
+    setReservations(updated);
     setDeleteId(null);
-    toast.success("Reservation deleted");
+    try {
+      await apiDelete(`/api/reservations?id=${encodeURIComponent(targetId)}`).catch(async () => {
+        await saveReservationsList(updated);
+      });
+      toast.success("Reservation deleted");
+    } catch {
+      await saveReservationsList(updated);
+      toast.success("Reservation deleted");
+    }
   };
 
   if (!hydrated) {
@@ -812,7 +855,7 @@ export default function ReservationsPage() {
         </div>
 
         <Button
-          onClick={handleOpenCreate}
+          onClick={handleOpenAdd}
           size="sm"
           className="bg-linear-to-r from-[#D77649] via-[#CB6C3F] to-[#B85C31] hover:from-[#C9693D] hover:to-[#A74E26] text-white shadow-md shadow-amber-900/10 shrink-0 h-9 rounded-md px-5 text-xs font-medium tracking-wide flex items-center gap-1.5 transition-all cursor-pointer"
         >
@@ -831,7 +874,7 @@ export default function ReservationsPage() {
               Try adjusting your search filters or create a new booking.
             </p>
             <Button
-              onClick={handleOpenCreate}
+              onClick={handleOpenAdd}
               size="sm"
               className="mt-4 gradient-warm text-primary-foreground shadow-elegant rounded-xl"
             >

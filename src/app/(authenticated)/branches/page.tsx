@@ -66,6 +66,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { apiGet, apiPost } from "@/lib/api-client";
 
 import { cn, generateId, getEncryptedTableUrl } from "@/lib/utils";
 import { SkeletonBranchesPage } from "@/components/menuverse/skeletons";
@@ -336,7 +337,7 @@ export default function BranchesPage() {
     setDialogOpen(true);
   };
 
-  const saveBranch = () => {
+  const saveBranch = async () => {
     if (!editing) return;
     if (!editing.name.trim()) {
       toast.error("Branch name is required");
@@ -349,37 +350,57 @@ export default function BranchesPage() {
       );
       return;
     }
-    setBranches((list) => {
-      const exists = list.some((b) => b.id === editing.id);
-      let next = exists ? list.map((b) => (b.id === editing.id ? editing : b)) : [...list, editing];
-      if (editing.isDefault) {
-        next = next.map((b) => ({ ...b, isDefault: b.id === editing.id }));
-      }
-      if (!next.some((b) => b.isDefault) && next.length > 0) {
-        next[0] = { ...next[0], isDefault: true };
-      }
-      return next;
-    });
+    const exists = branches.some((b) => b.id === editing.id);
+    let next = exists
+      ? branches.map((b) => (b.id === editing.id ? editing : b))
+      : [...branches, editing];
+    if (editing.isDefault) {
+      next = next.map((b) => ({ ...b, isDefault: b.id === editing.id }));
+    }
+    if (!next.some((b) => b.isDefault) && next.length > 0) {
+      next[0] = { ...next[0], isDefault: true };
+    }
+    setBranches(next);
     setDialogOpen(false);
-    toast.success(branches.some((b) => b.id === editing.id) ? "Branch updated" : "Branch created");
+    try {
+      await apiPost("/api/branches", { branches: next }).catch(async () => {
+        await updateBranchesServer({ data: next });
+      });
+      toast.success(exists ? "Branch updated" : "Branch created");
+    } catch {
+      toast.success(exists ? "Branch updated" : "Branch created");
+    }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteId) return;
-    setBranches((list) => {
-      const target = list.find((b) => b.id === deleteId);
-      const next = list.filter((b) => b.id !== deleteId);
-      if ((target?.isDefault || !next.some((b) => b.isDefault)) && next.length > 0) {
-        next[0] = { ...next[0], isDefault: true };
-      }
-      return next;
-    });
+    const target = branches.find((b) => b.id === deleteId);
+    let next = branches.filter((b) => b.id !== deleteId);
+    if ((target?.isDefault || !next.some((b) => b.isDefault)) && next.length > 0) {
+      next[0] = { ...next[0], isDefault: true };
+    }
+    setBranches(next);
     setDeleteId(null);
+    try {
+      await apiPost("/api/branches", { branches: next }).catch(async () => {
+        await updateBranchesServer({ data: next });
+      });
+    } catch {
+      /* ignore */
+    }
     toast.success("Branch deleted");
   };
 
-  const setDefault = (id: string) => {
-    setBranches((list) => list.map((b) => ({ ...b, isDefault: b.id === id })));
+  const setDefault = async (id: string) => {
+    const next = branches.map((b) => ({ ...b, isDefault: b.id === id }));
+    setBranches(next);
+    try {
+      await apiPost("/api/branches", { branches: next }).catch(async () => {
+        await updateBranchesServer({ data: next });
+      });
+    } catch {
+      /* ignore */
+    }
     toast.success("Default branch updated");
   };
 
@@ -853,20 +874,26 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const currentBranchId = branch.id;
     async function loadTables() {
       try {
-        const [dbTables, tenantRes] = await Promise.all([
-          getBranchTablesServer({ data: currentBranchId }),
+        const [apiRes, tenantRes] = await Promise.all([
+          apiGet<TableItem[]>(
+            `/api/branch-tables?branchId=${encodeURIComponent(currentBranchId)}`,
+          ).catch(() => null),
           getCurrentTenantSlugServer().catch(() => null),
         ]);
-        if (dbTables && Array.isArray(dbTables)) {
-          setTables(dbTables);
+
+        if (Array.isArray(apiRes) && apiRes.length > 0) {
+          setTables(apiRes);
         } else {
-          setTables([]);
+          const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
+          setTables(Array.isArray(dbTables) ? dbTables : []);
         }
+
         if (tenantRes && tenantRes.slug) {
           setRestaurantSlug(tenantRes.slug);
         }
       } catch {
-        setTables([]);
+        const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
+        setTables(Array.isArray(dbTables) ? dbTables : []);
       }
     }
     loadTables();
@@ -882,7 +909,17 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = [...tables, newTable];
     if (branch) {
       try {
-        await saveBranchTablesServer({ data: { branchId: branch.id, tables: nextTables } });
+        await apiPost("/api/branch-tables", {
+          branchId: branch.id,
+          tables: nextTables,
+        }).catch(async () => {
+          await saveBranchTablesServer({
+            data: {
+              branchId: branch.id,
+              tables: nextTables,
+            },
+          });
+        });
         setTables(nextTables);
         setNewTableNo("");
         setAddDialogOpen(false);
@@ -898,9 +935,21 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = tables.filter((t) => t.id !== id);
     setTables(nextTables);
     if (branch) {
-      await saveBranchTablesServer({ data: { branchId: branch.id, tables: nextTables } }).catch(
-        () => {},
-      );
+      try {
+        await apiPost("/api/branch-tables", {
+          branchId: branch.id,
+          tables: nextTables,
+        }).catch(async () => {
+          await saveBranchTablesServer({
+            data: {
+              branchId: branch.id,
+              tables: nextTables,
+            },
+          });
+        });
+      } catch {
+        /* ignore */
+      }
     }
     toast.success(`Table ${num} deleted`);
   };

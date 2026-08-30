@@ -11,6 +11,7 @@ import {
   deleteStaffServer,
   updateStaffAvatarServer,
 } from "@/lib/db-queries.server";
+import { apiGet, apiPost, apiDelete } from "@/lib/api-client";
 import { SkeletonStaff } from "@/components/menuverse/skeletons";
 import { BlobImg } from "@/components/ui/blob-img";
 import { uploadToImgBB } from "@/lib/imgbb";
@@ -520,7 +521,16 @@ function StaffPage() {
     const q = search.toLowerCase().trim();
     const map = new Map<string, StaffMember>();
     staff.forEach((s) => {
-      if (isManager && (s.role === "Owner" || s.role.toLowerCase() === "owner")) {
+      const sRoleLower = (s.role || "").toLowerCase().trim();
+      const sEmailLower = (s.email || "").toLowerCase().trim();
+      if (
+        sRoleLower === "super_admin" ||
+        sRoleLower === "superadmin" ||
+        sEmailLower === "admin@menuverse.app"
+      ) {
+        return;
+      }
+      if (isManager && (s.role === "Owner" || sRoleLower === "owner")) {
         return;
       }
       const matchSearch =
@@ -682,10 +692,13 @@ function StaffPage() {
       }
 
       try {
-        const dbStaff = await getStaffServer({ data: {} });
+        const dbStaff = await apiGet<StaffMember[]>("/api/staff").catch(async () => {
+          const res = await getStaffServer({ data: {} });
+          return (res || []) as StaffMember[];
+        });
         if (dbStaff && Array.isArray(dbStaff) && dbStaff.length > 0) {
           const map = new Map<string, StaffMember>();
-          (dbStaff as StaffMember[]).forEach((s) => {
+          dbStaff.forEach((s) => {
             const key = (s.email || s.id).toLowerCase().trim();
             if (!map.has(key)) map.set(key, s);
           });
@@ -710,17 +723,29 @@ function StaffPage() {
             : filterBranch !== "all"
               ? filterBranch
               : undefined;
-        const dbStaff = await getStaffServer({
-          data: {
-            branch: effectiveBranch,
-            role: filterRole !== "all" ? filterRole : undefined,
-            status: filterStatus !== "all" ? filterStatus : undefined,
-            search: search.trim() || undefined,
-          },
+
+        const params = new URLSearchParams();
+        if (effectiveBranch) params.set("branchId", effectiveBranch);
+        if (filterRole !== "all") params.set("role", filterRole);
+        if (filterStatus !== "all") params.set("status", filterStatus);
+        if (search.trim()) params.set("search", search.trim());
+
+        const url = `/api/staff${params.toString() ? `?${params.toString()}` : ""}`;
+        const dbStaff = await apiGet<StaffMember[]>(url).catch(async () => {
+          const res = await getStaffServer({
+            data: {
+              branch: effectiveBranch,
+              role: filterRole !== "all" ? filterRole : undefined,
+              status: filterStatus !== "all" ? filterStatus : undefined,
+              search: search.trim() || undefined,
+            },
+          });
+          return (res || []) as StaffMember[];
         });
+
         if (dbStaff && Array.isArray(dbStaff)) {
           const map = new Map<string, StaffMember>();
-          (dbStaff as StaffMember[]).forEach((s) => {
+          dbStaff.forEach((s) => {
             const key = (s.email || s.id).toLowerCase().trim();
             if (!map.has(key)) map.set(key, s);
           });
@@ -757,8 +782,19 @@ function StaffPage() {
     }
 
     try {
-      await saveStaffServer({
-        data: memberToSave as unknown as Parameters<typeof saveStaffServer>[0]["data"],
+      await apiPost("/api/staff", {
+        id: editTarget ? editTarget.id : undefined,
+        name: memberToSave.name,
+        email: memberToSave.email,
+        phone: memberToSave.phone,
+        role: memberToSave.role,
+        branch: memberToSave.branch,
+        status: memberToSave.status,
+        password: currentPass || undefined,
+      }).catch(async () => {
+        await saveStaffServer({
+          data: memberToSave as unknown as Parameters<typeof saveStaffServer>[0]["data"],
+        });
       });
 
       if (editTarget) {
@@ -790,7 +826,9 @@ function StaffPage() {
       return;
     }
     try {
-      await deleteStaffServer({ data: deleteTarget.id });
+      await apiDelete(`/api/staff?id=${encodeURIComponent(deleteTarget.id)}`).catch(async () => {
+        await deleteStaffServer({ data: deleteTarget.id });
+      });
     } catch {
       /* ignore */
     }

@@ -107,10 +107,14 @@ export function getPool(): mysql.Pool {
   return globalForMysql.__mysql_pool__;
 }
 
+export type QueryParams =
+  | (string | number | bigint | boolean | Date | Buffer | null | undefined | unknown)[]
+  | Record<string, unknown>;
+
 /**
  * Helper to run a parameterized query with automatic table creation & retry fallback.
  */
-export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValues): Promise<T> {
+export async function query<T = unknown>(sql: string, params?: QueryParams): Promise<T> {
   if (!globalForMysql.__mysql_tables_initialized__) {
     await ensureAllTablesExist();
   }
@@ -119,8 +123,8 @@ export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValu
   const isDDL = /^\s*(ALTER|CREATE|DROP|TRUNCATE|RENAME)\b/i.test(sql);
   try {
     const [rows] = isDDL
-      ? await connectionPool.query(sql, params)
-      : await connectionPool.execute(sql, params);
+      ? await connectionPool.query(sql, params as mysql.ExecuteValues)
+      : await connectionPool.execute(sql, params as mysql.ExecuteValues);
     return rows as T;
   } catch (err: unknown) {
     const mysqlErr = err as { errno?: number; code?: string };
@@ -137,8 +141,8 @@ export async function query<T = unknown>(sql: string, params?: mysql.ExecuteValu
       globalForMysql.__mysql_tables_initialized__ = false;
       await ensureAllTablesExist();
       const [retryRows] = isDDL
-        ? await connectionPool.query(sql, params)
-        : await connectionPool.execute(sql, params);
+        ? await connectionPool.query(sql, params as mysql.ExecuteValues)
+        : await connectionPool.execute(sql, params as mysql.ExecuteValues);
       return retryRows as T;
     }
     throw err;

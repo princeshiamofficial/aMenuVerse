@@ -13,6 +13,7 @@ import {
   getRestaurantProfile,
   getSettingsServer,
 } from "@/lib/db-queries.server";
+import { apiGet, apiPost, apiDelete } from "@/lib/api-client";
 import { SkeletonFoodItemsPage } from "@/components/menuverse/skeletons";
 import { BlobImg } from "@/components/ui/blob-img";
 import { uploadToImgBB } from "@/lib/imgbb";
@@ -163,7 +164,7 @@ function sanitizeFoodItem(raw: Record<string, unknown>, index: number): FoodItem
     shortDescription: String(raw?.shortDescription || raw?.description || ""),
     longDescription: String(raw?.longDescription || raw?.description || ""),
     category: String(raw?.category || "Burgers"),
-    image: String(raw?.image || ""),
+    image: String(raw?.image || raw?.imageUrl || raw?.image_url || raw?.img || ""),
     gallery: Array.isArray(raw?.gallery) ? (raw.gallery as string[]) : [],
     view360: String(raw?.view360 || ""),
     price: Number(raw?.price) || 0,
@@ -274,12 +275,23 @@ export default function FoodItemsPage() {
     if (!hydrated) return;
     const timer = setTimeout(async () => {
       try {
-        const dbItems = await getFoodItemsServer({
-          data: {
-            category: categoryFilter !== "all" ? categoryFilter : undefined,
-            search: query.trim() || undefined,
-          },
+        const q = query.trim();
+        const cat = categoryFilter !== "all" ? categoryFilter : "";
+        const params = new URLSearchParams();
+        if (q) params.set("search", q);
+        if (cat) params.set("categoryId", cat);
+        const url = `/api/food-items${params.toString() ? `?${params.toString()}` : ""}`;
+
+        const dbItems = await apiGet<FoodItem[]>(url).catch(async () => {
+          const res = await getFoodItemsServer({
+            data: {
+              category: cat || undefined,
+              search: q || undefined,
+            },
+          });
+          return (res || []).map(sanitizeFoodItem);
         });
+
         if (dbItems && Array.isArray(dbItems)) {
           setItems(dbItems.map(sanitizeFoodItem));
         }
@@ -354,7 +366,31 @@ export default function FoodItemsPage() {
     setSheetOpen(false);
 
     try {
-      await saveFoodItemsServer({ data: updatedList });
+      await apiPost("/api/food-items", {
+        id: toSave.id,
+        name: toSave.name,
+        categoryId: toSave.category,
+        price: toSave.price,
+        description: toSave.shortDescription || toSave.longDescription || "",
+        badge: toSave.bestSeller
+          ? "Best Seller"
+          : toSave.chefChoice
+            ? "Chef Choice"
+            : toSave.popular
+              ? "Popular"
+              : undefined,
+        isVeg: toSave.vegetarian,
+        isVegan: false,
+        isGlutenFree: false,
+        isHalal: toSave.halal,
+        spicyLevel: toSave.spicyLevel,
+        calories: toSave.calories,
+        prepTime: toSave.prepTime,
+        status: toSave.available ? "available" : "sold_out",
+        variations: [],
+        addOns: [],
+        branchIds: [],
+      });
       toast.success(isNew ? "Food item created successfully" : "Food item updated successfully");
     } catch (err: unknown) {
       console.error("DB save error:", err);
@@ -370,10 +406,12 @@ export default function FoodItemsPage() {
     setDeleteId(null);
 
     try {
-      await deleteFoodItemServer({ data: { id: targetId } });
+      await apiDelete(`/api/food-items?id=${encodeURIComponent(targetId)}`);
       toast.success("Food item deleted successfully");
-    } catch {
-      toast.success("Food item deleted successfully");
+    } catch (err: unknown) {
+      console.error("Delete food item error:", err);
+      const msg = err instanceof Error ? err.message : "Failed to delete food item";
+      toast.error(msg);
     }
   };
 
@@ -697,25 +735,30 @@ function EditDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editing: FoodItem | null;
-  setEditing: (item: FoodItem | null) => void;
+  setEditing: React.Dispatch<React.SetStateAction<FoodItem | null>>;
   categories: CategoryRef[];
   currencySymbol?: string;
   isNew: boolean;
   onSave: () => void;
   onDelete: () => void;
 }) {
+  const [isUploading, setIsUploading] = useState(false);
+
   if (!editing) return null;
 
   const handleMainFile = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setIsUploading(true);
     toast.info("Uploading food image...");
     try {
       const cdnUrl = await uploadToImgBB(file);
-      setEditing({ ...editing, image: cdnUrl });
+      setEditing((prev) => (prev ? { ...prev, image: cdnUrl } : null));
       toast.success("Food image uploaded successfully!");
     } catch {
       toast.error("Failed to upload image");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -735,11 +778,15 @@ function EditDialog({
             <Input
               value={editing.name}
               onChange={(e) =>
-                setEditing({
-                  ...editing,
-                  name: e.target.value,
-                  slug: editing.slug ? editing.slug : slugify(e.target.value),
-                })
+                setEditing((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        name: e.target.value,
+                        slug: prev.slug ? prev.slug : slugify(e.target.value),
+                      }
+                    : null,
+                )
               }
               placeholder="e.g. Margherita Pizza"
               className="h-11 bg-[#FFFBF5] border border-stone-200/90 rounded-2xl text-sm px-4 focus-visible:ring-amber-500"
@@ -752,7 +799,9 @@ function EditDialog({
               <Label className="text-sm font-semibold text-stone-800">Category *</Label>
               <Select
                 value={editing.category || categories[0]?.name || "Burgers"}
-                onValueChange={(val) => setEditing({ ...editing, category: val })}
+                onValueChange={(val) =>
+                  setEditing((prev) => (prev ? { ...prev, category: val } : null))
+                }
               >
                 <SelectTrigger className="h-11 bg-[#FFFBF5] border border-stone-200/90 rounded-2xl text-sm px-4 focus:ring-amber-500">
                   <SelectValue placeholder="Select category" />
@@ -776,7 +825,11 @@ function EditDialog({
                 step="0.01"
                 min="0"
                 value={editing.price}
-                onChange={(e) => setEditing({ ...editing, price: Number(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setEditing((prev) =>
+                    prev ? { ...prev, price: Number(e.target.value) || 0 } : null,
+                  )
+                }
                 placeholder="0.00"
                 className="h-11 bg-[#FFFBF5] border border-stone-200/90 rounded-2xl text-sm px-4 focus-visible:ring-amber-500"
               />
@@ -788,7 +841,9 @@ function EditDialog({
             <Label className="text-sm font-semibold text-stone-800">Short Description</Label>
             <Input
               value={editing.shortDescription}
-              onChange={(e) => setEditing({ ...editing, shortDescription: e.target.value })}
+              onChange={(e) =>
+                setEditing((prev) => (prev ? { ...prev, shortDescription: e.target.value } : null))
+              }
               placeholder="San Marzano, buffalo mozzarella, basil."
               className="h-11 bg-[#FFFBF5] border border-stone-200/90 rounded-2xl text-sm px-4 focus-visible:ring-amber-500"
             />
@@ -797,8 +852,8 @@ function EditDialog({
           {/* Main Cover Image */}
           <div className="space-y-1.5 pt-1">
             <Label className="text-sm font-semibold text-stone-800">Main Cover Image</Label>
-            <div className="flex items-center gap-4 pt-1">
-              <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/80 shrink-0 shadow-2xs">
+            <div className="flex items-start gap-4 pt-1">
+              <div className="relative w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/80 shrink-0 shadow-2xs">
                 {editing.image ? (
                   <BlobImg src={editing.image} alt="Cover" className="w-full h-full object-cover" />
                 ) : (
@@ -808,22 +863,44 @@ function EditDialog({
                 )}
               </div>
 
-              <div className="space-y-1.5 flex-1">
-                <Label
-                  htmlFor="dialog-main-file"
-                  className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 hover:bg-stone-50 rounded-full font-semibold text-xs text-stone-700 shadow-2xs transition-all"
-                >
-                  <Upload className="w-4 h-4 text-stone-500" />
-                  Upload Image
-                </Label>
-                <input
-                  id="dialog-main-file"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleMainFile}
-                  className="hidden"
+              <div className="space-y-2 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Label
+                    htmlFor="dialog-main-file"
+                    className="cursor-pointer inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-stone-200 hover:bg-stone-50 rounded-full font-semibold text-xs text-stone-700 shadow-2xs transition-all"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-stone-500" />
+                    {isUploading ? "Uploading..." : "Upload File"}
+                  </Label>
+                  <input
+                    id="dialog-main-file"
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploading}
+                    onChange={handleMainFile}
+                    className="hidden"
+                  />
+                  {editing.image && (
+                    <button
+                      type="button"
+                      onClick={() => setEditing((prev) => (prev ? { ...prev, image: "" } : null))}
+                      className="px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded-full transition-all"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <Input
+                  value={editing.image || ""}
+                  onChange={(e) =>
+                    setEditing((prev) => (prev ? { ...prev, image: e.target.value } : null))
+                  }
+                  placeholder="Or paste direct image URL (https://...)"
+                  className="h-9 bg-[#FFFBF5] border border-stone-200/90 rounded-xl text-xs px-3 focus-visible:ring-amber-500"
                 />
-                <p className="text-[11px] text-stone-400">PNG, JPG, WebP up to 5MB.</p>
+                <p className="text-[11px] text-stone-400">
+                  Upload JPG, PNG, WebP or paste an online image link.
+                </p>
               </div>
             </div>
           </div>

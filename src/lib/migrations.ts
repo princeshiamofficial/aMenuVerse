@@ -293,6 +293,34 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       INDEX idx_audit_restaurant (restaurant_id),
       INDEX idx_audit_date (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    // 17. Restaurant Profiles Table
+    `CREATE TABLE IF NOT EXISTS restaurant_profiles (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      restaurant_id INT NOT NULL UNIQUE,
+      restaurant_name VARCHAR(255),
+      slug VARCHAR(255),
+      tagline TEXT,
+      description TEXT,
+      intro TEXT,
+      about TEXT,
+      logo_url TEXT,
+      cover_url TEXT,
+      favicon_url TEXT,
+      social_preview_url TEXT,
+      phone VARCHAR(50),
+      email VARCHAR(255),
+      website VARCHAR(255),
+      currency VARCHAR(20) DEFAULT 'BDT',
+      address TEXT,
+      social_links JSON,
+      business_hours JSON,
+      facilities TEXT,
+      opening_hours VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_restaurant_profiles_tenant (restaurant_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
   ];
 
   for (const stmt of tableStatements) {
@@ -416,6 +444,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     "ALTER TABLE food_items ADD COLUMN image_url TEXT NULL",
     "ALTER TABLE food_items ADD COLUMN image TEXT NULL",
     "ALTER TABLE food_items ADD COLUMN price DECIMAL(10,2) NOT NULL DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN original_price DECIMAL(10,2) NULL",
     "ALTER TABLE food_items ADD COLUMN discount_price DECIMAL(10,2) NULL",
     "ALTER TABLE food_items ADD COLUMN prep_time INT DEFAULT 15",
     "ALTER TABLE food_items ADD COLUMN calories INT DEFAULT 0",
@@ -426,9 +455,18 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     "ALTER TABLE food_items ADD COLUMN popular TINYINT(1) DEFAULT 0",
     "ALTER TABLE food_items ADD COLUMN chef_choice TINYINT(1) DEFAULT 0",
     "ALTER TABLE food_items ADD COLUMN vegetarian TINYINT(1) DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN is_veg TINYINT(1) DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN is_vegan TINYINT(1) DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN is_gluten_free TINYINT(1) DEFAULT 0",
+    "ALTER TABLE food_items ADD COLUMN is_halal TINYINT(1) DEFAULT 1",
     "ALTER TABLE food_items ADD COLUMN halal TINYINT(1) DEFAULT 1",
+    "ALTER TABLE food_items ADD COLUMN badge VARCHAR(255) NULL",
     "ALTER TABLE food_items ADD COLUMN out_of_stock TINYINT(1) DEFAULT 0",
     "ALTER TABLE food_items ADD COLUMN is_available TINYINT(1) DEFAULT 1",
+    "ALTER TABLE food_items ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+    "ALTER TABLE food_items ADD COLUMN variations JSON NULL",
+    "ALTER TABLE food_items ADD COLUMN addons JSON NULL",
+    "ALTER TABLE food_items ADD COLUMN branch_ids JSON NULL",
     "ALTER TABLE food_items ADD COLUMN sort_order INT DEFAULT 0",
     "ALTER TABLE food_items MODIFY COLUMN id VARCHAR(255) NOT NULL",
     "ALTER TABLE food_items MODIFY COLUMN name VARCHAR(255) NOT NULL",
@@ -445,6 +483,8 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
   const userColumnAlters = [
     "ALTER TABLE users ADD COLUMN full_name VARCHAR(255) NULL",
     "ALTER TABLE users ADD COLUMN name VARCHAR(255) NULL",
+    "ALTER TABLE users MODIFY COLUMN name VARCHAR(255) NULL",
+    "ALTER TABLE users MODIFY COLUMN full_name VARCHAR(255) NULL",
     "ALTER TABLE users ADD COLUMN avatar_url TEXT NULL",
     "ALTER TABLE users ADD COLUMN avatar VARCHAR(512) NULL",
     "ALTER TABLE users ADD COLUMN phone VARCHAR(50) NULL",
@@ -511,10 +551,13 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
     "ALTER TABLE branch_tables ADD COLUMN branch_id VARCHAR(255) NOT NULL DEFAULT '1'",
     "ALTER TABLE branch_tables ADD COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
     "ALTER TABLE branch_tables ADD COLUMN table_number VARCHAR(50) NULL",
+    "ALTER TABLE branch_tables ADD COLUMN name VARCHAR(255) NULL",
     "ALTER TABLE branch_tables ADD COLUMN zone VARCHAR(100) DEFAULT 'MAIN ROOM'",
     "ALTER TABLE branch_tables ADD COLUMN sort_order INT DEFAULT 0",
     "ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL",
     "ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'",
+    "ALTER TABLE branch_tables ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+    "ALTER TABLE branch_tables ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
     "ALTER TABLE branch_tables MODIFY COLUMN id VARCHAR(255) NOT NULL",
     "ALTER TABLE branch_tables MODIFY COLUMN table_no VARCHAR(50) NOT NULL DEFAULT '01'",
     "ALTER TABLE branch_tables MODIFY COLUMN restaurant_id INT NOT NULL DEFAULT 1",
@@ -553,6 +596,19 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       await pool.query(alter);
     } catch {
       /* Column already exists */
+    }
+  }
+
+  // Ensure all restaurant_profiles table columns and uniqueness exist across legacy schemas
+  const restaurantProfilesColumnAlters = [
+    "ALTER TABLE restaurant_profiles ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
+    "ALTER TABLE restaurant_profiles ADD UNIQUE KEY uq_restaurant_profiles_tenant (restaurant_id)",
+  ];
+  for (const alter of restaurantProfilesColumnAlters) {
+    try {
+      await pool.query(alter);
+    } catch {
+      /* Column/key already exists */
     }
   }
 
@@ -726,8 +782,8 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       if (!Array.isArray(existing) || existing.length === 0) {
         const pHash = hashPwd(u.pwd);
         await pool.execute(
-          "INSERT INTO users (id, email, password_hash, full_name, phone, branch) VALUES (?, ?, ?, ?, ?, ?)",
-          [u.id, u.email, pHash, u.name, u.phone, u.branch],
+          "INSERT INTO users (id, email, password_hash, name, full_name, phone, branch) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [u.id, u.email, pHash, u.name, u.name, u.phone, u.branch],
         );
         await pool.execute(
           "INSERT INTO user_roles (user_id, role, restaurant_id) VALUES (?, ?, ?)",

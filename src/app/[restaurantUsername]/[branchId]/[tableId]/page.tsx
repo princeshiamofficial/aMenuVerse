@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { fetchPublicMenu, fetchPublicMenuSync } from "@/lib/public-menu";
+import { apiGet } from "@/lib/api-client";
 import { validateTableQrServer } from "@/lib/db-queries.server";
 import { PublicRestaurantView } from "@/app/[restaurantUsername]/page";
 import type { Restaurant } from "@/lib/restaurants-data";
@@ -20,6 +21,7 @@ export default function RestaurantBranchTableRoute() {
   const [resolvedTableNo, setResolvedTableNo] = useState<string>("");
   const [qrValid, setQrValid] = useState<boolean>(true);
   const [invalidReason, setInvalidReason] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function loadAsync() {
@@ -27,22 +29,47 @@ export default function RestaurantBranchTableRoute() {
         const fresh = await fetchPublicMenu(restaurantUsername);
         if (fresh) setRestaurantData(fresh);
 
-        const valRes = await validateTableQrServer({
-          data: {
-            restaurantSlug: restaurantUsername,
-            branchId,
-            tableId,
-          },
-        });
+        let valRes: {
+          valid?: boolean;
+          reason?: string;
+          branchId?: string;
+          tableNo?: string;
+        } | null = null;
+
+        try {
+          const apiRes = await apiGet<Record<string, unknown>>(
+            `/api/branch-tables?validate=true&restaurantSlug=${encodeURIComponent(restaurantUsername)}&branchId=${encodeURIComponent(branchId)}&tableId=${encodeURIComponent(tableId)}`,
+          );
+          if (apiRes) {
+            const nestedData = (apiRes.data as Record<string, unknown>) || apiRes;
+            valRes = {
+              valid: apiRes.valid !== false && nestedData.valid !== false,
+              reason: String(apiRes.reason || nestedData.reason || ""),
+              branchId: String(nestedData.branchId || apiRes.branchId || ""),
+              tableNo: String(nestedData.tableNo || apiRes.tableNo || ""),
+            };
+          }
+        } catch {
+          valRes = await validateTableQrServer({
+            data: {
+              restaurantSlug: restaurantUsername,
+              branchId,
+              tableId,
+            },
+          });
+        }
+
         if (valRes && valRes.valid === false) {
           setQrValid(false);
           setInvalidReason(valRes.reason || "Invalid Table QR Code");
-        } else if (valRes && valRes.valid) {
+        } else if (valRes && valRes.valid !== false) {
           if (valRes.branchId) setResolvedBranchId(valRes.branchId);
           if (valRes.tableNo) setResolvedTableNo(valRes.tableNo);
         }
       } catch {
         /* ignore */
+      } finally {
+        setLoading(false);
       }
     }
     loadAsync();
@@ -63,6 +90,15 @@ export default function RestaurantBranchTableRoute() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-2xl p-8 text-center min-h-[60vh] flex flex-col items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent mb-3" />
+        <p className="text-sm font-semibold text-gray-600">Loading dining table menu...</p>
+      </div>
+    );
+  }
+
   if (!restaurantData) {
     return (
       <div className="mx-auto max-w-2xl p-8 text-center min-h-[60vh] flex flex-col items-center justify-center">
@@ -78,7 +114,7 @@ export default function RestaurantBranchTableRoute() {
     <PublicRestaurantView
       initialRestaurant={restaurantData}
       restaurantUsername={restaurantUsername}
-      tableNumber={resolvedTableNo || "01"}
+      tableNumber={resolvedTableNo || ""}
       branchId={resolvedBranchId || branchId}
     />
   );

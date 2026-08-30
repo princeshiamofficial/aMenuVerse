@@ -84,6 +84,7 @@ import {
   getSettingsServer,
   getRestaurantProfile,
 } from "@/lib/db-queries.server";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api-client";
 import { useRealtime, playChime } from "@/lib/use-realtime";
 
 // ================================================================
@@ -623,7 +624,9 @@ export default function OrdersPage() {
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     try {
-      await updateOrderStatusServer({ data: { id, status } });
+      await apiPut("/api/orders", { id, status }).catch(async () => {
+        await updateOrderStatusServer({ data: { id, status } });
+      });
       const prevOrder = orders.find((o) => o.id === id);
       const prevStatus = prevOrder?.status;
       setOrders((prev) =>
@@ -644,7 +647,9 @@ export default function OrdersPage() {
 
   const handleDeleteOrder = async (orderId: string) => {
     try {
-      await deleteOrderServer({ data: orderId });
+      await apiDelete(`/api/orders?id=${encodeURIComponent(orderId)}`).catch(async () => {
+        await deleteOrderServer({ data: orderId });
+      });
       const prevOrder = orders.find((o) => o.id === orderId);
       const prevStatus = prevOrder?.status;
       setOrders((prev) => prev.filter((o) => o.id !== orderId));
@@ -2014,7 +2019,7 @@ function PrintReceiptDialog({
               </span>
             </div>
             {order.tableNumber && (
-              <div className="text-[11px] font-semibold">Table: #{order.tableNumber}</div>
+              <div className="text-[11px] font-semibold">Table: {order.tableNumber}</div>
             )}
             <div className="flex justify-between text-[11px]">
               <span>Customer: {order.customerName}</span>

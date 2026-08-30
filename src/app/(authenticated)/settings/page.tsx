@@ -43,9 +43,9 @@ import {
   Lock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { generateId } from "@/lib/utils";
 
-import { cn, generateId } from "@/lib/utils";
-
+import { apiGet, apiPost } from "@/lib/api-client";
 import { getSettingsServer, saveSettingsServer } from "@/lib/db-queries.server";
 
 type NotifChannel = { email: boolean; push: boolean; sms: boolean };
@@ -148,7 +148,8 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const dbSettings = await getSettingsServer();
+        const res = await apiGet<Record<string, unknown>>("/api/settings");
+        const dbSettings = (res?.data || res) as Record<string, unknown>;
         if (dbSettings && typeof dbSettings === "object") {
           let appObj: Record<string, unknown> | null = null;
           if (dbSettings.app_settings) {
@@ -183,8 +184,11 @@ export default function SettingsPage() {
   const persist = async (next: Settings) => {
     setS(next);
     try {
-      await saveSettingsServer({
-        data: { app_settings: next, currency: next.currency, api_keys: keys },
+      await apiPost("/api/settings", {
+        ...next,
+        currency: next.currency,
+        taxRate: next.taxRate,
+        serviceFee: next.serviceCharge,
       });
     } catch {
       /* ignore */
@@ -193,7 +197,12 @@ export default function SettingsPage() {
   const update = <K extends keyof Settings>(k: K, v: Settings[K]) => persist({ ...s, [k]: v });
   const save = async () => {
     try {
-      await saveSettingsServer({ data: { app_settings: s, currency: s.currency, api_keys: keys } });
+      await apiPost("/api/settings", {
+        ...s,
+        currency: s.currency,
+        taxRate: s.taxRate,
+        serviceFee: s.serviceCharge,
+      });
       toast.success("Settings saved successfully!");
     } catch {
       toast.error("Failed to save settings");
