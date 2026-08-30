@@ -8063,54 +8063,20 @@ export const testSingleFcmSubscriberServer = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     await requireRole(["super_admin", "owner"]);
-    const rows = await query<
-      Array<{
-        id: string;
-        endpoint: string;
-        p256dh: string;
-        auth: string;
-        role: string;
-      }>
-    >("SELECT * FROM push_subscriptions WHERE id = ? LIMIT 1", [data.id]);
-
-    if (!rows || rows.length === 0) {
-      throw new Error("Subscriber endpoint not found");
-    }
-
-    const sub = rows[0];
-    const webpush = (await import("web-push")).default;
-
-    const payload = JSON.stringify({
+    const m = await import("./web-push.server");
+    const result = await m.sendSinglePushToSubscriberServer(data.id, {
+      sound: data.sound,
       title: "🔔 Test FCM Push Alert",
-      body: "Your device is successfully receiving instant Web Push alerts from MenuVerse!",
-      icon: "/placeholder.svg",
-      badge: "/placeholder.svg",
-      sound: data.sound || "chime",
-      url: "/dashboard",
-      vibrate: [200, 100, 200, 100, 300],
-      tag: `test-fcm-${Date.now()}`,
+      body: "Your device is connected and receiving high-priority push notifications!",
     });
 
-    try {
-      await webpush.sendNotification(
-        {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        },
-        payload,
-        { urgency: "high", TTL: 3600 },
-      );
-      return { success: true };
-    } catch (err: unknown) {
-      const statusCode = (err as { statusCode?: number })?.statusCode;
-      if (statusCode === 404 || statusCode === 410) {
-        await query("DELETE FROM push_subscriptions WHERE id = ?", [data.id]);
-        throw new Error("Subscription has expired on client browser (removed from DB).");
+    if (!result.success) {
+      if (result.expired) {
+        throw new Error(result.message || "Device endpoint expired (removed from database).");
       }
-      throw new Error((err as Error).message || "Failed to deliver test push.");
+      throw new Error(result.message || "Failed to deliver test push.");
     }
+
+    return { success: true };
   });
 

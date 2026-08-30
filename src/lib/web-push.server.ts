@@ -304,3 +304,69 @@ export async function sendSystemAnnouncementPushServer(params: {
   }
 }
 
+/**
+ * Sends a direct test push notification to a specific subscription ID
+ */
+export async function sendSinglePushToSubscriberServer(
+  subscriberId: string,
+  options?: { sound?: string; title?: string; body?: string }
+): Promise<{ success: boolean; expired?: boolean; message?: string }> {
+  try {
+    const rows = await query<
+      Array<{
+        id: string;
+        endpoint: string;
+        p256dh: string;
+        auth: string;
+      }>
+    >("SELECT * FROM push_subscriptions WHERE id = ? LIMIT 1", [subscriberId]);
+
+    if (!rows || rows.length === 0) {
+      return { success: false, message: "Subscriber endpoint not found" };
+    }
+
+    const sub = rows[0];
+    const pushSubscription = {
+      endpoint: sub.endpoint,
+      keys: {
+        p256dh: sub.p256dh,
+        auth: sub.auth,
+      },
+    };
+
+    const notificationPayload = JSON.stringify({
+      title: options?.title || "🔔 MenuVerse FCM Live Ping",
+      body: options?.body || "Your device is connected and receiving high-priority push notifications!",
+      icon: "/placeholder.svg",
+      badge: "/placeholder.svg",
+      sound: options?.sound || "chime",
+      url: "/dashboard",
+      vibrate: [200, 100, 200, 100, 300],
+      tag: `test-fcm-${Date.now()}`,
+    });
+
+    try {
+      await webpush.sendNotification(pushSubscription, notificationPayload, {
+        TTL: 3600,
+        urgency: "high",
+        topic: "ping",
+      });
+      return { success: true };
+    } catch (err: unknown) {
+      const statusCode = (err as { statusCode?: number })?.statusCode;
+      if (statusCode === 404 || statusCode === 410 || String(err).includes("410") || String(err).includes("404")) {
+        await deletePushSubscriptionServer(sub.endpoint).catch(() => {});
+        return {
+          success: false,
+          expired: true,
+          message: "Device endpoint was rotated or expired on browser (automatically cleaned from DB).",
+        };
+      }
+      const msg = (err as Error).message || "FCM Gateway error";
+      return { success: false, message: msg };
+    }
+  } catch (err: unknown) {
+    return { success: false, message: (err as Error).message || "Dispatch error" };
+  }
+}
+

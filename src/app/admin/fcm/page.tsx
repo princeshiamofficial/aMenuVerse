@@ -188,7 +188,11 @@ export default function AdminFcmPage() {
         toast.success("🔔 Direct test push sent to selected device endpoint!");
       }
     } catch (err: unknown) {
-      toast.error((err as Error).message || "Could not deliver test push.");
+      const msg = (err as Error).message || "Could not deliver test push.";
+      toast.error(msg);
+      if (msg.includes("expired") || msg.includes("removed")) {
+        loadData();
+      }
     } finally {
       setActionId(null);
     }
