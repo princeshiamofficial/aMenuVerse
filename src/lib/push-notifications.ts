@@ -22,17 +22,62 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+let globalAudioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!globalAudioCtx || globalAudioCtx.state === "closed") {
+      globalAudioCtx = new AudioContextClass();
+    }
+    if (globalAudioCtx.state === "suspended") {
+      globalAudioCtx.resume().catch(() => {});
+    }
+    return globalAudioCtx;
+  } catch {
+    return null;
+  }
+}
+
+// Auto-unlock audio on first user interaction
+if (typeof window !== "undefined") {
+  const unlock = () => {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+    window.removeEventListener("click", unlock);
+    window.removeEventListener("touchstart", unlock);
+    window.removeEventListener("keydown", unlock);
+  };
+  window.addEventListener("click", unlock, { passive: true });
+  window.addEventListener("touchstart", unlock, { passive: true });
+  window.addEventListener("keydown", unlock, { passive: true });
+}
+
 /**
- * Synthesizes high-fidelity custom chime and alert tones via native Web Audio API
+ * Synthesizes high-fidelity custom chime and alert tones via native Web Audio API with audio fallback
  */
 export function playNotificationSound(type: SoundType | string = "chime") {
   if (typeof window === "undefined") return;
 
   try {
-    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
+    const ctx = getAudioContext();
+    if (!ctx) {
+      const audio = new Audio("/sound.wav");
+      audio.volume = 0.8;
+      audio.play().catch(() => {});
+      return;
+    }
 
-    const ctx = new AudioContextClass();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
     const now = ctx.currentTime;
 
     if (type === "kitchen-bell" || type === "bell") {
@@ -49,7 +94,7 @@ export function playNotificationSound(type: SoundType | string = "chime") {
       osc2.frequency.setValueAtTime(1760, now); // Overtones
       osc2.frequency.exponentialRampToValueAtTime(880, now + 0.8);
 
-      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.setValueAtTime(0.55, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
 
       osc1.connect(gain);
@@ -69,7 +114,7 @@ export function playNotificationSound(type: SoundType | string = "chime") {
       osc.frequency.setValueAtTime(987.77, now); // B5
       osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
 
-      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.setValueAtTime(0.5, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
 
       osc.connect(gain);
@@ -84,7 +129,7 @@ export function playNotificationSound(type: SoundType | string = "chime") {
         const gain = ctx.createGain();
         osc.type = "square";
         osc.frequency.setValueAtTime(1046.5, now + delay); // C6
-        gain.gain.setValueAtTime(0.2, now + delay);
+        gain.gain.setValueAtTime(0.35, now + delay);
         gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.12);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -99,7 +144,7 @@ export function playNotificationSound(type: SoundType | string = "chime") {
         const gain = ctx.createGain();
         osc.type = "sine";
         osc.frequency.setValueAtTime(freq, now + idx * 0.07);
-        gain.gain.setValueAtTime(0.25, now + idx * 0.07);
+        gain.gain.setValueAtTime(0.45, now + idx * 0.07);
         gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.8);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -109,6 +154,13 @@ export function playNotificationSound(type: SoundType | string = "chime") {
     }
   } catch (err) {
     console.warn("[WebAudio Alert]", err);
+    try {
+      const audio = new Audio("/sound.wav");
+      audio.volume = 0.8;
+      audio.play().catch(() => {});
+    } catch {
+      /* ignore */
+    }
   }
 }
 
