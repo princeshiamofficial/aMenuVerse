@@ -1,6 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: [
+    "*.trycloudflare.com",
+    "*.loca.lt",
+    "*.ngrok.io",
+    "*.ngrok-free.app",
+    "*.pinggy.link",
+    "localhost:3000",
+    "192.168.10.115:3000",
+    "192.168.10.115",
+  ],
   serverExternalPackages: ["mysql2", "ioredis"],
   images: {
     remotePatterns: [
@@ -11,7 +21,32 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
+      allowedOrigins: [
+        "*.trycloudflare.com",
+        "*.loca.lt",
+        "*.ngrok.io",
+        "*.ngrok-free.app",
+        "*.pinggy.link",
+        "localhost:3000",
+        "192.168.10.115:3000",
+      ],
     },
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
+          {
+            key: "Access-Control-Allow-Headers",
+            value:
+              "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, bypass-tunnel-reminder",
+          },
+        ],
+      },
+    ];
   },
   typescript: {
     ignoreBuildErrors: false,
