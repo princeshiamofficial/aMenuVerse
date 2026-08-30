@@ -1,7 +1,7 @@
 // aMenuVerse Web Push Service Worker (Standard VAPID Web Push)
 // Handles background notifications, custom vibration patterns, badge count, and audio synchronization
 
-const SW_VERSION = "2.2.0";
+const SW_VERSION = "2.3.0";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -11,13 +11,14 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// 1. Push Event - Triggered when server sends a Web Push payload
+// 1. Push Event - Triggered when server sends a Web Push payload (even when tab/panel is closed)
 self.addEventListener("push", (event) => {
+  const origin = self.location.origin;
   let data = {
-    title: "🔔 aMenuVerse Alert",
+    title: "🔔 MenuVerse Alert",
     body: "You have a new update.",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
+    icon: `${origin}/icon-192.png`,
+    badge: `${origin}/favicon.ico`,
     url: "/dashboard",
     sound: "chime",
     unreadCount: 1,
@@ -45,8 +46,8 @@ self.addEventListener("push", (event) => {
     /* ignore badge failure */
   }
 
-  // B. Notify all active tabs / windows to play the in-browser custom audio chime
-  const broadcastPromise = self.clients
+  // B. Notify any open tabs / windows to play the in-browser custom audio chime
+  self.clients
     .matchAll({ type: "window", includeUncontrolled: true })
     .then((clientList) => {
       for (const client of clientList) {
@@ -63,16 +64,25 @@ self.addEventListener("push", (event) => {
     })
     .catch(() => {});
 
-  // C. Display the OS-level System Notification (Must use PNG/ICO, never SVG)
+  // C. Display the OS-level System Notification (Absolute HTTPS URL for background rendering)
+  const title = data.title || "🔔 MenuVerse Alert";
+  const iconUrl =
+    data.icon && (data.icon.startsWith("http://") || data.icon.startsWith("https://"))
+      ? data.icon
+      : `${origin}/icon-192.png`;
+  const badgeUrl =
+    data.badge && (data.badge.startsWith("http://") || data.badge.startsWith("https://"))
+      ? data.badge
+      : `${origin}/favicon.ico`;
+
   const options = {
-    body: data.body,
-    icon: data.icon && !data.icon.endsWith(".svg") ? data.icon : "/icon-192.png",
-    badge: data.badge && !data.badge.endsWith(".svg") ? data.badge : "/icon-192.png",
+    body: data.body || "New update received",
+    icon: iconUrl,
+    badge: badgeUrl,
     vibrate: data.vibrate || [200, 100, 200, 100, 400],
     tag: data.tag || `alert-${Date.now()}`,
     renotify: true,
     requireInteraction: true,
-    silent: false,
     data: {
       url: data.url || "/dashboard",
       orderId: data.orderId,
@@ -80,13 +90,8 @@ self.addEventListener("push", (event) => {
     },
   };
 
-  const notificationPromise = self.registration
-    .showNotification(data.title, options)
-    .catch((err) => {
-      console.warn("[SW] showNotification warning:", err);
-    });
-
-  event.waitUntil(Promise.allSettled([broadcastPromise, notificationPromise]));
+  // Crucial: event.waitUntil guarantees background OS notification is shown even when panel is closed
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 // 2. Notification Click Event - Direct staff or customer to relevant page
