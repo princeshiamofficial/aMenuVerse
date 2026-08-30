@@ -82,3 +82,19 @@ export async function uploadToImgBB(fileOrBase64: File | string): Promise<string
   // 4. Final Guaranteed Fallback
   return base64String || (typeof fileOrBase64 === "string" ? fileOrBase64 : "");
 }
+
+export const DEFAULT_FOOD_FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&auto=format&fit=crop&q=80";
+
+export function sanitizeImageUrl(
+  url?: string | null,
+  fallback = DEFAULT_FOOD_FALLBACK_IMAGE,
+): string {
+  if (!url || typeof url !== "string") return fallback;
+  const clean = url.trim();
+  if (!clean || clean.startsWith("blob:") || clean.includes("image-not-found")) {
+    return fallback;
+  }
+  return clean;
+}
+
