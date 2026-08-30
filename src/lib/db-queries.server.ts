@@ -3162,7 +3162,7 @@ export const getCategoriesServer = createServerFn({ method: "GET" })
         /* ignore */
       }
 
-      let sql = "SELECT * FROM categories WHERE (restaurant_id = ? OR restaurant_id = 0)";
+      let sql = "SELECT * FROM categories WHERE restaurant_id = ?";
       const params: unknown[] = [tenant.restaurantId];
 
       if (filter.activeOnly) {
@@ -3426,7 +3426,7 @@ export const getFoodItemsServer = createServerFn({ method: "GET" })
       : await resolvePrivateTenantContext();
 
     try {
-      let sql = `SELECT * FROM food_items WHERE (restaurant_id = ? OR restaurant_id = 0)`;
+      let sql = `SELECT * FROM food_items WHERE restaurant_id = ?`;
       const params: unknown[] = [tenant.restaurantId];
 
       if (filter.category && filter.category !== "all") {

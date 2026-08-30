@@ -104,44 +104,8 @@ export const RESTAURANTS: Restaurant[] = [
         ],
       },
     ],
-    categories: [
-      { name: "Burgers", emoji: "🍔" },
-      { name: "Pizza", emoji: "🍕" },
-      { name: "Beverages", emoji: "🥤" },
-    ],
-    menuItems: [
-      {
-        id: "mv-1",
-        name: "MenuVerse Special Burger",
-        description:
-          "Double smash patty with caramelized onions, cheddar cheese, and signature house sauce.",
-        price: 9.5,
-        image:
-          "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80",
-        category: "Burgers",
-        popular: true,
-      },
-      {
-        id: "mv-2",
-        name: "Artisan Truffle Pizza",
-        description:
-          "Stone-baked Neapolitan pizza topped with wild mushrooms, truffle oil, and fresh mozzarella.",
-        price: 14.0,
-        image:
-          "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600&auto=format&fit=crop&q=80",
-        category: "Pizza",
-        popular: true,
-      },
-      {
-        id: "mv-3",
-        name: "Fresh Iced Lemonade",
-        description: "Freshly squeezed lemon juice with garden mint and sparkling soda.",
-        price: 3.5,
-        image:
-          "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80",
-        category: "Beverages",
-      },
-    ],
+    categories: [],
+    menuItems: [],
   },
   {
     id: "mehnur-food-gallery",
@@ -167,38 +131,8 @@ export const RESTAURANTS: Restaurant[] = [
       "Welcome to Mehnur Food Gallery. Scan QR codes at your table to place kitchen orders instantly.",
     descriptionText:
       "Mehnur Food Gallery serves artisan dishes, delicious wontons, mapo tofu, kung pao chicken, and beverages.",
-    menuItems: [
-      {
-        id: "mfg-1",
-        name: "Sichuan Wontons in Chilli Oil",
-        description:
-          "Handcrafted wontons served in spicy, numbing chilli oil with sweet tang and toasted sesame.",
-        price: 8.5,
-        image:
-          "https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=600&auto=format&fit=crop&q=80",
-        category: "Starters",
-      },
-      {
-        id: "mfg-2",
-        name: "Silken Mapo Tofu",
-        description:
-          "Traditional Sichuan mapo tofu with minced beef, broad bean paste, and Sichuan peppercorns.",
-        price: 9.0,
-        image:
-          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80",
-        category: "Mains",
-      },
-      {
-        id: "mfg-3",
-        name: "Kung Pao Chicken",
-        description:
-          "Wok-tossed chicken chunks with peanuts, dried red chillies, and savory sweet soy reduction.",
-        price: 11.0,
-        image:
-          "https://images.unsplash.com/photo-1525755662778-989d0524087e?w=600&auto=format&fit=crop&q=80",
-        category: "Mains",
-      },
-    ],
+    categories: [],
+    menuItems: [],
   },
   {
     id: 1,
@@ -278,6 +212,7 @@ export const RESTAURANTS: Restaurant[] = [
         ],
       },
     ],
+    categories: [],
     menuItems: [],
   },
   {
@@ -296,60 +231,8 @@ export const RESTAURANTS: Restaurant[] = [
     logoImage:
       "https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?w=80&auto=format&fit=crop&q=80",
     username: "sultansdine",
-    menuItems: [
-      {
-        id: 21,
-        name: "Truffle Mushroom Pizza",
-        description:
-          "Stone-baked Neapolitan pizza topped with wild cremini mushrooms, white truffle oil essence, fresh mozzarella, and wild arugula.",
-        price: 18.0,
-        image:
-          "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=600&auto=format&fit=crop&q=80",
-        category: "Pizza",
-        popular: true,
-      },
-      {
-        id: 22,
-        name: "Spaghetti Carbonara",
-        description:
-          "Traditional egg yolk emulsion sauce, crispy cured pancetta, aged Pecorino Romano cheese, and fresh cracked black peppercorns.",
-        price: 15.5,
-        image:
-          "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=600&auto=format&fit=crop&q=80",
-        category: "Pasta",
-        popular: true,
-      },
-      {
-        id: 23,
-        name: "Classic Margherita Pizza",
-        description:
-          "Rich San Marzano tomato base, fresh buffalo mozzarella, aromatic sweet basil leaves, and extra virgin olive oil drizzle.",
-        price: 14.0,
-        image:
-          "https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?w=600&auto=format&fit=crop&q=80",
-        category: "Pizza",
-      },
-      {
-        id: 24,
-        name: "Espresso Tiramisu",
-        description:
-          "Layers of espresso-soaked Italian ladyfingers, velvety whipped mascarpone cream cheese, and dark cocoa powder dusting.",
-        price: 7.5,
-        image:
-          "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=600&auto=format&fit=crop&q=80",
-        category: "Desserts",
-      },
-      {
-        id: 25,
-        name: "Chianti Classico",
-        description:
-          "A glass of premium Tuscan red wine featuring rich cherry and wild berry notes with smooth tannins.",
-        price: 9.0,
-        image:
-          "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=600&auto=format&fit=crop&q=80",
-        category: "Beverages",
-      },
-    ],
+    categories: [],
+    menuItems: [],
   },
   {
     id: 3,
@@ -367,60 +250,8 @@ export const RESTAURANTS: Restaurant[] = [
     logoImage:
       "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=80&auto=format&fit=crop&q=80",
     username: "sakurasushibar",
-    menuItems: [
-      {
-        id: 31,
-        name: "Dragon Sushi Roll Platter",
-        description:
-          "Inside-out sushi rolls filled with freshwater eel and cucumber, topped with avocado sheets, tobiko, and sweet soy glaze.",
-        price: 22.5,
-        image:
-          "https://images.unsplash.com/photo-1611143669185-af224c5e3252?w=600&auto=format&fit=crop&q=80",
-        category: "Sushi",
-        popular: true,
-      },
-      {
-        id: 32,
-        name: "Tonkotsu Chashu Ramen",
-        description:
-          "16-hour slow-cooked creamy pork bone broth, custom noodles, tender braised chashu pork, soft nitamago egg, and nori.",
-        price: 16.0,
-        image:
-          "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600&auto=format&fit=crop&q=80",
-        category: "Ramen",
-        popular: true,
-      },
-      {
-        id: 33,
-        name: "Spicy Bluefin Tuna Roll",
-        description:
-          "Hand-rolled sushi featuring spicy minced bluefin tuna, toasted sesame seeds, crunchy tempura flakes, and spicy kewpie.",
-        price: 12.0,
-        image:
-          "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=600&auto=format&fit=crop&q=80",
-        category: "Sushi",
-      },
-      {
-        id: 34,
-        name: "Uji Matcha Ice Cream",
-        description:
-          "Artisanal churned green tea ice cream made with premium stone-ground matcha powder from Uji, Kyoto.",
-        price: 5.5,
-        image:
-          "https://images.unsplash.com/photo-1505394033641-40c6ad1178d7?w=600&auto=format&fit=crop&q=80",
-        category: "Desserts",
-      },
-      {
-        id: 35,
-        name: "Warm Junmai Sake",
-        description:
-          "Traditional pure-rice sake served warm, presenting a rich, full-bodied flavour profile with clean notes.",
-        price: 10.0,
-        image:
-          "https://images.unsplash.com/photo-1613063372218-568d6020bc41?w=600&auto=format&fit=crop&q=80",
-        category: "Beverages",
-      },
-    ],
+    categories: [],
+    menuItems: [],
   },
   {
     id: 4,
@@ -438,60 +269,8 @@ export const RESTAURANTS: Restaurant[] = [
     logoImage:
       "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=80&auto=format&fit=crop&q=80",
     username: "thespicywok",
-    menuItems: [
-      {
-        id: 41,
-        name: "Spicy Sichuan Chilli Wontons",
-        description:
-          "Delicate steamed pork wontons served floating in a spicy, aromatic house chilli oil and aged black vinegar sauce.",
-        price: 11.0,
-        image:
-          "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=600&auto=format&fit=crop&q=80",
-        category: "Appetizers",
-        popular: true,
-      },
-      {
-        id: 42,
-        name: "Sichuan Kung Pao Chicken",
-        description:
-          "Stir-fried tender diced chicken breast, roasted peanuts, wok-charred dry red chillies, and aromatic Sichuan peppercorns.",
-        price: 14.5,
-        image:
-          "https://images.unsplash.com/photo-1525755662778-989d0524087e?w=600&auto=format&fit=crop&q=80",
-        category: "Mains",
-        popular: true,
-      },
-      {
-        id: 43,
-        name: "Authentic Mapo Tofu",
-        description:
-          "Silken tofu blocks cooked with seasoned minced beef in a fiery, numbing Sichuan bean paste sauce.",
-        price: 13.0,
-        image:
-          "https://images.unsplash.com/photo-1541832676-9b763b0239ab?w=600&auto=format&fit=crop&q=80",
-        category: "Mains",
-      },
-      {
-        id: 44,
-        name: "Steamed Jasmine Rice",
-        description:
-          "Fragrant, fluffy long-grain steamed Jasmine rice served in a traditional porcelain bowl.",
-        price: 2.5,
-        image:
-          "https://images.unsplash.com/photo-1516685018646-549198525c1b?w=600&auto=format&fit=crop&q=80",
-        category: "Sides",
-      },
-      {
-        id: 45,
-        name: "Brewed Jasmine Green Tea",
-        description:
-          "Freshly brewed hot loose-leaf Jasmine green tea served hot, showcasing delicate floral notes.",
-        price: 3.0,
-        image:
-          "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop&q=80",
-        category: "Beverages",
-      },
-    ],
+    categories: [],
+    menuItems: [],
   },
   {
     id: 5,
@@ -509,59 +288,7 @@ export const RESTAURANTS: Restaurant[] = [
     logoImage:
       "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=80&auto=format&fit=crop&q=80",
     username: "redchilichinese",
-    menuItems: [
-      {
-        id: 51,
-        name: "Sichuan Chili Chicken",
-        description:
-          "Crispy chicken cubes stir-fried with hot Sichuan peppercorns, dried red chilis, and fresh garlic.",
-        price: 13.5,
-        image:
-          "https://images.unsplash.com/photo-1525755662778-989d0524087e?w=600&auto=format&fit=crop&q=80",
-        category: "Mains",
-        popular: true,
-      },
-      {
-        id: 52,
-        name: "Beef with Oyster Sauce",
-        description:
-          "Tender beef slices stir-fried with fresh broccoli, mushrooms, and scallions in rich oyster sauce.",
-        price: 15.0,
-        image:
-          "https://images.unsplash.com/photo-1534939561126-855b8675edd7?w=600&auto=format&fit=crop&q=80",
-        category: "Mains",
-        popular: true,
-      },
-      {
-        id: 53,
-        name: "Yangzhou Fried Rice",
-        description:
-          "Classic wok-fried Jasmine rice with shrimps, barbecue pork, green peas, and egg.",
-        price: 10.0,
-        image:
-          "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&auto=format&fit=crop&q=80",
-        category: "Rice & Noodles",
-      },
-      {
-        id: 54,
-        name: "Steamed Chicken Dumplings",
-        description:
-          "Handmade dumplings filled with seasoned minced chicken, served with soy dipping sauce.",
-        price: 8.0,
-        image:
-          "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=600&auto=format&fit=crop&q=80",
-        category: "Appetizers",
-      },
-      {
-        id: 55,
-        name: "Iced Lychee Tea",
-        description:
-          "Sweet iced black tea infused with fragrant lychee fruit syrup and whole lychees.",
-        price: 3.5,
-        image:
-          "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80",
-        category: "Beverages",
-      },
-    ],
+    categories: [],
+    menuItems: [],
   },
 ];

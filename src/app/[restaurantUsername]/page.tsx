@@ -699,11 +699,10 @@ export function PublicRestaurantView({
         if (
           resData &&
           resData.menuItems &&
-          Array.isArray(resData.menuItems) &&
-          resData.menuItems.length > 0
+          Array.isArray(resData.menuItems)
         ) {
           setAdminFoodItems(resData.menuItems as MenuItem[]);
-        } else if (dbItems && Array.isArray(dbItems) && dbItems.length > 0) {
+        } else if (dbItems && Array.isArray(dbItems)) {
           const mapped: MenuItem[] = dbItems.map((item) => ({
             id: String(item.id || generateId()),
             name: String(item.name || "Food Item"),
@@ -721,10 +720,14 @@ export function PublicRestaurantView({
             trending: Boolean(item.popular || item.bestSeller),
           }));
           setAdminFoodItems(mapped);
+        } else {
+          setAdminFoodItems([]);
         }
 
-        if (dbCategories && Array.isArray(dbCategories) && dbCategories.length > 0) {
+        if (dbCategories && Array.isArray(dbCategories)) {
           setAdminCategories(dbCategories.map((c) => ({ id: c.id, name: c.name, icon: c.icon })));
+        } else {
+          setAdminCategories([]);
         }
       } catch {
         /* ignore */
