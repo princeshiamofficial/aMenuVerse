@@ -769,7 +769,13 @@ export function PublicRestaurantView({
       }
     }
 
-    loadAdminMenuData();
+    const timer = setTimeout(() => {
+      setIsMenuLoading(false);
+    }, 2500);
+
+    loadAdminMenuData().finally(() => clearTimeout(timer));
+
+    return () => clearTimeout(timer);
   }, [restaurantUsername]);
 
   useEffect(() => {
