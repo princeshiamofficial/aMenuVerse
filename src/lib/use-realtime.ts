@@ -319,6 +319,7 @@ export function useRealtime({
                 "waiter:resolved",
                 "reservation:created",
                 "table:updated",
+                "announcement:created",
               ];
 
         targetTypes.forEach((type) => {
