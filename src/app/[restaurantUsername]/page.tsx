@@ -680,6 +680,24 @@ export function PublicRestaurantView({
     Array<{ id: string; name: string; icon?: string }>
   >(() => initialCats);
   const [adminFoodItems, setAdminFoodItems] = useState<MenuItem[]>(() => initialItems);
+
+  useEffect(() => {
+    if (restaurant?.menuItems && restaurant.menuItems.length > 0) {
+      setAdminFoodItems(restaurant.menuItems);
+    }
+    if (restaurant?.categories && restaurant.categories.length > 0) {
+      setAdminCategories(
+        restaurant.categories.map((c) => {
+          const catObj = c as { id?: string; name: string; emoji?: string; icon?: string };
+          return {
+            id: catObj.id || catObj.name.toLowerCase(),
+            name: catObj.name,
+            icon: catObj.emoji || catObj.icon || "🍽️",
+          };
+        }),
+      );
+    }
+  }, [restaurant]);
   const [serverPromotions, setServerPromotions] = useState<
     Array<{
       id: string;
