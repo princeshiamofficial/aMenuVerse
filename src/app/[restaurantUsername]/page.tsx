@@ -395,11 +395,16 @@ interface SearchParams {
 export default function PublicRestaurantPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const restaurantUsername = (params?.restaurantUsername as string) || "";
+  const pathname = usePathname();
+
+  const pathSlug = (pathname || "").split("/").filter(Boolean)[0] || "";
+  const paramSlug = (params?.restaurantUsername as string) || "";
+  const restaurantUsername = (paramSlug || pathSlug || "bellapizza").toLowerCase().trim();
+
   const [restaurant, setRestaurant] = useState<Restaurant | null>(() =>
     fetchPublicMenuSync(restaurantUsername),
   );
-  const [loading, setLoading] = useState(!restaurant);
+  const [loading, setLoading] = useState(false);
   const [suspended, setSuspended] = useState(false);
   const [suspendedName, setSuspendedName] = useState("");
 
@@ -413,7 +418,10 @@ export default function PublicRestaurantPage() {
 
   useEffect(() => {
     async function load() {
-      if (!restaurantUsername) return;
+      if (!restaurantUsername) {
+        setLoading(false);
+        return;
+      }
       try {
         const fresh = await fetchPublicMenu(restaurantUsername);
         if (fresh) {

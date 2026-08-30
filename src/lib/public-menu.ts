@@ -1,8 +1,29 @@
 import { getRestaurantData, getRestaurantProfile } from "@/lib/db-queries.server";
 import { RESTAURANTS, Restaurant } from "@/lib/restaurants-data";
 
-export function fetchPublicMenuSync(_username: string): Restaurant | null {
-  return null;
+export function fetchPublicMenuSync(username: string): Restaurant | null {
+  const clean = (username || "").toLowerCase().trim().split(".")[0];
+  if (!clean || clean === "loca" || clean === "localhost") return null;
+
+  return {
+    id: clean,
+    name: clean.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    username: clean,
+    cuisine: "Gourmet Dining",
+    rating: "4.9",
+    reviews: "100",
+    price: "$$",
+    time: "15-20 min",
+    location: "Main Location",
+    logo: clean.charAt(0).toUpperCase(),
+    logoBg: "from-amber-500 to-orange-600",
+    image:
+      "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&auto=format&fit=crop&q=80",
+    logoImage:
+      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=80&auto=format&fit=crop&q=80",
+    menuItems: [],
+    categories: [],
+  };
 }
 
 export async function fetchPublicMenu(username: string): Promise<Restaurant | null> {
