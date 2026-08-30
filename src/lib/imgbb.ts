@@ -6,8 +6,11 @@ import { uploadToImgBBServer } from "./db-queries.server";
  */
 export async function uploadToImgBB(fileOrBase64: File | string): Promise<string> {
   const apiKey =
-    (import.meta.env.VITE_IMGBB_API_KEY as string | undefined) ||
-    (typeof process !== "undefined" ? process.env?.VITE_IMGBB_API_KEY : undefined);
+    typeof process !== "undefined"
+      ? process.env.NEXT_PUBLIC_IMGBB_API_KEY ||
+        process.env.VITE_IMGBB_API_KEY ||
+        process.env.IMGBB_API_KEY
+      : undefined;
 
   // 1. Convert File / Blob to clean Base64 string
   let base64String = "";

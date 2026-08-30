@@ -1,4 +1,6 @@
-import { createServerFn } from "@tanstack/react-start";
+"use server";
+
+import { createServerFn } from "./server-fn";
 import { query } from "./mysql";
 
 export type PublicRestaurant = {

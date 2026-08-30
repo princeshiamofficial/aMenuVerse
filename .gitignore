@@ -16,6 +16,11 @@ dist-ssr
 .nitro
 *.local
 .env
+.next/
+out/
+build/
+*.tsbuildinfo
+.freebuff/
 
 # Wrangler / Cloudflare
 .wrangler/
@@ -31,3 +36,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+

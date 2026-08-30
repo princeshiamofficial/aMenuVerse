@@ -1,5 +1,7 @@
+"use client";
+
 import { type ReactNode, useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import Link from "next/link";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
 import { isSinglePageRole } from "@/lib/navigation";
@@ -546,7 +548,7 @@ export function DashboardShell({
                         asChild
                         className="relative flex select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground cursor-pointer"
                       >
-                        <Link to="/settings">
+                        <Link href="/settings">
                           <SettingsIcon className="mr-2 h-4 w-4" />
                           <span>Settings</span>
                         </Link>

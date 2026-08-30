@@ -1,5 +1,7 @@
+"use server";
+
 import crypto from "crypto";
-import { getCookie, setCookie, deleteCookie, getRequest } from "@tanstack/react-start/server";
+import { cookies, headers } from "next/headers";
 import { query } from "./mysql";
 
 // ─── Password Hashing ────────────────────────────────────────────────────────
@@ -10,13 +12,13 @@ const PBKDF2_ITERATIONS = 600_000;
 const PBKDF2_ITERATIONS_LEGACY = 1_000;
 const HASH_VERSION_PREFIX = "$pbkdf2v2$";
 
-export function hashPassword(password: string): string {
+export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, 64, "sha512").toString("hex");
   return `${HASH_VERSION_PREFIX}${salt}:${hash}`;
 }
 
-export function verifyPassword(password: string, storedHash: string): boolean {
+export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   if (!storedHash) return false;
 
   // Detect version from prefix
@@ -35,7 +37,7 @@ export function verifyPassword(password: string, storedHash: string): boolean {
  * Returns true if this hash was stored with legacy (low-iteration) PBKDF2.
  * Callers should re-hash the password on successful login to upgrade the stored hash.
  */
-export function isLegacyHash(storedHash: string): boolean {
+export async function isLegacyHash(storedHash: string): Promise<boolean> {
   return !!storedHash && !storedHash.startsWith(HASH_VERSION_PREFIX);
 }
 
@@ -56,11 +58,12 @@ export async function createSession(userId: string): Promise<string> {
     console.warn("[Auth] MySQL session insertion fallback to cookie-only mode.", e);
   }
 
-  // Set session cookie - secure: false ensures compatibility behind reverse proxies (OpenLiteSpeed / Nginx)
+  // Set session cookie
   try {
-    setCookie(COOKIE_NAME, sessionToken, {
+    const cookieStore = await cookies();
+    cookieStore.set(COOKIE_NAME, sessionToken, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
@@ -74,7 +77,8 @@ export async function createSession(userId: string): Promise<string> {
 
 export async function destroySession(): Promise<void> {
   try {
-    const sessionToken = getCookie(COOKIE_NAME);
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get(COOKIE_NAME)?.value;
     if (sessionToken && sessionToken !== "logged_out") {
       try {
         await query("DELETE FROM sessions WHERE id = ?", [sessionToken]);
@@ -83,10 +87,8 @@ export async function destroySession(): Promise<void> {
       }
     }
 
-    deleteCookie(COOKIE_NAME, {
-      path: "/",
-    });
-    setCookie(COOKIE_NAME, "logged_out", {
+    cookieStore.delete(COOKIE_NAME);
+    cookieStore.set(COOKIE_NAME, "logged_out", {
       path: "/",
       maxAge: 0,
     });
@@ -278,18 +280,25 @@ const DEMO_USERS_MAP: Record<string, AuthenticatedUser> = {
 export async function verifySession(explicitToken?: string): Promise<AuthenticatedUser | null> {
   try {
     let sessionToken =
-      explicitToken && explicitToken.trim() !== "" ? explicitToken.trim() : getCookie(COOKIE_NAME);
+      explicitToken && explicitToken.trim() !== "" ? explicitToken.trim() : undefined;
 
-    // Fallback: parse raw cookie header from Web Request if getCookie is empty
+    if (!sessionToken) {
+      try {
+        const cookieStore = await cookies();
+        sessionToken = cookieStore.get(COOKIE_NAME)?.value;
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // Fallback: parse raw cookie header from headers() if cookieStore is empty
     if (!sessionToken || sessionToken === "logged_out" || sessionToken.trim() === "") {
       try {
-        const req = getRequest();
-        if (req) {
-          const cookieHeader = req.headers.get("cookie") || "";
-          const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
-          if (match && match[1] && match[1] !== "logged_out") {
-            sessionToken = match[1].trim();
-          }
+        const headerStore = await headers();
+        const cookieHeader = headerStore.get("cookie") || "";
+        const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
+        if (match && match[1] && match[1] !== "logged_out") {
+          sessionToken = match[1].trim();
         }
       } catch {
         /* ignore */

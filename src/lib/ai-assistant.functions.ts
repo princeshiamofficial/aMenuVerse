@@ -1,4 +1,6 @@
-import { createServerFn } from "@tanstack/react-start";
+"use server";
+
+import { createServerFn } from "./server-fn";
 import { z } from "zod";
 
 const InputSchema = z.object({
@@ -67,7 +69,9 @@ export const runAssistant = createServerFn({ method: "POST" })
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
 
-    const { system, user } = PROMPTS[data.task](data.input, data.extra);
+    const taskHandler = PROMPTS[data.task as keyof typeof PROMPTS];
+    if (!taskHandler) throw new Error(`Unknown task: ${data.task}`);
+    const { system, user } = taskHandler(data.input, data.extra);
 
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

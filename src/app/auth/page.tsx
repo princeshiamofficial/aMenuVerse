@@ -1,0 +1,179 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter, usePathname, useSearchParams, useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getCurrentUser, signInAction } from "@/lib/db-queries.server";
+import { toast } from "sonner";
+import { Loader2, LogIn, Mail, Lock, Eye, EyeOff, Utensils } from "lucide-react";
+import authBg from "@/assets/auth-bg.jpg";
+import { cn } from "@/lib/utils";
+
+export default function AuthPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    let token: string | undefined;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("menuverse_session") || undefined;
+    }
+    getCurrentUser({ data: { token } }).then((user) => {
+      if (user) {
+        const isSuper = user.role === "super_admin";
+        if (isSuper) {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
+      }
+    });
+  }, [router]);
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await signInAction({ data: { email, password } });
+      if (res?.token && typeof window !== "undefined") {
+        document.cookie = `menuverse_session=${res.token}; path=/; max-age=604800; SameSite=Lax`;
+        localStorage.setItem("menuverse_session", res.token);
+      }
+      setLoading(false);
+      toast.success("Welcome back!");
+      const roles = res?.user?.roles || [];
+      if (roles.includes("super_admin")) {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      setLoading(false);
+      return toast.error(error.message || "Invalid credentials");
+    }
+  };
+
+  const handleForgot = async () => {
+    toast.info("Password resets are disabled for local/custom databases. Please contact support.");
+  };
+
+  return (
+    <div className="relative min-h-screen overflow-hidden px-4 py-8">
+      {/* Restaurant photo backdrop */}
+      <Image
+        src={authBg}
+        alt="Restaurant background"
+        fill
+        priority
+        className="pointer-events-none object-cover object-center"
+        sizes="100vw"
+        quality={85}
+      />
+      {/* Warm tint + darken overlay for readability */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(20,10,5,0.55) 0%, rgba(30,15,8,0.45) 50%, rgba(20,10,5,0.65) 100%)",
+        }}
+      />
+
+      {/* Brand mark */}
+      <Link href="/" className="relative z-10 inline-flex items-center gap-2 px-1 py-2">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/95 text-[#0f172a]">
+          <Utensils className="h-3.5 w-3.5" />
+        </span>
+        <span className="text-[15px] font-semibold text-white drop-shadow">MenuVerse</span>
+      </Link>
+
+      {/* Auth card */}
+      <div className="relative z-10 mx-auto mt-16 w-full max-w-105">
+        <div
+          className="rounded-3xl border border-white/60 bg-white/55 p-8 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)] backdrop-blur-xl"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(226,240,253,0.55) 100%)",
+          }}
+        >
+          {/* Icon badge — nested inside card */}
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
+            <LogIn className="h-5 w-5 text-[#0f172a]" strokeWidth={2.2} />
+          </div>
+
+          <h1 className="text-center text-[22px] font-bold tracking-tight text-[#0f172a]">
+            Sign in with email
+          </h1>
+          <p className="mx-auto mt-2 max-w-[320px] text-center text-[13px] leading-relaxed text-slate-500">
+            Launch your digital QR menu and serve your restaurant smarter — free to start.
+          </p>
+
+          <form onSubmit={handleSignIn} className="mt-6 space-y-3">
+            {/* Email */}
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                id="si-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white/70 pl-10 pr-3 text-[14px] text-[#0f172a] placeholder:text-slate-400 outline-none transition focus:border-slate-400 focus:bg-white"
+              />
+            </div>
+
+            {/* Password */}
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                id="si-pass"
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white/70 pl-10 pr-10 text-[14px] text-[#0f172a] placeholder:text-slate-400 outline-none transition focus:border-slate-400 focus:bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              </button>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleForgot}
+                className="text-[12px] font-medium text-[#0f172a] hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-1 flex h-11 w-full items-center justify-center rounded-full bg-[#1f2937] text-[14px] font-medium text-white shadow-sm transition hover:bg-[#0f172a] disabled:opacity-60"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Get Started"}
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-6 text-center text-[12px] text-white/80">
+          By continuing you agree to MenuVerse's Terms & Privacy Policy.
+        </p>
+      </div>
+    </div>
+  );
+}

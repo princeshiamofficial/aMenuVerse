@@ -1,6 +1,10 @@
-import { createServerFn } from "@tanstack/react-start";
+"use server";
+
+import { createServerFn } from "./server-fn";
 import { z } from "zod";
 import type { PermissionKey } from "./permissions";
+import type { AuthenticatedUser } from "./auth.server";
+import { resolvePlanLimits } from "./plan-limits";
 import { RESTAURANTS, type Restaurant } from "./restaurants-data";
 import { toISODateString, isTimeInWindow, decodeTableToken, encodeTableToken } from "./utils";
 
@@ -640,6 +644,302 @@ export const getAdminRestaurantsServer = createServerFn({ method: "GET" }).handl
   return [];
 });
 
+export const getAdminDashboardMetricsServer = createServerFn({ method: "GET" }).handler(
+  async () => {
+    try {
+      // 1. Restaurant metrics
+      let totalRestaurants = 0;
+      let activeRestaurants = 0;
+      let newRestaurantsWeek = 0;
+      try {
+        const [rStats] = await query<Record<string, unknown>[]>(
+          `SELECT 
+            COUNT(*) AS total,
+            SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_cnt,
+            SUM(CASE WHEN created_at >= NOW() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS new_week
+           FROM restaurants`,
+        );
+        if (rStats) {
+          totalRestaurants = Number(rStats.total || 0);
+          activeRestaurants = Number(rStats.active_cnt || 0);
+          newRestaurantsWeek = Number(rStats.new_week || 0);
+        }
+      } catch (err) {
+        console.warn("[getAdminDashboardMetricsServer] restaurants query fallback:", err);
+      }
+
+      // 2. Restaurant plan distribution & MRR
+      let planMix = [
+        { name: "Starter", value: 0, color: "#60a5fa", mrr: 29 },
+        { name: "Business", value: 0, color: "#f59e0b", mrr: 89 },
+        { name: "Enterprise", value: 0, color: "#e11d48", mrr: 299 },
+        { name: "Free", value: 0, color: "#94a3b8", mrr: 0 },
+      ];
+      let calculatedMrr = 0;
+      let activeSubs = 0;
+
+      try {
+        const planRows = await query<Record<string, unknown>[]>(
+          `SELECT COALESCE(plan, 'Starter') AS plan, status, COUNT(*) AS cnt 
+           FROM restaurants 
+           GROUP BY plan, status`,
+        );
+        const planCountMap: Record<string, number> = {};
+        for (const row of planRows || []) {
+          const planName = String(row.plan || "Starter");
+          const status = String(row.status || "active");
+          const count = Number(row.cnt || 0);
+          planCountMap[planName] = (planCountMap[planName] || 0) + count;
+          const planRate =
+            planName.toLowerCase() === "business"
+              ? 89
+              : planName.toLowerCase() === "enterprise"
+                ? 299
+                : planName.toLowerCase() === "starter"
+                  ? 29
+                  : 0;
+          if (status === "active" && planRate > 0) {
+            calculatedMrr += planRate * count;
+            activeSubs += count;
+          }
+        }
+
+        planMix = [
+          { name: "Free", value: planCountMap["Free"] || 0, color: "#94a3b8", mrr: 0 },
+          { name: "Starter", value: planCountMap["Starter"] || 0, color: "#60a5fa", mrr: 29 },
+          { name: "Business", value: planCountMap["Business"] || 0, color: "#f59e0b", mrr: 89 },
+          {
+            name: "Enterprise",
+            value: planCountMap["Enterprise"] || 0,
+            color: "#e11d48",
+            mrr: 299,
+          },
+        ];
+      } catch (err) {
+        console.warn("[getAdminDashboardMetricsServer] plan query fallback:", err);
+      }
+
+      // 3. Platform Users metrics
+      let totalUsers = 0;
+      let activeUsers = 0;
+      let newUsersToday = 0;
+      try {
+        const [uStats] = await query<Record<string, unknown>[]>(
+          `SELECT 
+            COUNT(*) AS total,
+            SUM(CASE WHEN LOWER(status) = 'active' THEN 1 ELSE 0 END) AS active_cnt,
+            SUM(CASE WHEN created_at >= NOW() - INTERVAL 1 DAY THEN 1 ELSE 0 END) AS new_today
+           FROM users`,
+        );
+        if (uStats) {
+          totalUsers = Number(uStats.total || 0);
+          activeUsers = Number(uStats.active_cnt || 0);
+          newUsersToday = Number(uStats.new_today || 0);
+        }
+      } catch (err) {
+        console.warn("[getAdminDashboardMetricsServer] users query fallback:", err);
+      }
+
+      // 4. Platform aggregates (Branches, Categories, Food Items, Orders, Revenue)
+      let totalBranches = 0;
+      let totalCategories = 0;
+      let totalFoodItems = 0;
+      let totalOrders = 0;
+      let totalRevenue = 0;
+
+      try {
+        const [bRow] = await query<Record<string, unknown>[]>(
+          `SELECT COUNT(*) AS total FROM branches`,
+        );
+        totalBranches = Number(bRow?.total || 0);
+
+        const [cRow] = await query<Record<string, unknown>[]>(
+          `SELECT COUNT(*) AS total FROM categories`,
+        );
+        totalCategories = Number(cRow?.total || 0);
+
+        const [fRow] = await query<Record<string, unknown>[]>(
+          `SELECT COUNT(*) AS total FROM food_items`,
+        );
+        totalFoodItems = Number(fRow?.total || 0);
+
+        const [oRow] = await query<Record<string, unknown>[]>(
+          `SELECT COUNT(*) AS total, COALESCE(SUM(total), 0) AS rev FROM pos_orders`,
+        );
+        totalOrders = Number(oRow?.total || 0);
+        totalRevenue = Number(oRow?.rev || 0);
+      } catch (err) {
+        console.warn("[getAdminDashboardMetricsServer] aggregates fallback:", err);
+      }
+
+      // 5. Monthly Revenue / MRR Trend
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      const now = new Date();
+      const currentMonthIndex = now.getMonth();
+      const last6Months = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), currentMonthIndex - i, 1);
+        last6Months.push({
+          m: monthNames[d.getMonth()],
+          ym: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+          mrr: calculatedMrr > 0 ? calculatedMrr : 0,
+          orders: 0,
+        });
+      }
+
+      try {
+        const orderTrends = await query<Record<string, unknown>[]>(
+          `SELECT 
+            DATE_FORMAT(created_at, '%Y-%m') AS ym,
+            COUNT(*) AS order_cnt,
+            COALESCE(SUM(total), 0) AS rev
+           FROM pos_orders
+           WHERE created_at >= NOW() - INTERVAL 6 MONTH
+           GROUP BY ym`,
+        );
+        const orderMap = new Map<string, { count: number; rev: number }>();
+        for (const row of orderTrends || []) {
+          orderMap.set(String(row.ym || ""), {
+            count: Number(row.order_cnt || 0),
+            rev: Number(row.rev || 0),
+          });
+        }
+
+        for (const mObj of last6Months) {
+          const matched = orderMap.get(mObj.ym);
+          if (matched) {
+            mObj.orders = matched.count;
+            mObj.mrr = calculatedMrr + matched.rev;
+          }
+        }
+      } catch (err) {
+        console.warn("[getAdminDashboardMetricsServer] trend fallback:", err);
+      }
+
+      // 6. Recent Restaurants from DB
+      let recentRestaurants: Array<{
+        id: string;
+        name: string;
+        username: string;
+        cuisine: string;
+        location: string;
+        plan: string;
+        status: string;
+        logoUrl: string;
+        createdAt: string;
+      }> = [];
+      try {
+        const rRows = await query<Record<string, unknown>[]>(
+          `SELECT id, name, COALESCE(slug, '') AS username, 
+                  COALESCE(cuisine, 'Multi-Cuisine') AS cuisine,
+                  COALESCE(location, 'Main Location') AS location,
+                  COALESCE(plan, 'Starter') AS plan,
+                  COALESCE(status, 'active') AS status,
+                  COALESCE(logo_url, '') AS logo_url,
+                  created_at
+           FROM restaurants
+           ORDER BY id DESC LIMIT 5`,
+        );
+        recentRestaurants = (rRows || []).map((r) => ({
+          id: String(r.id),
+          name: String(r.name || ""),
+          username: String(r.username || ""),
+          cuisine: String(r.cuisine || "Multi-Cuisine"),
+          location: String(r.location || "Main Location"),
+          plan: String(r.plan || "Starter"),
+          status: String(r.status || "active"),
+          logoUrl: String(r.logo_url || ""),
+          createdAt: r.created_at ? String(r.created_at).split("T")[0] : "Recent",
+        }));
+      } catch (err) {
+        console.warn("[getAdminDashboardMetricsServer] recent restaurants fallback:", err);
+      }
+
+      // 7. Recent Users from DB
+      let recentUsers: Array<{
+        id: string;
+        name: string;
+        email: string;
+        role: string;
+        status: string;
+        avatarUrl?: string;
+        createdAt: string;
+      }> = [];
+      try {
+        const uRows = await query<Record<string, unknown>[]>(
+          `SELECT u.id, COALESCE(u.full_name, 'User') AS name, u.email,
+                  COALESCE(ur.role, 'Owner') AS role,
+                  COALESCE(u.status, 'Active') AS status,
+                  COALESCE(u.avatar_url, '') AS avatar_url,
+                  u.created_at
+           FROM users u
+           INNER JOIN user_roles ur ON ur.user_id = u.id
+           WHERE LOWER(ur.role) IN ('owner', 'manager')
+           ORDER BY (CASE WHEN LOWER(ur.role) = 'owner' THEN 0 ELSE 1 END) ASC, u.created_at DESC 
+           LIMIT 5`,
+        );
+        recentUsers = (uRows || []).map((u) => {
+          const name = String(u.name || "User");
+          const email = String(u.email || "");
+          const dbAvatar = String(u.avatar_url || "").trim();
+          const avatarUrl =
+            dbAvatar ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&bold=true`;
+
+          return {
+            id: String(u.id),
+            name,
+            email,
+            role: String(u.role || "Owner"),
+            status: String(u.status || "Active"),
+            avatarUrl,
+            createdAt: u.created_at ? String(u.created_at).split("T")[0] : "Recent",
+          };
+        });
+      } catch (err) {
+        console.warn("[getAdminDashboardMetricsServer] recent users fallback:", err);
+      }
+
+      return {
+        totalRestaurants,
+        activeRestaurants,
+        newRestaurantsWeek,
+        activeSubs,
+        mrr: calculatedMrr,
+        mrrDelta: newRestaurantsWeek > 0 ? `+${newRestaurantsWeek} this week` : "Stable",
+        totalUsers,
+        activeUsers,
+        newUsersToday,
+        totalBranches,
+        totalCategories,
+        totalFoodItems,
+        totalOrders,
+        totalRevenue,
+        planMix,
+        revenueTrend: last6Months,
+        recentRestaurants,
+        recentUsers,
+      };
+    } catch (err) {
+      console.error("[getAdminDashboardMetricsServer Error]", err);
+      throw err;
+    }
+  },
+);
+
 // =========================================================
 // MUTATION SERVER FUNCTIONS
 // =========================================================
@@ -791,7 +1091,7 @@ export const placeOrderAction = createServerFn({ method: "POST" })
     }
 
     let calculatedSubtotal = 0;
-    const validatedItems = items.map((item) => {
+    const validatedItems = items.map((item: any) => {
       let unitPrice = item.price;
       if (item.itemId && priceMap.has(item.itemId)) {
         unitPrice = priceMap.get(item.itemId)!;
@@ -813,7 +1113,7 @@ export const placeOrderAction = createServerFn({ method: "POST" })
     const orderId = crypto.randomUUID();
 
     const linesJson = JSON.stringify(
-      validatedItems.map((i) => ({
+      validatedItems.map((i: any) => ({
         itemId: i.itemId,
         name: i.name,
         qty: i.quantity,
@@ -896,7 +1196,7 @@ export const placeOrderAction = createServerFn({ method: "POST" })
         tableNumber,
         customerName: sanitizeText(customerName.trim()),
         phone: sanitizeText(phone.trim()),
-        lines: validatedItems.map((i) => ({
+        lines: validatedItems.map((i: any) => ({
           itemId: i.itemId,
           name: i.name,
           qty: i.quantity,
@@ -1000,7 +1300,7 @@ function saveProfileToFile(_data: ProfileCache) {
   /* Disabled plain-text disk cache — MySQL database is primary store */
 }
 
-export const LIVE_PROFILE_STORES: Record<string, ProfileCache> = {};
+const LIVE_PROFILE_STORES: Record<string, ProfileCache> = {};
 
 export const getRestaurantProfile = createServerFn({ method: "GET" })
   .validator((slugOrEmail?: string) => z.string().optional().parse(slugOrEmail))
@@ -1115,7 +1415,7 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
               ? defaultProfile.cover ||
                 "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=80"
               : String(r.cover_url || ""),
-          favicon: String(r.favicon_url || ""),
+          favicon: String(r.favicon_url || r.logo_url || ""),
           socialPreview: String(r.og_image_url || ""),
           facebookUrl: String(r.facebook_url || ""),
           instagramUrl: String(r.instagram_url || ""),
@@ -1198,7 +1498,15 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
       cuisineType: String(live.cuisineType || dbData.cuisineType || defaultProfile.cuisineType),
       logo: String(live.logo || dbData.logo || defaultProfile.logo),
       cover: String(live.cover || dbData.cover || defaultProfile.cover),
-      favicon: String(live.favicon || dbData.favicon || defaultProfile.favicon),
+      favicon: String(
+        live.favicon ||
+          dbData.favicon ||
+          defaultProfile.favicon ||
+          live.logo ||
+          dbData.logo ||
+          defaultProfile.logo ||
+          "",
+      ),
       socialPreview: String(
         live.socialPreview || dbData.socialPreview || defaultProfile.socialPreview,
       ),
@@ -2338,10 +2646,10 @@ export const uploadToImgBBServer = createServerFn({ method: "POST" })
     validateImagePayload(base64String);
 
     const apiKey =
+      process.env.NEXT_PUBLIC_IMGBB_API_KEY ||
       process.env.VITE_IMGBB_API_KEY ||
       process.env.IMGBB_API_KEY ||
-      process.env.IMGBB_KEY ||
-      (import.meta.env.VITE_IMGBB_API_KEY as string | undefined);
+      process.env.IMGBB_KEY;
 
     if (!apiKey) {
       throw new Error(
@@ -2966,8 +3274,8 @@ export const saveCategoriesServer = createServerFn({ method: "POST" })
         "SELECT id FROM categories WHERE (restaurant_id = ? OR restaurant_id = 0)",
         [tenant.restaurantId],
       );
-      const existingIds = new Set((existingCategories || []).map((c) => String(c.id)));
-      const newCategoriesCount = categories.filter((c) => !existingIds.has(c.id)).length;
+      const existingIds = new Set((existingCategories || []).map((c: any) => String(c.id)));
+      const newCategoriesCount = categories.filter((c: any) => !existingIds.has(c.id)).length;
       if (newCategoriesCount > 0) {
         const sub = await getTenantSubscriptionServer();
         if (
@@ -3246,8 +3554,8 @@ export const saveFoodItemsServer = createServerFn({ method: "POST" })
         "SELECT id FROM food_items WHERE restaurant_id = ?",
         [tenant.restaurantId],
       );
-      const existingIds = new Set((existingItems || []).map((i) => String(i.id)));
-      const newItemsCount = items.filter((i) => !existingIds.has(i.id)).length;
+      const existingIds = new Set((existingItems || []).map((i: any) => String(i.id)));
+      const newItemsCount = items.filter((i: any) => !existingIds.has(i.id)).length;
       if (newItemsCount > 0) {
         const sub = await getTenantSubscriptionServer();
         if (
@@ -3308,8 +3616,8 @@ export const saveFoodItemsServer = createServerFn({ method: "POST" })
                 item.discountPrice ?? null,
                 item.prepTime || 15,
                 item.calories || 0,
-                JSON.stringify((item.ingredients || []).map((i) => sanitizeText(i))),
-                JSON.stringify((item.allergens || []).map((a) => sanitizeText(a))),
+                JSON.stringify((item.ingredients || []).map((i: any) => sanitizeText(i))),
+                JSON.stringify((item.allergens || []).map((a: any) => sanitizeText(a))),
                 item.spicyLevel || 0,
                 item.bestSeller ? 1 : 0,
                 item.popular ? 1 : 0,
@@ -4204,7 +4512,7 @@ export const saveOrderServer = createServerFn({ method: "POST" })
     }
 
     let calculatedSubtotal = 0;
-    const validatedLines: OrderLineRecord[] = (order.lines || []).map((line) => {
+    const validatedLines: OrderLineRecord[] = (order.lines || []).map((line: any) => {
       let unitPrice = line.price;
       if (line.itemId && priceMap.has(line.itemId)) {
         unitPrice = priceMap.get(line.itemId)!;
@@ -7014,80 +7322,6 @@ export const deleteSubscriptionPackageServer = createServerFn({ method: "POST" }
       throw new Error("Failed to delete package from database");
     }
   });
-export function resolvePlanLimits(
-  planName: string,
-  packagesList: SubscriptionPackageRecord[],
-): {
-  maxBranches: number | "unlimited";
-  maxCategories: number | "unlimited";
-  maxItems: number | "unlimited";
-  maxOrders: number | "unlimited";
-  maxQrs: number | "unlimited";
-} {
-  const norm = (planName || "Free").toLowerCase().trim();
-  const matched = (packagesList || []).find(
-    (p) =>
-      p.name.toLowerCase().trim() === norm ||
-      p.id.toLowerCase().includes(norm) ||
-      norm.includes(p.name.toLowerCase().trim()),
-  );
-
-  if (matched) {
-    return {
-      maxBranches:
-        matched.maxBranches === "unlimited"
-          ? "unlimited"
-          : Math.max(1, parseInt(matched.maxBranches || "1", 10)),
-      maxCategories:
-        matched.maxCategories === "unlimited"
-          ? "unlimited"
-          : Math.max(1, parseInt(matched.maxCategories || "5", 10)),
-      maxItems:
-        matched.maxItems === "unlimited"
-          ? "unlimited"
-          : Math.max(1, parseInt(matched.maxItems || "25", 10)),
-      maxOrders:
-        matched.maxOrders === "unlimited"
-          ? "unlimited"
-          : Math.max(1, parseInt(matched.maxOrders || "100", 10)),
-      maxQrs:
-        matched.maxQrs === "unlimited"
-          ? "unlimited"
-          : Math.max(1, parseInt(matched.maxQrs || "5", 10)),
-    };
-  }
-
-  if (norm.includes("enterprise") || norm.includes("vip") || norm.includes("custom")) {
-    return {
-      maxBranches: "unlimited",
-      maxCategories: "unlimited",
-      maxItems: "unlimited",
-      maxOrders: "unlimited",
-      maxQrs: "unlimited",
-    };
-  }
-  if (norm.includes("business") || norm.includes("pro") || norm.includes("growth")) {
-    return {
-      maxBranches: 10,
-      maxCategories: "unlimited",
-      maxItems: "unlimited",
-      maxOrders: 10000,
-      maxQrs: 100,
-    };
-  }
-  if (norm.includes("starter") || norm.includes("popular")) {
-    return {
-      maxBranches: 3,
-      maxCategories: 15,
-      maxItems: 150,
-      maxOrders: 1000,
-      maxQrs: 25,
-    };
-  }
-
-  // Free default
-  return { maxBranches: 1, maxCategories: 5, maxItems: 25, maxOrders: 100, maxQrs: 5 };
-}
 
 async function getPublicTenantOrderLimits(restaurantId: number): Promise<{
   plan: string;

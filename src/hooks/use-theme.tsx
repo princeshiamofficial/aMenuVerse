@@ -1,3 +1,5 @@
+"use client";
+
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
 type Theme = "light" | "dark" | "system";
@@ -19,9 +21,11 @@ function getSystemTheme(): "light" | "dark" {
 
 function applyTheme(theme: Theme): "light" | "dark" {
   const resolved = theme === "system" ? getSystemTheme() : theme;
-  const root = document.documentElement;
-  root.classList.toggle("dark", resolved === "dark");
-  root.style.colorScheme = resolved;
+  if (typeof document !== "undefined") {
+    const root = document.documentElement;
+    root.classList.toggle("dark", resolved === "dark");
+    root.style.colorScheme = resolved;
+  }
   return resolved;
 }
 
@@ -37,14 +41,18 @@ export function ThemeProvider({
 
   // Read stored theme on mount to avoid SSR hydration mismatch
   useEffect(() => {
-    const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? defaultTheme;
-    setThemeState(stored);
-    setResolvedTheme(applyTheme(stored));
+    try {
+      const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? defaultTheme;
+      setThemeState(stored);
+      setResolvedTheme(applyTheme(stored));
+    } catch {
+      /* ignore */
+    }
   }, [defaultTheme]);
 
   // React to system preference changes
   useEffect(() => {
-    if (theme !== "system") return;
+    if (theme !== "system" || typeof window === "undefined") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = () => setResolvedTheme(applyTheme("system"));
     mq.addEventListener("change", handler);
@@ -52,7 +60,11 @@ export function ThemeProvider({
   }, [theme]);
 
   const setTheme = useCallback((next: Theme) => {
-    localStorage.setItem(STORAGE_KEY, next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
     setThemeState(next);
     setResolvedTheme(applyTheme(next));
   }, []);
@@ -68,9 +80,15 @@ export function ThemeProvider({
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useTheme() {
   const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
+  if (!ctx) {
+    return {
+      theme: "light" as Theme,
+      resolvedTheme: "light" as "light" | "dark",
+      setTheme: () => {},
+      toggle: () => {},
+    };
+  }
   return ctx;
 }

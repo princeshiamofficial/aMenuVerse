@@ -1,8 +1,4 @@
-import {
-  getRestaurantData,
-  getRestaurantProfile,
-  LIVE_PROFILE_STORES,
-} from "@/lib/db-queries.server";
+import { getRestaurantData, getRestaurantProfile } from "@/lib/db-queries.server";
 import { RESTAURANTS, Restaurant } from "@/lib/restaurants-data";
 
 export function fetchPublicMenuSync(_username: string): Restaurant | null {
@@ -160,10 +156,16 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
         baseData.rating = dbProfile.rating;
       }
     }
-    if (dbProfile.favicon || dbProfile.logo)
-      (baseData as unknown as { favicon?: string }).favicon = String(
-        dbProfile.favicon || dbProfile.logo,
-      );
+    const resolvedFavicon =
+      (dbProfile.favicon as string) ||
+      (dbProfile.faviconUrl as string) ||
+      (dbProfile.logo as string) ||
+      (baseData.logoImage as string) ||
+      (baseData.image as string) ||
+      "";
+    if (resolvedFavicon) {
+      (baseData as unknown as { favicon?: string }).favicon = resolvedFavicon;
+    }
     if (dbProfile.socialPreview)
       (baseData as unknown as { socialPreview?: string }).socialPreview = String(
         dbProfile.socialPreview,

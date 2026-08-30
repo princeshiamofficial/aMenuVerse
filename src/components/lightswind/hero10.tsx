@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Link } from "@tanstack/react-router";
+import Link from "next/link";
 import { Asterisk } from "lucide-react";
 
 const GoogleIcon = () => (
@@ -121,7 +121,7 @@ export default function Hero10() {
 
       {/* Decorative Navbar */}
       <header className="relative w-full max-w-6xl mx-auto px-6 py-5 grid grid-cols-[auto_1fr_auto] items-center gap-4 z-20">
-        <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+        <Link href="/" className="flex items-center gap-2.5 group shrink-0">
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900 text-white transition-transform group-hover:rotate-12 duration-300">
             <Asterisk className="h-5 w-5" strokeWidth={2.5} />
           </span>
@@ -148,7 +148,7 @@ export default function Hero10() {
             Who it's for
           </a>
           <Link
-            to="/"
+            href="/"
             className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors"
           >
             Pricing
@@ -157,7 +157,7 @@ export default function Hero10() {
         <div className="md:hidden" />
 
         <Link
-          to="/auth"
+          href="/auth"
           className="justify-self-end px-5 py-2.5 rounded-full bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition-colors shadow-sm"
         >
           Start free
@@ -209,7 +209,7 @@ export default function Hero10() {
           className="flex items-center gap-4 mb-16 z-10"
         >
           <Link
-            to="/auth"
+            href="/auth"
             className="px-6 py-3.5 rounded-full bg-zinc-900 text-white font-medium text-sm hover:bg-zinc-800 transition-colors shadow-lg active:scale-[0.98]"
           >
             Get started free

@@ -1,4 +1,7 @@
-import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+"use client";
+
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { BlobImg } from "@/components/ui/blob-img";
 import {
   LayoutDashboard,
@@ -55,9 +58,8 @@ import {
 } from "@/lib/navigation";
 
 export function AppSidebar() {
-  const navigate = useNavigate();
-  const routerState = useRouterState();
-  const pathname = routerState.location.pathname;
+  const router = useRouter();
+  const pathname = usePathname() || "";
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -117,7 +119,7 @@ export function AppSidebar() {
             </button>
           ) : (
             <Link
-              to={item.url}
+              href={item.url}
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full transition-all cursor-pointer shrink-0",
                 isActive
@@ -177,7 +179,7 @@ export function AppSidebar() {
                         <span>{item.title}</span>
                       </div>
                     ) : (
-                      <Link to={item.url}>
+                      <Link href={item.url}>
                         <item.icon
                           className={cn(
                             "h-4 w-4 transition-colors",
@@ -280,7 +282,7 @@ export function AppSidebar() {
           <SidebarHeader>
             <div className="flex items-center justify-between px-2 py-1">
               <Link
-                to="/dashboard"
+                href="/dashboard"
                 className="flex items-center gap-2.5 font-display text-base font-bold min-w-0"
               >
                 <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg gradient-warm text-primary-foreground overflow-hidden border border-border/40 shadow-xs">

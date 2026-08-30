@@ -1,4 +1,4 @@
-import { getRequest } from "@tanstack/react-start/server";
+import { headers } from "next/headers";
 import Redis from "ioredis";
 
 // ─── Redis client (singleton) ────────────────────────────────────────────────
@@ -60,18 +60,20 @@ if (typeof setInterval !== "undefined") {
 }
 
 // ─── IP extraction ────────────────────────────────────────────────────────────
-export function getClientIp(): string {
+export async function getClientIpAsync(): Promise<string> {
   try {
-    const req = getRequest();
-    if (req?.headers) {
-      const xff = req.headers.get("x-forwarded-for");
-      if (xff) return xff.split(",")[0].trim();
-      const realIp = req.headers.get("x-real-ip");
-      if (realIp) return realIp.trim();
-    }
+    const headerStore = await headers();
+    const xff = headerStore.get("x-forwarded-for");
+    if (xff) return xff.split(",")[0].trim();
+    const realIp = headerStore.get("x-real-ip");
+    if (realIp) return realIp.trim();
   } catch {
     /* outside HTTP request context */
   }
+  return "127.0.0.1";
+}
+
+export function getClientIp(): string {
   return "127.0.0.1";
 }
 

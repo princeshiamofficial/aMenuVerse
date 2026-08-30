@@ -32,36 +32,35 @@ Internet
 [DNS]  menuversebd.com + *.menuversebd.com  →  VPS IP
    │
    ▼
-[CyberPanel / OpenLiteSpeed :443]  (SSL, HTTPS redirect via .htaccess)
+[Nginx / OpenLiteSpeed :443]  (SSL, Reverse Proxy, Static Caching, Load Balancer)
    │
-   ▼  reverse proxy
-[Node.js / Nitro server :3000]  ←  PM2 (ecosystem.config.cjs)
+   ▼  upstream load balancing
+[PM2 Cluster Load Balancer :3000]  ←  Multi-Core Workers (instances: "max")
    │
-   ├── MySQL   (CyberPanel-managed, 127.0.0.1:3306)
+   ├── MySQL   (127.0.0.1:3306)
    └── Redis   (127.0.0.1:6379, optional)
 ```
 
 ### How subdomain routing works
 
 ```text
-burgercraftlab.menuversebd.com  →  OLS  →  Node :3000
-                                              │
-                                       getSubdomain() → "burgercraftlab"
-                                              │
-                                       renders that restaurant's public menu
+burgercraftlab.menuversebd.com  →  Nginx / OLS  →  PM2 Cluster :3000
+                                                        │
+                                                 getSubdomain() → "burgercraftlab"
+                                                        │
+                                                 renders that restaurant's public menu
 ```
 
-The Node process serves the whole app. OpenLiteSpeed simply proxies every request
-(root domain and all subdomains) to `127.0.0.1:3000`.
+The Node processes serve the app in Cluster mode across all CPU cores. Nginx or OpenLiteSpeed proxies requests (root domain and all subdomains) to `127.0.0.1:3000`.
 
 ---
 
 ## What You're Deploying
 
-- **Framework**: TanStack Start (React 19 + Vite 8), built to a Nitro Node server.
-- **Build output**: `.output/server/index.mjs` (this is what runs in production).
-- **Process manager**: PM2, configured by `ecosystem.config.cjs` (app name `amenuverse`, port `3000`).
-- **Database**: MySQL. Tables are **auto-created on first boot** by `ensureAllTablesExist()` in `src/lib/mysql.ts` — you only need to create an empty database and a user.
+- **Framework**: Next.js App Router (React 19 + Tailwind CSS + Radix UI).
+- **Process Manager & Load Balancer**: PM2 Cluster Mode configured via `ecosystem.config.cjs` (scales across all CPU cores with zero-downtime rolling reload).
+- **Reverse Proxy / Nginx Config**: `nginx/amenuverse.conf` (SSL termination, SSE/WebSocket support for real-time notifications, rate limiting, and gzip compression).
+- **Database**: MySQL with connection pooling. Tables are **auto-created on first boot** by `ensureAllTablesExist()` in `src/lib/mysql.ts`.
 - **Cache/rate-limit**: Redis via `REDIS_URL` — **optional**; the app degrades gracefully if it is absent.
 
 ---
@@ -239,7 +238,7 @@ node scripts/seed.js        # fuller demo data — requires a .env.local file
 
 ---
 
-## Step 10 — Start the App with PM2
+## Step 10 — Start the App with PM2 Cluster Load Balancer
 
 ```bash
 cd /home/menuversebd.com/public_html
@@ -248,7 +247,7 @@ pm2 save
 pm2 startup           # run the command it prints to enable auto-start on reboot
 ```
 
-Verify the Node server is up on port 3000:
+Verify all cluster workers are active:
 
 ```bash
 pm2 list
@@ -256,9 +255,17 @@ pm2 logs amenuverse --lines 50
 curl -I http://127.0.0.1:3000/api/health   # expect HTTP/1.1 200
 ```
 
-> `ecosystem.config.cjs` runs `.output/server/index.mjs` in cluster mode on port `3000`.
-> If port 3000 is taken, change `PORT` in that file (and keep Step 11 in sync). If cluster
-> mode causes port-bind errors on a tiny VPS, set `instances: 1` and `exec_mode: "fork"`.
+### Zero-Downtime Rolling Update (Future Deploys)
+When updating code in production, always use `pm2 reload` instead of `restart` to achieve zero downtime:
+
+```bash
+git pull origin main
+npm run build
+pm2 reload ecosystem.config.cjs --update-env
+```
+
+> `ecosystem.config.cjs` runs `app.js` in Next.js Cluster mode across all CPU cores on port `3000`.
+> It features graceful shutdown and `wait_ready: true` for zero connection drops during rollouts.
 
 ---
 

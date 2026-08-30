@@ -1,4 +1,6 @@
-import { createServerFn } from "@tanstack/react-start";
+"use server";
+
+import { createServerFn } from "./server-fn";
 import { z } from "zod";
 import {
   GoogleReview,
@@ -89,13 +91,13 @@ export async function fetchReviewsFromBrightData(targetUrl: string): Promise<Goo
   return [];
 }
 
-export function extractGoogleAvatarUrls(html: string): string[] {
+function extractGoogleAvatarUrls(html: string): string[] {
   if (!html || typeof html !== "string") return [];
   const matches = html.match(/https:\/\/lh[3-6]\.googleusercontent\.com\/a\/[^\s"'<>]+/g) || [];
   return Array.from(new Set(matches));
 }
 
-export function parseGoogleMapsHtml(html: string): GoogleReview[] {
+function parseGoogleMapsHtml(html: string): GoogleReview[] {
   const reviews: GoogleReview[] = [];
   if (!html || typeof html !== "string") return reviews;
 

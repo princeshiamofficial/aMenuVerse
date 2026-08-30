@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
+import { ThemeProvider } from "@/hooks/use-theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MenuVerse",
-  description: "MenuVerse - Premium Multi-Tenant Digital Menu & Restaurant POS",
+  title: "MenuVerse — Multi-Tenant Restaurant OS & POS",
+  description:
+    "MenuVerse is the all-in-one AI platform for digital QR menus, multi-branch operations, real-time KDS, waiter calling, and POS billing.",
 };
 
 export default function RootLayout({
@@ -29,7 +32,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col overflow-x-hidden" suppressHydrationWarning>
-        {children}
+        <ThemeProvider>
+          {children}
+          <Toaster position="top-right" richColors closeButton />
+        </ThemeProvider>
       </body>
     </html>
   );
