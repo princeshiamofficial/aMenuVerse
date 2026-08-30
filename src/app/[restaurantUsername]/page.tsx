@@ -654,11 +654,32 @@ export function PublicRestaurantView({
     };
   }, [restaurant.id, restaurantUsername]);
 
-  const [localBranches, setLocalBranches] = useState<Branch[]>([]);
+  const initialItems = useMemo(() => {
+    if (restaurant?.menuItems && restaurant.menuItems.length > 0) {
+      return restaurant.menuItems;
+    }
+    return [];
+  }, [restaurant]);
+
+  const initialCats = useMemo(() => {
+    if (restaurant?.categories && restaurant.categories.length > 0) {
+      return restaurant.categories.map((c) => {
+        const catObj = c as { id?: string; name: string; emoji?: string; icon?: string };
+        return {
+          id: catObj.id || catObj.name.toLowerCase(),
+          name: catObj.name,
+          icon: catObj.emoji || catObj.icon || "🍽️",
+        };
+      });
+    }
+    return [];
+  }, [restaurant]);
+
+  const [localBranches, setLocalBranches] = useState<Branch[]>(() => restaurant?.branches || []);
   const [adminCategories, setAdminCategories] = useState<
     Array<{ id: string; name: string; icon?: string }>
-  >([]);
-  const [adminFoodItems, setAdminFoodItems] = useState<MenuItem[]>([]);
+  >(() => initialCats);
+  const [adminFoodItems, setAdminFoodItems] = useState<MenuItem[]>(() => initialItems);
   const [serverPromotions, setServerPromotions] = useState<
     Array<{
       id: string;
@@ -686,7 +707,9 @@ export function PublicRestaurantView({
   >([]);
   const [promoPopupOpen, setPromoPopupOpen] = useState(false);
 
-  const [isMenuLoading, setIsMenuLoading] = useState(true);
+  const [isMenuLoading, setIsMenuLoading] = useState(
+    () => initialItems.length === 0 && initialCats.length === 0,
+  );
   const [isCategorySwitching, setIsCategorySwitching] = useState(false);
 
   useEffect(() => {
