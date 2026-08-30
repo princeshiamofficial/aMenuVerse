@@ -714,7 +714,6 @@ export function PublicRestaurantView({
 
   useEffect(() => {
     async function loadAdminMenuData() {
-      setIsMenuLoading(true);
       // Fetch directly from MySQL Database Server Functions (including promotional discount prices)
       try {
         const [dbData, dbCategories, dbItems, dbProfile, dbPromos] = await Promise.all([

@@ -5,11 +5,65 @@ export function fetchPublicMenuSync(username: string): Restaurant | null {
   const clean = (username || "").toLowerCase().trim().split(".")[0];
   if (!clean || clean === "loca" || clean === "localhost") return null;
 
+  const defaultCategories = [
+    { id: "all", name: "All", emoji: "🍽️" },
+    { id: "popular", name: "Popular", emoji: "🔥" },
+    { id: "pizzas", name: "Pizzas", emoji: "🍕" },
+    { id: "burgers", name: "Burgers", emoji: "🍔" },
+    { id: "appetizers", name: "Appetizers", emoji: "🍟" },
+  ];
+
+  const defaultItems = [
+    {
+      id: "bella-1",
+      name: "Margherita Pizza",
+      description: "San Marzano tomatoes, fresh mozzarella, sweet basil, and extra virgin olive oil.",
+      price: 390,
+      image:
+        "https://images.unsplash.com/photo-1604382355076-af4b0eb60143?w=800&auto=format&fit=crop&q=80",
+      category: "Pizzas",
+      popular: true,
+    },
+    {
+      id: "bella-2",
+      name: "Mushroom Swiss Burger",
+      description: "Juicy smashed beef patty, sauteed mushrooms, swiss cheese, garlic aioli.",
+      price: 350,
+      image:
+        "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&auto=format&fit=crop&q=80",
+      category: "Burgers",
+      popular: true,
+    },
+    {
+      id: "bella-3",
+      name: "Mozzarella Sticks",
+      description: "Crispy breaded mozzarella served hot with house marinara sauce.",
+      price: 220,
+      image:
+        "https://images.unsplash.com/photo-1531749668029-2db88e4276c7?w=800&auto=format&fit=crop&q=80",
+      category: "Appetizers",
+      popular: false,
+    },
+    {
+      id: "bella-4",
+      name: "Pepperoni Pizza",
+      description: "Loaded with spicy Italian pepperoni, mozzarella cheese, and rich tomato sauce.",
+      price: 450,
+      image:
+        "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=800&auto=format&fit=crop&q=80",
+      category: "Pizzas",
+      popular: true,
+    },
+  ];
+
   return {
     id: clean,
-    name: clean.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    name:
+      clean === "bellapizza"
+        ? "Bella Pizza"
+        : clean.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
     username: clean,
-    cuisine: "Gourmet Dining",
+    cuisine: clean === "bellapizza" ? "Italian Pizzeria & Burgers" : "Gourmet Dining",
     rating: "4.9",
     reviews: "100",
     price: "$$",
@@ -21,8 +75,8 @@ export function fetchPublicMenuSync(username: string): Restaurant | null {
       "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&auto=format&fit=crop&q=80",
     logoImage:
       "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=80&auto=format&fit=crop&q=80",
-    menuItems: [],
-    categories: [],
+    menuItems: defaultItems,
+    categories: defaultCategories,
   };
 }
 
