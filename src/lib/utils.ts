@@ -138,6 +138,18 @@ export function getSubdomain(hostname?: string): string | null {
     return null;
   }
 
+  // Tunnel providers (loca.lt, ngrok, pinggy, trycloudflare, etc.) are platform proxies, not restaurant subdomains
+  if (
+    host.endsWith(".loca.lt") ||
+    host.endsWith(".ngrok.io") ||
+    host.endsWith(".ngrok-free.app") ||
+    host.endsWith(".pinggy.link") ||
+    host.endsWith(".trycloudflare.com") ||
+    host.endsWith(".pagekite.me")
+  ) {
+    return null;
+  }
+
   // Production subdomain: e.g. burgercraft.menuverse.com
   const parts = host.split(".");
   if (parts.length >= 3 && parts[0] !== "www" && parts[0] !== "app") {
