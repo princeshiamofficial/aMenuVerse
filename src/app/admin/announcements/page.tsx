@@ -411,9 +411,10 @@ export default function AdminAnnouncementsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">🌐 Everyone (All Subscriptions)</SelectItem>
+                    <SelectItem value="all">🌐 Everyone (All Staff & Customers)</SelectItem>
                     <SelectItem value="owners">👑 Restaurant Owners Only</SelectItem>
                     <SelectItem value="staff">👨‍🍳 Staff (Chefs, Waiters, Cashiers)</SelectItem>
+                    <SelectItem value="customers">👥 Customers & Guests Only</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

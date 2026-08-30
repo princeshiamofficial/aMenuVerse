@@ -185,8 +185,14 @@ export async function sendPushNotificationServer(
           },
         };
 
+        const pushOptions = {
+          TTL: 86400,
+          urgency: "high" as const,
+          topic: "order-alert",
+        };
+
         try {
-          await webpush.sendNotification(pushSubscription, notificationPayload);
+          await webpush.sendNotification(pushSubscription, notificationPayload, pushOptions);
           sent++;
         } catch (err: unknown) {
           failed++;
@@ -230,6 +236,8 @@ export async function sendSystemAnnouncementPushServer(params: {
       sql += " AND LOWER(role) = 'owner'";
     } else if (params.audience === "staff") {
       sql += " AND LOWER(role) IN ('manager', 'cashier', 'chef', 'waiter', 'host')";
+    } else if (params.audience === "customers") {
+      sql += " AND LOWER(role) = 'customer'";
     }
 
     const subscriptions = await query<
@@ -248,8 +256,8 @@ export async function sendSystemAnnouncementPushServer(params: {
     const notificationPayload = JSON.stringify({
       title: `📢 ${params.title}`,
       body: params.body,
-      icon: "/favicon.ico",
-      badge: "/favicon.ico",
+      icon: "/placeholder.svg",
+      badge: "/placeholder.svg",
       url: params.url || "/dashboard",
       sound: params.sound || "chime",
       unreadCount: 1,
@@ -259,6 +267,12 @@ export async function sendSystemAnnouncementPushServer(params: {
 
     let sent = 0;
     let failed = 0;
+
+    const pushOptions = {
+      TTL: 86400,
+      urgency: "high" as const,
+      topic: "announcement",
+    };
 
     await Promise.allSettled(
       subscriptions.map(async (sub) => {
@@ -271,7 +285,7 @@ export async function sendSystemAnnouncementPushServer(params: {
         };
 
         try {
-          await webpush.sendNotification(pushSubscription, notificationPayload);
+          await webpush.sendNotification(pushSubscription, notificationPayload, pushOptions);
           sent++;
         } catch (err: unknown) {
           failed++;
