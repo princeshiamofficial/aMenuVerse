@@ -47,6 +47,7 @@ import { generateId } from "@/lib/utils";
 
 import { apiGet, apiPost } from "@/lib/api-client";
 import { getSettingsServer, saveSettingsServer } from "@/lib/db-queries.server";
+import { PushNotificationManager } from "@/components/push-notification-manager";
 
 type NotifChannel = { email: boolean; push: boolean; sms: boolean };
 type Settings = {
@@ -438,12 +439,26 @@ export default function SettingsPage() {
       </div>
 
       {/* NOTIFICATIONS */}
-      <section className="glass rounded-2xl p-6 shadow-card">
-        <h3 className="font-display text-lg font-semibold flex items-center gap-2">
-          <Bell className="h-4 w-4 text-primary" /> Notifications
-        </h3>
-        <p className="text-sm text-muted-foreground mt-0.5">Choose channels for each event.</p>
-        <div className="mt-4 overflow-x-auto">
+      <section className="glass rounded-2xl p-6 shadow-card space-y-6">
+        <div>
+          <h3 className="font-display text-lg font-semibold flex items-center gap-2">
+            <Bell className="h-4 w-4 text-primary" /> Device Push Notifications & Sound Alerts
+          </h3>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Enable live OS push notifications, custom kitchen chimes, and icon badge counters.
+          </p>
+        </div>
+
+        <PushNotificationManager />
+
+        <Separator />
+
+        <div>
+          <h4 className="font-medium text-sm text-foreground">Notification Channels Matrix</h4>
+          <p className="text-xs text-muted-foreground mt-0.5">Choose channels for specific system events.</p>
+        </div>
+
+        <div className="overflow-x-auto">
           <table className="w-full min-w-140 text-sm">
             <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>

@@ -105,6 +105,18 @@ const broadcastRealtimeEvent = async (params: {
   }
 };
 
+const sendPushNotification = async (
+  filter: import("./web-push.server").PushTargetFilter,
+  payload: import("./web-push.server").PushNotificationPayload,
+) => {
+  try {
+    const m = await import("./web-push.server");
+    return await m.sendPushNotificationServer(filter, payload);
+  } catch (err) {
+    console.warn("[WebPush] notification error:", err);
+  }
+};
+
 const sanitizeText = (text: string) => {
   if (!text) return text;
   return text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
@@ -1210,6 +1222,23 @@ export const placeOrderAction = createServerFn({ method: "POST" })
         createdAt: new Date().toISOString(),
       },
     });
+
+    // Send background OS Web Push Notification with kitchen-bell chime & unread badge
+    sendPushNotification(
+      {
+        restaurantId: tenant.restaurantId,
+        branchId: resolvedBranchId || null,
+        roles: ["owner", "manager", "cashier", "chef", "waiter"],
+      },
+      {
+        title: `🔔 New Order #${orderNumber} (${tableNumber ? `Table ${tableNumber}` : "Dine-in"})`,
+        body: `${validatedItems.map((i: any) => `${i.quantity}x ${i.name}`).join(", ")} • Total: ${calculatedTotal}`,
+        sound: "kitchen-bell",
+        orderId,
+        url: "/orders",
+        unreadCount: 1,
+      },
+    ).catch(() => {});
 
     return { id: orderId, total: calculatedTotal };
   });
@@ -4634,6 +4663,24 @@ export const saveOrderServer = createServerFn({ method: "POST" })
         },
       });
 
+      if (isNewOrder) {
+        sendPushNotification(
+          {
+            restaurantId: tenant.restaurantId,
+            branchId: branchId || null,
+            roles: ["owner", "manager", "cashier", "chef", "waiter"],
+          },
+          {
+            title: `🛎️ Order #${orderNum} Created (${fullOrder.tableNumber ? `Table ${fullOrder.tableNumber}` : fullOrder.type || "Dine-in"})`,
+            body: `${(fullOrder.lines || []).map((i: any) => `${i.qty || i.quantity || 1}x ${i.name}`).join(", ")} • Total: ${fullOrder.total}`,
+            sound: "cash-register",
+            orderId,
+            url: "/orders",
+            unreadCount: 1,
+          },
+        ).catch(() => {});
+      }
+
       return { success: true };
     } catch (err) {
       console.error("[MySQL] saveOrderServer query error:", err);
@@ -6668,6 +6715,21 @@ export const createWaiterRequestServer = createServerFn({ method: "POST" })
           updatedAt: new Date().toISOString(),
         },
       });
+
+      sendPushNotification(
+        {
+          restaurantId: publicTenant.restaurantId,
+          branchId: resolvedBranchId || null,
+          roles: ["waiter", "manager", "owner"],
+        },
+        {
+          title: `👋 Table ${tableNo} Needs Assistance (${type.toUpperCase()})`,
+          body: note ? `Note: ${note}` : `Guest at Table ${tableNo} requested ${type}.`,
+          sound: "urgent",
+          url: "/waiter-panel",
+          unreadCount: 1,
+        },
+      ).catch(() => {});
 
       return { success: true, id };
     } catch (err) {

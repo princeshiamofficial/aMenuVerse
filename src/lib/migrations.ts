@@ -279,6 +279,25 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       INDEX idx_analytics_events_type (restaurant_id, event_type)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
+    // 16. Push Subscriptions Table (VAPID Web Push Notifications)
+    `CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id VARCHAR(255) PRIMARY KEY,
+      restaurant_id INT NOT NULL,
+      branch_id VARCHAR(255) NULL,
+      user_id VARCHAR(255) NULL,
+      role VARCHAR(50) NULL,
+      endpoint TEXT NOT NULL,
+      p256dh VARCHAR(255) NOT NULL,
+      auth VARCHAR(255) NOT NULL,
+      user_agent VARCHAR(255) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_push_restaurant (restaurant_id),
+      INDEX idx_push_branch (restaurant_id, branch_id),
+      INDEX idx_push_role (restaurant_id, role),
+      INDEX idx_push_user (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
     // 16. Audit Logs Table
     `CREATE TABLE IF NOT EXISTS audit_logs (
       id VARCHAR(255) PRIMARY KEY,

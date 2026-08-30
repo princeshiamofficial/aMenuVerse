@@ -8,6 +8,7 @@ import type { AuthenticatedUser } from "@/lib/auth.server";
 import { DashboardShell } from "@/components/menuverse/dashboard-shell";
 import { useRealtime, playChime } from "@/lib/use-realtime";
 import { SkeletonDashboard } from "@/components/menuverse/skeletons";
+import { setupPushNotificationListener } from "@/lib/push-notifications";
 
 const PAGE_TITLE_MAP: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -72,6 +73,11 @@ function GlobalRealtimeNotifier({
       }
     },
   });
+
+  useEffect(() => {
+    const unsub = setupPushNotificationListener();
+    return () => unsub();
+  }, []);
 
   return null;
 }
