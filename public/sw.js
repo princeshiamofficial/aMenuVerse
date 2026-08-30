@@ -1,7 +1,7 @@
 // aMenuVerse Web Push Service Worker (Standard VAPID Web Push)
 // Handles background notifications, custom vibration patterns, badge count, and audio synchronization
 
-const SW_VERSION = "2.1.0";
+const SW_VERSION = "2.2.0";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

@@ -6,6 +6,8 @@
  * - Badging API support (Windows Taskbar, macOS Dock, Android app icon badge count)
  */
 
+import { toast } from "sonner";
+
 export type SoundType = "chime" | "kitchen-bell" | "cash-register" | "ping" | "urgent";
 
 /**
@@ -299,6 +301,24 @@ export function setupPushNotificationListener() {
   const handler = (event: MessageEvent) => {
     if (event.data?.type === "PLAY_NOTIFICATION_SOUND") {
       playNotificationSound(event.data.sound || "chime");
+
+      if (event.data.payload) {
+        const p = event.data.payload;
+        toast(p.title || "🔔 New Notification", {
+          description: p.body,
+          duration: 6000,
+          action: p.url
+            ? {
+                label: "View",
+                onClick: () => {
+                  if (typeof window !== "undefined") {
+                    window.location.href = p.url;
+                  }
+                },
+              }
+            : undefined,
+        });
+      }
     }
   };
 
