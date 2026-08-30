@@ -1,7 +1,7 @@
 // aMenuVerse Web Push Service Worker (Standard VAPID Web Push)
 // Handles background notifications, custom vibration patterns, badge count, and audio synchronization
 
-const SW_VERSION = "2.3.0";
+const SW_VERSION = "2.4.0";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -79,10 +79,16 @@ self.addEventListener("push", (event) => {
     body: data.body || "New update received",
     icon: iconUrl,
     badge: badgeUrl,
-    vibrate: data.vibrate || [200, 100, 200, 100, 400],
-    tag: data.tag || `alert-${Date.now()}`,
+    vibrate: data.vibrate || [300, 150, 300, 150, 400],
+    tag: `alert-${Date.now()}`,
     renotify: true,
     requireInteraction: true,
+    silent: false,
+    timestamp: Date.now(),
+    actions: [
+      { action: "open", title: "View Details" },
+      { action: "close", title: "Dismiss" },
+    ],
     data: {
       url: data.url || "/dashboard",
       orderId: data.orderId,
