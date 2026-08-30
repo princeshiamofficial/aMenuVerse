@@ -1110,6 +1110,63 @@ export function PublicRestaurantView({
     return [];
   });
 
+  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
+  const [hasNotificationPermission, setHasNotificationPermission] = useState(false);
+  const [isSubscribingPush, setIsSubscribingPush] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setHasNotificationPermission(Notification.permission === "granted");
+      const dismissed = sessionStorage.getItem(`menuverse:notif-dismissed:${restaurantUsername}`);
+      if (Notification.permission === "default" && !dismissed) {
+        const timer = setTimeout(() => {
+          setShowNotificationPrompt(true);
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [restaurantUsername]);
+
+  const handleEnableNotifications = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      toast.error("Push notifications are not supported on this browser.");
+      return;
+    }
+    setIsSubscribingPush(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        setHasNotificationPermission(true);
+        setShowNotificationPrompt(false);
+        const m = await import("@/lib/push-notifications");
+        const res = await m.subscribeToPushNotifications({
+          restaurantId: restaurant.id || restaurantUsername,
+          role: "customer",
+        });
+        if (res.success) {
+          m.playNotificationSound("chime");
+          toast.success("🔔 Order status alerts enabled for this device!");
+        } else {
+          toast.error(res.error || "Could not register push token.");
+        }
+      } else {
+        setShowNotificationPrompt(false);
+        toast.info("Notification permission was not enabled.");
+      }
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "An error occurred.");
+    } finally {
+      setIsSubscribingPush(false);
+    }
+  };
+
+  const handleDismissNotificationPrompt = () => {
+    setShowNotificationPrompt(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(`menuverse:notif-dismissed:${restaurantUsername}`, "true");
+    }
+  };
+
   // Sync initial placed order statuses from database on mount
   useEffect(() => {
     if (orders.length === 0) return;
@@ -2103,15 +2160,38 @@ export function PublicRestaurantView({
                   </div>
                 </div>
 
-                {/* Mobile Dropdown Button */}
-                <div className="relative shrink-0">
+                {/* Header Action Buttons */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {/* Notification Bell Button */}
                   <button
-                    onClick={() => setIsMenuDropdownOpen(!isMenuDropdownOpen)}
-                    className="md:hidden p-2 text-neutral-500 hover:text-neutral-700 active:scale-95 transition-all cursor-pointer rounded-full hover:bg-neutral-50 -mr-2"
-                    title="More options"
+                    type="button"
+                    onClick={handleEnableNotifications}
+                    className={`p-2 rounded-full transition-all active:scale-95 cursor-pointer relative ${
+                      hasNotificationPermission
+                        ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100"
+                        : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    }`}
+                    title={
+                      hasNotificationPermission
+                        ? "Push alerts active"
+                        : "Enable live order notifications"
+                    }
                   >
-                    <MoreVertical className="w-5.5 h-5.5" />
+                    <Bell className="w-5 h-5" />
+                    {hasNotificationPermission && (
+                      <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                    )}
                   </button>
+
+                  {/* Mobile Dropdown Button */}
+                  <div className="relative shrink-0">
+                    <button
+                      onClick={() => setIsMenuDropdownOpen(!isMenuDropdownOpen)}
+                      className="md:hidden p-2 text-neutral-500 hover:text-neutral-700 active:scale-95 transition-all cursor-pointer rounded-full hover:bg-neutral-50 -mr-2"
+                      title="More options"
+                    >
+                      <MoreVertical className="w-5.5 h-5.5" />
+                    </button>
 
                   {/* Dropdown Menu */}
                   {isMenuDropdownOpen && (
@@ -2197,6 +2277,7 @@ export function PublicRestaurantView({
                   )}
                 </div>
               </div>
+            </div>
 
               {/* Desktop Tabs */}
               <div className="hidden md:flex justify-between items-center border-t border-neutral-100/80 pl-8 pr-6">
@@ -3579,6 +3660,46 @@ export function PublicRestaurantView({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Notification Permission Request Card */}
+      {showNotificationPrompt && !hasNotificationPermission && (
+        <div className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-50 max-w-sm w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className="rounded-2xl p-4 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-amber-500/30 shadow-2xl space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                <Bell className="h-5 w-5 animate-bounce" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-sm text-neutral-900 dark:text-white">
+                  Get Live Order & Kitchen Updates!
+                </h4>
+                <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-0.5 leading-relaxed">
+                  Turn on notifications for instant audio chimes when your food is preparing & served at your table.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleDismissNotificationPrompt}
+                className="px-3 py-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors cursor-pointer"
+              >
+                Maybe Later
+              </button>
+              <button
+                type="button"
+                disabled={isSubscribingPush}
+                onClick={handleEnableNotifications}
+                className="btn-bubble px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+              >
+                <Bell className="h-3.5 w-3.5" />
+                {isSubscribingPush ? "Enabling..." : "Enable Alerts"}
+              </button>
+            </div>
           </div>
         </div>
       )}
