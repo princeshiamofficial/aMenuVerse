@@ -298,6 +298,23 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       INDEX idx_push_user (user_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
 
+    // 17. System Announcements Table
+    `CREATE TABLE IF NOT EXISTS announcements (
+      id VARCHAR(255) PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      body TEXT NOT NULL,
+      audience VARCHAR(50) DEFAULT 'all',
+      sound VARCHAR(50) DEFAULT 'chime',
+      url VARCHAR(255) DEFAULT '/dashboard',
+      live TINYINT(1) DEFAULT 1,
+      sent_count INT DEFAULT 0,
+      created_by VARCHAR(255) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_announcements_audience (audience),
+      INDEX idx_announcements_live (live)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
     // 16. Audit Logs Table
     `CREATE TABLE IF NOT EXISTS audit_logs (
       id VARCHAR(255) PRIMARY KEY,

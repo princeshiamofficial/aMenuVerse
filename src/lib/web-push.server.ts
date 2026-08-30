@@ -172,3 +172,88 @@ export async function sendPushNotificationServer(
     return { sent: 0, failed: 0 };
   }
 }
+
+/**
+ * Broadcasts system-wide announcements to targeted audiences via Web Push
+ */
+export async function sendSystemAnnouncementPushServer(params: {
+  title: string;
+  body: string;
+  audience?: "all" | "owners" | "staff" | string;
+  sound?: string;
+  url?: string;
+  restaurantId?: number | string;
+}): Promise<{ sent: number; failed: number }> {
+  try {
+    let sql = "SELECT * FROM push_subscriptions WHERE 1=1";
+    const sqlParams: unknown[] = [];
+
+    if (params.restaurantId && params.restaurantId !== "all") {
+      sql += " AND restaurant_id = ?";
+      sqlParams.push(Number(params.restaurantId));
+    }
+
+    if (params.audience === "owners") {
+      sql += " AND LOWER(role) = 'owner'";
+    } else if (params.audience === "staff") {
+      sql += " AND LOWER(role) IN ('manager', 'cashier', 'chef', 'waiter', 'host')";
+    }
+
+    const subscriptions = await query<
+      Array<{
+        id: string;
+        endpoint: string;
+        p256dh: string;
+        auth: string;
+      }>
+    >(sql, sqlParams);
+
+    if (!subscriptions || subscriptions.length === 0) {
+      return { sent: 0, failed: 0 };
+    }
+
+    const notificationPayload = JSON.stringify({
+      title: `📢 ${params.title}`,
+      body: params.body,
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+      url: params.url || "/dashboard",
+      sound: params.sound || "chime",
+      unreadCount: 1,
+      vibrate: [300, 150, 300, 150, 500],
+      tag: `announcement-${Date.now()}`,
+    });
+
+    let sent = 0;
+    let failed = 0;
+
+    await Promise.allSettled(
+      subscriptions.map(async (sub) => {
+        const pushSubscription = {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        };
+
+        try {
+          await webpush.sendNotification(pushSubscription, notificationPayload);
+          sent++;
+        } catch (err: unknown) {
+          failed++;
+          const statusCode = (err as { statusCode?: number })?.statusCode;
+          if (statusCode === 404 || statusCode === 410) {
+            await deletePushSubscriptionServer(sub.endpoint).catch(() => {});
+          }
+        }
+      }),
+    );
+
+    return { sent, failed };
+  } catch (err) {
+    console.error("[WebPush Announcement Error]", err);
+    return { sent: 0, failed: 0 };
+  }
+}
+

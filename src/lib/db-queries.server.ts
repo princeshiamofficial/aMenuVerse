@@ -7632,3 +7632,181 @@ export const updateTenantSubscriptionServer = createServerFn({ method: "POST" })
       throw new Error("Failed to update subscription in database");
     }
   });
+
+// =========================================================
+// SYSTEM ANNOUNCEMENTS & WEB PUSH BROADCASTS
+// =========================================================
+
+export type AnnouncementRecord = {
+  id: string;
+  title: string;
+  body: string;
+  audience: "all" | "owners" | "staff" | string;
+  sound: string;
+  url: string;
+  live: boolean;
+  sentCount: number;
+  date: string;
+  createdAt: string;
+};
+
+export const getAnnouncementsServer = createServerFn({ method: "GET" })
+  .validator((input?: { data?: Record<string, unknown> }) => input)
+  .handler(async () => {
+    try {
+      try {
+        const pool = await getPool();
+        await pool.query(`CREATE TABLE IF NOT EXISTS announcements (
+          id VARCHAR(255) PRIMARY KEY,
+          title VARCHAR(255) NOT NULL,
+          body TEXT NOT NULL,
+          audience VARCHAR(50) DEFAULT 'all',
+          sound VARCHAR(50) DEFAULT 'chime',
+          url VARCHAR(255) DEFAULT '/dashboard',
+          live TINYINT(1) DEFAULT 1,
+          sent_count INT DEFAULT 0,
+          created_by VARCHAR(255) NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_announcements_audience (audience),
+          INDEX idx_announcements_live (live)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+      } catch {
+        /* ignore */
+      }
+
+      const rows = await query<Record<string, unknown>[]>(
+        "SELECT * FROM announcements ORDER BY created_at DESC",
+      );
+
+      if (!rows || rows.length === 0) return [];
+
+      return rows.map((r) => ({
+        id: String(r.id),
+        title: String(r.title || ""),
+        body: String(r.body || ""),
+        audience: String(r.audience || "all"),
+        sound: String(r.sound || "chime"),
+        url: String(r.url || "/dashboard"),
+        live: Boolean(r.live),
+        sentCount: Number(r.sent_count || 0),
+        date: String(r.created_at ? new Date(String(r.created_at)).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)),
+        createdAt: String(r.created_at || new Date().toISOString()),
+      })) as AnnouncementRecord[];
+    } catch (err) {
+      console.warn("[MySQL] getAnnouncementsServer query warning:", err);
+      return [];
+    }
+  });
+
+export const publishAnnouncementServer = createServerFn({ method: "POST" })
+  .validator(
+    (data: {
+      title: string;
+      body: string;
+      audience: "all" | "owners" | "staff" | string;
+      sound?: string;
+      url?: string;
+      sendPush?: boolean;
+    }) =>
+      z
+        .object({
+          title: z.string().min(1),
+          body: z.string().min(1),
+          audience: z.string().default("all"),
+          sound: z.string().default("chime"),
+          url: z.string().default("/dashboard"),
+          sendPush: z.boolean().default(true),
+        })
+        .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const id = `ann_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const authUser = await requireAuth();
+
+    try {
+      let sentCount = 0;
+
+      if (data.sendPush) {
+        const m = await import("./web-push.server");
+        const pushResult = await m.sendSystemAnnouncementPushServer({
+          title: data.title,
+          body: data.body,
+          audience: data.audience,
+          sound: data.sound || "chime",
+          url: data.url || "/dashboard",
+        });
+        sentCount = pushResult.sent;
+      }
+
+      await query(
+        `INSERT INTO announcements (id, title, body, audience, sound, url, live, sent_count, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+        [
+          id,
+          data.title.trim(),
+          data.body.trim(),
+          data.audience,
+          data.sound || "chime",
+          data.url || "/dashboard",
+          sentCount,
+          authUser.email || authUser.id,
+        ],
+      );
+
+      return { success: true, id, sentCount };
+    } catch (err) {
+      console.error("[MySQL] publishAnnouncementServer error:", err);
+      throw new Error(err instanceof Error ? err.message : "Failed to publish announcement");
+    }
+  });
+
+export const deleteAnnouncementServer = createServerFn({ method: "POST" })
+  .validator((data: { id: string }) => z.object({ id: z.string() }).parse(data))
+  .handler(async ({ data }) => {
+    await requireRole(["super_admin", "owner"]);
+    await query("DELETE FROM announcements WHERE id = ?", [data.id]);
+    return { success: true };
+  });
+
+export const toggleAnnouncementLiveServer = createServerFn({ method: "POST" })
+  .validator((data: { id: string; live: boolean }) =>
+    z.object({ id: z.string(), live: z.boolean() }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    await requireRole(["super_admin", "owner"]);
+    await query("UPDATE announcements SET live = ? WHERE id = ?", [data.live ? 1 : 0, data.id]);
+    return { success: true };
+  });
+
+export const resendAnnouncementPushServer = createServerFn({ method: "POST" })
+  .validator((data: { id: string }) => z.object({ id: z.string() }).parse(data))
+  .handler(async ({ data }) => {
+    await requireRole(["super_admin", "owner"]);
+    const rows = await query<Record<string, unknown>[]>(
+      "SELECT * FROM announcements WHERE id = ? LIMIT 1",
+      [data.id],
+    );
+
+    if (!rows || rows.length === 0) {
+      throw new Error("Announcement not found");
+    }
+
+    const ann = rows[0];
+    const m = await import("./web-push.server");
+    const pushResult = await m.sendSystemAnnouncementPushServer({
+      title: String(ann.title || "Announcement"),
+      body: String(ann.body || ""),
+      audience: String(ann.audience || "all"),
+      sound: String(ann.sound || "chime"),
+      url: String(ann.url || "/dashboard"),
+    });
+
+    await query(
+      "UPDATE announcements SET sent_count = sent_count + ? WHERE id = ?",
+      [pushResult.sent, data.id],
+    );
+
+    return { success: true, sentCount: pushResult.sent };
+  });
+
