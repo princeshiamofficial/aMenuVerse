@@ -401,10 +401,8 @@ export default function PublicRestaurantPage() {
   const paramSlug = (params?.restaurantUsername as string) || "";
   const restaurantUsername = (paramSlug || pathSlug || "bellapizza").toLowerCase().trim();
 
-  const [restaurant, setRestaurant] = useState<Restaurant | null>(() =>
-    fetchPublicMenuSync(restaurantUsername),
-  );
-  const [loading, setLoading] = useState(false);
+  const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [loading, setLoading] = useState(true);
   const [suspended, setSuspended] = useState(false);
   const [suspendedName, setSuspendedName] = useState("");
 
