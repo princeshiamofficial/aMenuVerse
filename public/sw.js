@@ -71,6 +71,8 @@ self.addEventListener("push", (event) => {
     vibrate: data.vibrate || [200, 100, 200, 100, 400],
     tag: data.tag || `alert-${Date.now()}`,
     renotify: true,
+    requireInteraction: true,
+    silent: false,
     data: {
       url: data.url || "/dashboard",
       orderId: data.orderId,
