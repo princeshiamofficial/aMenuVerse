@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams, useParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   getRestaurantData,
   getRestaurantStatusBySlug,
@@ -620,6 +621,30 @@ export function PublicRestaurantView({
       twitterMeta.content = ogImageUrl;
     }
   }, [restaurant]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        import("@/lib/push-notifications").then((m) => {
+          m.subscribeToPushNotifications({
+            restaurantId: restaurant.id || restaurantUsername,
+            role: "customer",
+          }).catch(() => {});
+        });
+      }
+    }
+
+    let unsubListener: (() => void) | undefined;
+    import("@/lib/push-notifications").then((m) => {
+      unsubListener = m.setupPushNotificationListener();
+    });
+
+    return () => {
+      if (unsubListener) unsubListener();
+    };
+  }, [restaurant.id, restaurantUsername]);
 
   const [localBranches, setLocalBranches] = useState<Branch[]>([]);
   const [adminCategories, setAdminCategories] = useState<
@@ -2119,6 +2144,33 @@ export function PublicRestaurantView({
                             <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
                           </svg>
                           <span>Copy Link</span>
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setIsMenuDropdownOpen(false);
+                            if (typeof window !== "undefined" && "Notification" in window) {
+                              const perm = await Notification.requestPermission();
+                              if (perm === "granted") {
+                                const m = await import("@/lib/push-notifications");
+                                const res = await m.subscribeToPushNotifications({
+                                  restaurantId: restaurant.id || restaurantUsername,
+                                  role: "customer",
+                                });
+                                if (res.success) {
+                                  m.playNotificationSound("chime");
+                                  toast.success("🔔 Push alerts enabled for this device!");
+                                } else {
+                                  toast.error(res.error || "Failed to subscribe");
+                                }
+                              } else {
+                                toast.error("Notification permission was not granted.");
+                              }
+                            }
+                          }}
+                          className="w-full px-4 py-2.5 text-xs font-bold text-neutral-755 hover:bg-neutral-50 flex items-center gap-2.5 cursor-pointer text-left border-t border-neutral-100/80"
+                        >
+                          <Bell className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Push Alerts</span>
                         </button>
                         <button
                           onClick={() => {

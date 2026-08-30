@@ -57,6 +57,28 @@ function GlobalRealtimeNotifier({
           description: `Customer: ${customerName}`,
           duration: 7000,
         });
+
+        // Trigger native system notification if permission is granted
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          try {
+            navigator.serviceWorker.ready.then((reg) => {
+              reg.showNotification(`🔔 New Order! ${orderNum}`, {
+                body: `Customer: ${customerName}`,
+                icon: "/favicon.ico",
+                badge: "/favicon.ico",
+                tag: `order-${payload?.id || Date.now()}`,
+                data: { url: "/orders" },
+              });
+            }).catch(() => {
+              new Notification(`🔔 New Order! ${orderNum}`, {
+                body: `Customer: ${customerName}`,
+                icon: "/favicon.ico",
+              });
+            });
+          } catch {
+            /* ignore */
+          }
+        }
       } else if (event.type === "waiter:called") {
         playChime("waiter");
         const payload = event.payload as Record<string, unknown>;
@@ -66,6 +88,28 @@ function GlobalRealtimeNotifier({
           description: "Guest needs assistance",
           duration: 7000,
         });
+
+        // Trigger native system notification if permission is granted
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          try {
+            navigator.serviceWorker.ready.then((reg) => {
+              reg.showNotification(`🚨 Waiter Call! ${tableNum}`, {
+                body: "Guest needs assistance",
+                icon: "/favicon.ico",
+                badge: "/favicon.ico",
+                tag: `waiter-${payload?.id || Date.now()}`,
+                data: { url: "/waiter-panel" },
+              });
+            }).catch(() => {
+              new Notification(`🚨 Waiter Call! ${tableNum}`, {
+                body: "Guest needs assistance",
+                icon: "/favicon.ico",
+              });
+            });
+          } catch {
+            /* ignore */
+          }
+        }
       }
 
       if (typeof window !== "undefined") {
@@ -76,8 +120,25 @@ function GlobalRealtimeNotifier({
 
   useEffect(() => {
     const unsub = setupPushNotificationListener();
+
+    // Auto-subscribe if notification permission is already granted
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "granted" &&
+      restaurantId
+    ) {
+      import("@/lib/push-notifications").then((m) => {
+        m.subscribeToPushNotifications({
+          restaurantId,
+          branchId: branch || null,
+          role: role || null,
+        }).catch(() => {});
+      });
+    }
+
     return () => unsub();
-  }, []);
+  }, [restaurantId, branch, role]);
 
   return null;
 }

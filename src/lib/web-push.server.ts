@@ -51,7 +51,23 @@ export async function savePushSubscriptionServer(params: {
   userAgent?: string | null;
 }): Promise<void> {
   const id = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const restId = Number(params.restaurantId) || 1;
+  let restId = Number(params.restaurantId);
+
+  if (isNaN(restId) || restId <= 0) {
+    try {
+      const restRows = await query<Array<{ id: number }>>(
+        "SELECT id FROM restaurants WHERE slug = ? OR name = ? LIMIT 1",
+        [String(params.restaurantId), String(params.restaurantId)],
+      );
+      if (restRows && restRows.length > 0 && restRows[0].id) {
+        restId = Number(restRows[0].id);
+      } else {
+        restId = 1;
+      }
+    } catch {
+      restId = 1;
+    }
+  }
 
   await query(
     `INSERT INTO push_subscriptions 
@@ -95,8 +111,25 @@ export async function sendPushNotificationServer(
   payload: PushNotificationPayload,
 ): Promise<{ sent: number; failed: number }> {
   try {
-    let sql = "SELECT * FROM push_subscriptions WHERE restaurant_id = ?";
-    const params: unknown[] = [Number(filter.restaurantId) || 1];
+    let targetRestId = Number(filter.restaurantId);
+    if (isNaN(targetRestId) || targetRestId <= 0) {
+      try {
+        const restRows = await query<Array<{ id: number }>>(
+          "SELECT id FROM restaurants WHERE slug = ? OR name = ? LIMIT 1",
+          [String(filter.restaurantId), String(filter.restaurantId)],
+        );
+        if (restRows && restRows.length > 0 && restRows[0].id) {
+          targetRestId = Number(restRows[0].id);
+        } else {
+          targetRestId = 1;
+        }
+      } catch {
+        targetRestId = 1;
+      }
+    }
+
+    let sql = "SELECT * FROM push_subscriptions WHERE (restaurant_id = ? OR restaurant_id = 0)";
+    const params: unknown[] = [targetRestId];
 
     if (filter.branchId) {
       sql += " AND (branch_id = ? OR branch_id IS NULL)";
