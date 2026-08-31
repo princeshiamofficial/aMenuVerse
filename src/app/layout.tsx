@@ -14,10 +14,38 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const appBaseUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.APP_URL ||
+  "https://hazards-raw-cycle-menus.trycloudflare.com";
+
 export const metadata: Metadata = {
-  title: "MenuVerse — Multi-Tenant Restaurant OS & POS",
+  metadataBase: new URL(appBaseUrl),
+  title: "MenuVerse - Multi-Tenant Restaurant OS & POS",
   description:
     "MenuVerse is the all-in-one AI platform for digital QR menus, multi-branch operations, real-time KDS, waiter calling, and POS billing.",
+  openGraph: {
+    title: "MenuVerse - Multi-Tenant Restaurant OS & POS",
+    description:
+      "MenuVerse is the all-in-one AI platform for digital QR menus, multi-branch operations, real-time KDS, waiter calling, and POS billing.",
+    siteName: "MenuVerse",
+    type: "website",
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=1200&auto=format&fit=crop&q=80",
+        width: 1200,
+        height: 630,
+        alt: "MenuVerse Restaurant Platform",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MenuVerse - Multi-Tenant Restaurant OS & POS",
+    description:
+      "MenuVerse is the all-in-one AI platform for digital QR menus, multi-branch operations, real-time KDS, waiter calling, and POS billing.",
+    images: ["https://images.unsplash.com/photo-1552566626-52f8b828add9?w=1200&auto=format&fit=crop&q=80"],
+  },
 };
 
 export default function RootLayout({

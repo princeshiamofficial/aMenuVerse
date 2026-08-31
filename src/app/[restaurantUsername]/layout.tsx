@@ -16,36 +16,48 @@ export async function generateMetadata({
 
   if (!restaurant) {
     return {
-      title: "Restaurant Not Found — MenuVerse",
+      title: "Restaurant Not Found - MenuVerse",
       description: "The requested restaurant menu could not be found on MenuVerse.",
     };
   }
 
   const title = `${restaurant.name} - Digital Menu & Table Ordering`;
   const description =
-    restaurant.cuisine && restaurant.location
+    (restaurant as any).descriptionText ||
+    (restaurant as any).introText ||
+    (restaurant.cuisine && restaurant.location
       ? `Explore the digital menu, signature food items, and order online from ${restaurant.name} (${restaurant.cuisine}) located in ${restaurant.location}.`
-      : `Explore the live digital menu, deals, and order directly from ${restaurant.name} on MenuVerse.`;
+      : `Explore the live digital menu, signature food items, and order directly from ${restaurant.name} on MenuVerse.`);
 
   const ogImage =
+    (restaurant as any).socialPreview ||
     restaurant.image ||
     restaurant.logoImage ||
     "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=1200&auto=format&fit=crop&q=80";
 
+  const appBaseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    "https://hazards-raw-cycle-menus.trycloudflare.com";
+
   return {
+    metadataBase: new URL(appBaseUrl),
     title,
     description,
+    icons: restaurant.favicon || restaurant.logoImage ? [{ url: restaurant.favicon || (restaurant.logoImage as string) }] : undefined,
     openGraph: {
       title,
       description,
+      url: `/${restaurantUsername}`,
       type: "website",
       siteName: "MenuVerse",
       images: [
         {
           url: ogImage,
+          secureUrl: ogImage,
           width: 1200,
           height: 630,
-          alt: `${restaurant.name} Cover Image`,
+          alt: `${restaurant.name} Cover Preview`,
         },
       ],
     },
