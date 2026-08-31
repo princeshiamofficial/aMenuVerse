@@ -76,7 +76,6 @@ export function unlockAudioEngine() {
     }
   }
   loadSoundWavBuffer();
-  requestNotificationPermission();
 }
 
 let originalTabTitle = "";

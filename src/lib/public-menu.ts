@@ -92,6 +92,9 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
     if ((dbData as unknown as { whatsappNumber?: string }).whatsappNumber !== undefined) {
       baseData.whatsappNumber = (dbData as unknown as { whatsappNumber?: string }).whatsappNumber;
     }
+    if (dbData.isPushEnabled !== undefined) {
+      baseData.isPushEnabled = dbData.isPushEnabled;
+    }
   }
 
   if (dbProfile) {

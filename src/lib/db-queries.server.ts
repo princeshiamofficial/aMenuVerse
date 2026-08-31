@@ -512,6 +512,14 @@ export const getRestaurantData = createServerFn({ method: "GET" })
       phone: String(profile.phone || restaurant.phone || ""),
       operatingHours: String(profile.openingHours || "Open Daily"),
       isVerified: profile.isVerified !== undefined ? Boolean(profile.isVerified) : true,
+      isPushEnabled: await (async () => {
+        try {
+          const webPushMod = await import("./web-push.server");
+          return await webPushMod.isWebPushEnabledForRestaurant(Number(restaurant.id));
+        } catch {
+          return true;
+        }
+      })(),
       appearance: (profile.appearance as Restaurant["appearance"]) || {
         themeColor: "amber",
         menuLayout: "cards",

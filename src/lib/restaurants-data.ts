@@ -62,6 +62,7 @@ export interface Restaurant {
     fontFamily?: string;
     themeColor?: string;
   };
+  isPushEnabled?: boolean;
 }
 
 export const RESTAURANTS: Restaurant[] = [

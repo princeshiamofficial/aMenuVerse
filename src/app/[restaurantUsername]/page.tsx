@@ -632,7 +632,11 @@ export function PublicRestaurantView({
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
 
-      if ("Notification" in window && Notification.permission === "granted") {
+      if (
+        "Notification" in window &&
+        Notification.permission === "granted" &&
+        restaurant?.isPushEnabled !== false
+      ) {
         import("@/lib/push-notifications").then((m) => {
           m.subscribeToPushNotifications({
             restaurantId: restaurant.id || restaurantUsername,
@@ -1167,6 +1171,10 @@ export function PublicRestaurantView({
   const [isSubscribingPush, setIsSubscribingPush] = useState(false);
 
   useEffect(() => {
+    if (restaurant?.isPushEnabled === false) {
+      setShowNotificationPrompt(false);
+      return;
+    }
     if (typeof window !== "undefined" && "Notification" in window) {
       setHasNotificationPermission(Notification.permission === "granted");
       const dismissed = sessionStorage.getItem(`menuverse:notif-dismissed:${restaurantUsername}`);
@@ -1177,7 +1185,7 @@ export function PublicRestaurantView({
         return () => clearTimeout(timer);
       }
     }
-  }, [restaurantUsername]);
+  }, [restaurantUsername, restaurant?.isPushEnabled]);
 
   const handleEnableNotifications = async () => {
     if (typeof window === "undefined" || !("Notification" in window)) {
@@ -3762,7 +3770,7 @@ export function PublicRestaurantView({
       )}
 
       {/* Floating Notification Permission Request Card */}
-      {showNotificationPrompt && !hasNotificationPermission && (
+      {showNotificationPrompt && !hasNotificationPermission && restaurant?.isPushEnabled !== false && (
         <div className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-50 max-w-sm w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div className="rounded-2xl p-4 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-amber-500/30 shadow-2xl space-y-3">
             <div className="flex items-start gap-3">
