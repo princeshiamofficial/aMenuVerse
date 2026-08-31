@@ -56,6 +56,8 @@ import {
   sendFcmCustomBroadcastServer,
   testSingleFcmSubscriberServer,
   getAdminRestaurantsServer,
+  toggleWebPushGlobalStatusServer,
+  toggleRestaurantPushStatusServer,
   type FcmSubscriberRecord,
 } from "@/lib/db-queries.server";
 import { playNotificationSound, type SoundType } from "@/lib/push-notifications";
@@ -67,7 +69,14 @@ export default function AdminFcmPage() {
     staffDevices: number;
     ownerDevices: number;
     uniqueRestaurants: number;
-    restaurants: Array<{ restaurant_id: number; name: string; slug: string; subscribers: number }>;
+    globalEnabled?: boolean;
+    restaurants: Array<{
+      restaurant_id: number;
+      name: string;
+      slug: string;
+      subscribers: number;
+      is_push_enabled?: boolean;
+    }>;
     vapidPublicKey: string;
     gatewayStatus: string;
   } | null>(null);
@@ -76,6 +85,8 @@ export default function AdminFcmPage() {
   const [restaurantsList, setRestaurantsList] = useState<Array<{ id: number; name: string; slug: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [broadcasting, setBroadcasting] = useState(false);
+  const [togglingGlobal, setTogglingGlobal] = useState(false);
+  const [togglingRestId, setTogglingRestId] = useState<number | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState(false);
 
@@ -133,6 +144,46 @@ export default function AdminFcmPage() {
   useEffect(() => {
     loadData();
   }, [selectedRoleFilter, selectedRestaurantFilter]);
+
+  const handleToggleGlobalPush = async (newVal: boolean) => {
+    setTogglingGlobal(true);
+    try {
+      const res = await toggleWebPushGlobalStatusServer({ data: { enabled: newVal } });
+      if (res.success) {
+        toast.success(
+          newVal
+            ? "🟢 Web Push Notifications globally ENABLED across all restaurants."
+            : "🔴 Web Push Notifications globally PAUSED across the platform.",
+        );
+        await loadData();
+      }
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Failed to update global push status.");
+    } finally {
+      setTogglingGlobal(false);
+    }
+  };
+
+  const handleToggleRestaurantPush = async (restaurantId: number, newVal: boolean) => {
+    setTogglingRestId(restaurantId);
+    try {
+      const res = await toggleRestaurantPushStatusServer({
+        data: { restaurantId, enabled: newVal },
+      });
+      if (res.success) {
+        toast.success(
+          newVal
+            ? `🟢 Push notifications ENABLED for Restaurant #${restaurantId}.`
+            : `🔴 Push notifications PAUSED for Restaurant #${restaurantId}.`,
+        );
+        await loadData();
+      }
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Failed to toggle restaurant push status.");
+    } finally {
+      setTogglingRestId(null);
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -346,9 +397,62 @@ export default function AdminFcmPage() {
         </Card>
       </div>
 
+      {/* Master Push Control Card */}
+      <Card className="rounded-3xl border-border/60 shadow-xs overflow-hidden">
+        <div className="p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-muted/20">
+          <div className="flex items-start md:items-center gap-3.5">
+            <div
+              className={`h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+                stats?.globalEnabled !== false
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+              }`}
+            >
+              <Radio
+                className={`h-5 w-5 ${
+                  stats?.globalEnabled !== false ? "animate-pulse" : ""
+                }`}
+              />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-foreground">
+                  Platform Web Push Master Gateway
+                </h3>
+                <Badge
+                  variant="outline"
+                  className={
+                    stats?.globalEnabled !== false
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold"
+                      : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-[10px] font-bold"
+                  }
+                >
+                  {stats?.globalEnabled !== false ? "🟢 Live & Active" : "🔴 Paused / Muted"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 max-w-2xl">
+                Global Super Admin master switch. When toggled OFF, all automated order alerts, waiter pings, and broadcasts across all restaurants are temporarily muted without deleting device subscriptions.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 self-end md:self-center shrink-0 bg-background/80 px-4 py-2.5 rounded-2xl border border-border/60 shadow-xs">
+            <span className="text-xs font-semibold text-foreground">
+              {stats?.globalEnabled !== false ? "Gateway Enabled" : "Gateway Muted"}
+            </span>
+            <Switch
+              checked={stats?.globalEnabled !== false}
+              disabled={togglingGlobal}
+              onCheckedChange={(checked) => handleToggleGlobalPush(checked)}
+              className="data-[state=checked]:bg-emerald-600"
+            />
+          </div>
+        </div>
+      </Card>
+
       {/* Main Tabs Workspace */}
       <Tabs defaultValue="broadcast" className="space-y-6">
-        <TabsList className="bg-muted/80 p-1 rounded-2xl grid grid-cols-3 max-w-lg">
+        <TabsList className="bg-muted/80 p-1 rounded-2xl grid grid-cols-2 sm:grid-cols-4 max-w-2xl">
           <TabsTrigger value="broadcast" className="rounded-xl text-xs font-bold gap-1.5 py-2">
             <Send className="h-3.5 w-3.5" />
             Push Broadcast
@@ -356,6 +460,10 @@ export default function AdminFcmPage() {
           <TabsTrigger value="subscribers" className="rounded-xl text-xs font-bold gap-1.5 py-2">
             <Smartphone className="h-3.5 w-3.5" />
             Device Endpoints
+          </TabsTrigger>
+          <TabsTrigger value="restaurants" className="rounded-xl text-xs font-bold gap-1.5 py-2">
+            <Store className="h-3.5 w-3.5" />
+            Tenant Channels
           </TabsTrigger>
           <TabsTrigger value="diagnostics" className="rounded-xl text-xs font-bold gap-1.5 py-2">
             <ShieldCheck className="h-3.5 w-3.5" />
@@ -776,7 +884,115 @@ export default function AdminFcmPage() {
           </Card>
         </TabsContent>
 
-        {/* Tab 3: VAPID & Diagnostic Suite */}
+        {/* Tab 3: Tenant Channels & Per-Restaurant Push Control */}
+        <TabsContent value="restaurants" className="space-y-4">
+          <Card className="rounded-3xl border-border/60 shadow-xs">
+            <CardHeader className="p-4 sm:p-6 border-b border-border/60">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Store className="h-4 w-4 text-purple-500" />
+                    Restaurant Push Notification Channels ({stats?.restaurants?.length || 0})
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Enable or disable Web Push notification delivery for individual restaurant tenants.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0">
+              {(!stats?.restaurants || stats.restaurants.length === 0) ? (
+                <div className="p-12 text-center text-muted-foreground">
+                  <Store className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+                  <p className="font-bold text-sm">No restaurant channels found</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Subscribers will register their restaurant automatically on first interaction.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-muted/40 text-muted-foreground uppercase text-[10px] font-bold border-b border-border/60">
+                      <tr>
+                        <th className="py-3 px-4">Restaurant</th>
+                        <th className="py-3 px-4">Slug Identifier</th>
+                        <th className="py-3 px-4 text-center">Subscribers</th>
+                        <th className="py-3 px-4">Channel Status</th>
+                        <th className="py-3 px-4 text-right">Web Push Toggle</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/40 font-medium">
+                      {stats.restaurants.map((rest) => {
+                        const isPushActive = rest.is_push_enabled !== false;
+                        const isToggling = togglingRestId === rest.restaurant_id;
+
+                        return (
+                          <tr key={rest.restaurant_id} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-3.5 px-4 font-bold text-foreground">
+                              <div className="flex items-center gap-2.5">
+                                <div className="h-8 w-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-black text-xs shrink-0">
+                                  {rest.name.slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-foreground">{rest.name}</div>
+                                  <div className="text-[10px] text-muted-foreground font-normal">
+                                    ID #{rest.restaurant_id}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4 font-mono text-[11px] text-muted-foreground">
+                              /{rest.slug}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-center">
+                              <Badge variant="secondary" className="font-mono text-xs px-2.5 py-0.5">
+                                {rest.subscribers} device{rest.subscribers === 1 ? "" : "s"}
+                              </Badge>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              <Badge
+                                variant="outline"
+                                className={
+                                  isPushActive
+                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-bold"
+                                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30 text-[10px] font-bold"
+                                }
+                              >
+                                {isPushActive ? "🟢 Active" : "🔴 Muted"}
+                              </Badge>
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-2.5">
+                                <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                                  {isPushActive ? "Enabled" : "Disabled"}
+                                </span>
+                                <Switch
+                                  checked={isPushActive}
+                                  disabled={isToggling}
+                                  onCheckedChange={(checked) =>
+                                    handleToggleRestaurantPush(rest.restaurant_id, checked)
+                                  }
+                                  className="data-[state=checked]:bg-emerald-600"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 4: VAPID & Diagnostic Suite */}
         <TabsContent value="diagnostics" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* VAPID Details Card */}

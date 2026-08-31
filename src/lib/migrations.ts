@@ -357,6 +357,13 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_restaurant_profiles_tenant (restaurant_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
+
+    // 18. System Settings Table (Global SaaS Configuration & Master Toggles)
+    `CREATE TABLE IF NOT EXISTS system_settings (
+      key_name VARCHAR(100) PRIMARY KEY,
+      value_text TEXT,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`,
   ];
 
   for (const stmt of tableStatements) {
@@ -369,6 +376,7 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
 
   // Ensure all restaurants table columns exist across legacy schemas
   const restaurantColumnAlters = [
+    "ALTER TABLE restaurants ADD COLUMN is_push_enabled TINYINT(1) DEFAULT 1",
     "ALTER TABLE restaurants ADD COLUMN slug VARCHAR(255) NULL",
     "ALTER TABLE restaurants ADD COLUMN username VARCHAR(255) NULL",
     "ALTER TABLE restaurants ADD COLUMN description TEXT NULL",

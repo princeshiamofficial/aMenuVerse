@@ -97,6 +97,72 @@ export async function savePushSubscriptionServer(params: {
 }
 
 /**
+ * Checks if Web Push is globally enabled across the whole SaaS platform.
+ */
+export async function isWebPushEnabledGlobally(): Promise<boolean> {
+  try {
+    const rows = await query<Array<{ value_text: string }>>(
+      "SELECT value_text FROM system_settings WHERE key_name = 'web_push_enabled' LIMIT 1",
+    );
+    if (rows && rows.length > 0) {
+      return rows[0].value_text !== "false";
+    }
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Updates the global Web Push master toggle.
+ */
+export async function setWebPushGlobalStatus(enabled: boolean): Promise<void> {
+  await query(
+    `INSERT INTO system_settings (key_name, value_text) VALUES ('web_push_enabled', ?)
+     ON DUPLICATE KEY UPDATE value_text = VALUES(value_text)`,
+    [enabled ? "true" : "false"],
+  );
+}
+
+/**
+ * Checks if Web Push is enabled for a specific restaurant tenant.
+ */
+export async function isWebPushEnabledForRestaurant(restaurantId: number): Promise<boolean> {
+  try {
+    const globalActive = await isWebPushEnabledGlobally();
+    if (!globalActive) return false;
+
+    const rows = await query<Array<{ is_push_enabled?: number }>>(
+      "SELECT is_push_enabled FROM restaurants WHERE id = ? LIMIT 1",
+      [restaurantId],
+    );
+    if (rows && rows.length > 0 && rows[0].is_push_enabled !== undefined && rows[0].is_push_enabled !== null) {
+      return Number(rows[0].is_push_enabled) === 1;
+    }
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Sets Web Push toggle for a specific restaurant tenant.
+ */
+export async function setRestaurantPushStatus(restaurantId: number, enabled: boolean): Promise<void> {
+  try {
+    await query("UPDATE restaurants SET is_push_enabled = ? WHERE id = ?", [enabled ? 1 : 0, restaurantId]);
+  } catch {
+    /* ignore */
+  }
+  await query(
+    `INSERT INTO restaurant_settings (restaurant_id, setting_key, setting_value)
+     VALUES (?, 'web_push_enabled', ?)
+     ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+    [restaurantId, enabled ? "true" : "false"],
+  );
+}
+
+/**
  * Removes an expired or unsubscribed push subscription
  */
 export async function deletePushSubscriptionServer(endpoint: string): Promise<void> {
@@ -126,6 +192,12 @@ export async function sendPushNotificationServer(
       } catch {
         targetRestId = 1;
       }
+    }
+
+    // Check if push notifications are enabled for this restaurant
+    const pushEnabled = await isWebPushEnabledForRestaurant(targetRestId);
+    if (!pushEnabled) {
+      return { sent: 0, failed: 0 };
     }
 
     let sql = "SELECT * FROM push_subscriptions WHERE (restaurant_id = ? OR restaurant_id = 0)";
@@ -224,6 +296,11 @@ export async function sendSystemAnnouncementPushServer(params: {
   restaurantId?: number | string;
 }): Promise<{ sent: number; failed: number }> {
   try {
+    const globalActive = await isWebPushEnabledGlobally();
+    if (!globalActive) {
+      return { sent: 0, failed: 0 };
+    }
+
     let sql = "SELECT * FROM push_subscriptions WHERE 1=1";
     const sqlParams: unknown[] = [];
 

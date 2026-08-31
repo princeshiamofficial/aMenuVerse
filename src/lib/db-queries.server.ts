@@ -7890,6 +7890,8 @@ export type FcmSubscriberRecord = {
 export const getFcmStatsServer = createServerFn({ method: "GET" })
   .handler(async () => {
     await requireRole(["super_admin", "owner"]);
+    const m = await import("./web-push.server");
+    const globalEnabled = await m.isWebPushEnabledGlobally();
 
     const [countRows, restRows] = await Promise.all([
       query<
@@ -7915,16 +7917,18 @@ export const getFcmStatsServer = createServerFn({ method: "GET" })
           name: string;
           slug: string;
           subscribers: number;
+          is_push_enabled: number | null;
         }>
       >(
         `SELECT 
           ps.restaurant_id,
           COALESCE(r.name, CONCAT('Restaurant #', ps.restaurant_id)) as name,
           COALESCE(r.slug, 'unknown') as slug,
-          COUNT(*) as subscribers
+          COUNT(*) as subscribers,
+          COALESCE(r.is_push_enabled, 1) as is_push_enabled
         FROM push_subscriptions ps
         LEFT JOIN restaurants r ON ps.restaurant_id = r.id
-        GROUP BY ps.restaurant_id, r.name, r.slug
+        GROUP BY ps.restaurant_id, r.name, r.slug, r.is_push_enabled
         ORDER BY subscribers DESC`,
       ),
     ]);
@@ -7943,11 +7947,17 @@ export const getFcmStatsServer = createServerFn({ method: "GET" })
       staffDevices: Number(stats.staff) || 0,
       ownerDevices: Number(stats.owners) || 0,
       uniqueRestaurants: Number(stats.unique_restaurants) || 0,
-      restaurants: restRows || [],
+      globalEnabled,
+      restaurants: (restRows || []).map((r) => ({
+        ...r,
+        is_push_enabled: r.is_push_enabled !== 0,
+      })),
       vapidPublicKey:
         process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
         "BFCWjOYUAdv3FqiTopV07F48-nmqk7g-NJkkd-1ZU4XVwhXSXirasbeJpi8qEMIj50WKQ6h8lay1wOGKWxuGhjM",
-      gatewayStatus: "Online (Google FCM / WebPush RFC 8292)",
+      gatewayStatus: globalEnabled
+        ? "Online (Google FCM / WebPush RFC 8292)"
+        : "Disabled / Paused by Administrator",
     };
   });
 
@@ -8102,4 +8112,60 @@ export const testSingleFcmSubscriberServer = createServerFn({ method: "POST" })
 
     return { success: true };
   });
+
+export const toggleWebPushGlobalStatusServer = createServerFn({ method: "POST" })
+  .validator((data: { enabled: boolean }) =>
+    z
+      .object({
+        enabled: z.boolean(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    await requireRole(["super_admin"]);
+    const m = await import("./web-push.server");
+    await m.setWebPushGlobalStatus(data.enabled);
+    return { success: true, enabled: data.enabled };
+  });
+
+export const getRestaurantPushStatusServer = createServerFn({ method: "GET" })
+  .validator((data?: { restaurantId?: string | number }) => data)
+  .handler(async ({ data }) => {
+    const session = await verifySession();
+    let targetRestId = Number(session?.restaurant_id || 1);
+    if (session?.role === "super_admin" && data?.restaurantId) {
+      targetRestId = Number(data.restaurantId);
+    }
+    const m = await import("./web-push.server");
+    const enabled = await m.isWebPushEnabledForRestaurant(targetRestId);
+    const globalEnabled = await m.isWebPushEnabledGlobally();
+    return { enabled, globalEnabled, restaurantId: targetRestId };
+  });
+
+export const toggleRestaurantPushStatusServer = createServerFn({ method: "POST" })
+  .validator((data: { restaurantId?: string | number; enabled: boolean }) =>
+    z
+      .object({
+        restaurantId: z.union([z.string(), z.number()]).optional(),
+        enabled: z.boolean(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const session = await verifySession();
+    if (!session) {
+      throw new Error("Unauthorized");
+    }
+    let targetRestId = Number(session.restaurant_id || 1);
+    if (session.role === "super_admin" && data.restaurantId) {
+      targetRestId = Number(data.restaurantId);
+    } else if (session.role !== "owner" && session.role !== "super_admin") {
+      throw new Error("Forbidden. Only owners and super admins can configure push notifications.");
+    }
+
+    const m = await import("./web-push.server");
+    await m.setRestaurantPushStatus(targetRestId, data.enabled);
+    return { success: true, restaurantId: targetRestId, enabled: data.enabled };
+  });
+
 
