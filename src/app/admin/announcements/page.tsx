@@ -368,7 +368,7 @@ export default function AdminAnnouncementsPage() {
 
       {/* New Announcement Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent className="sm:max-w-137.5">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Megaphone className="h-5 w-5 text-amber-500" /> New System Broadcast & Push Alert

@@ -13,7 +13,6 @@ import {
   getRestaurantProfile,
   getSettingsServer,
 } from "@/lib/db-queries.server";
-import { apiGet, apiPost, apiDelete } from "@/lib/api-client";
 import { SkeletonFoodItemsPage } from "@/components/menuverse/skeletons";
 import { BlobImg } from "@/components/ui/blob-img";
 import { uploadToImgBB } from "@/lib/imgbb";
@@ -277,23 +276,14 @@ export default function FoodItemsPage() {
       try {
         const q = query.trim();
         const cat = categoryFilter !== "all" ? categoryFilter : "";
-        const params = new URLSearchParams();
-        if (q) params.set("search", q);
-        if (cat) params.set("categoryId", cat);
-        const url = `/api/food-items${params.toString() ? `?${params.toString()}` : ""}`;
-
-        const dbItems = await apiGet<FoodItem[]>(url).catch(async () => {
-          const res = await getFoodItemsServer({
-            data: {
-              category: cat || undefined,
-              search: q || undefined,
-            },
-          });
-          return (res || []).map(sanitizeFoodItem);
+        const res = await getFoodItemsServer({
+          data: {
+            category: cat || undefined,
+            search: q || undefined,
+          },
         });
-
-        if (dbItems && Array.isArray(dbItems)) {
-          setItems(dbItems.map(sanitizeFoodItem));
+        if (res && Array.isArray(res)) {
+          setItems(res.map(sanitizeFoodItem));
         }
       } catch (err) {
         console.warn("[FoodItems] Server fetch error:", err);
@@ -366,31 +356,7 @@ export default function FoodItemsPage() {
     setSheetOpen(false);
 
     try {
-      await apiPost("/api/food-items", {
-        id: toSave.id,
-        name: toSave.name,
-        categoryId: toSave.category,
-        price: toSave.price,
-        description: toSave.shortDescription || toSave.longDescription || "",
-        badge: toSave.bestSeller
-          ? "Best Seller"
-          : toSave.chefChoice
-            ? "Chef Choice"
-            : toSave.popular
-              ? "Popular"
-              : undefined,
-        isVeg: toSave.vegetarian,
-        isVegan: false,
-        isGlutenFree: false,
-        isHalal: toSave.halal,
-        spicyLevel: toSave.spicyLevel,
-        calories: toSave.calories,
-        prepTime: toSave.prepTime,
-        status: toSave.available ? "available" : "sold_out",
-        variations: [],
-        addOns: [],
-        branchIds: [],
-      });
+      await saveFoodItemsServer({ data: updatedList });
       toast.success(isNew ? "Food item created successfully" : "Food item updated successfully");
     } catch (err: unknown) {
       console.error("DB save error:", err);
@@ -406,7 +372,7 @@ export default function FoodItemsPage() {
     setDeleteId(null);
 
     try {
-      await apiDelete(`/api/food-items?id=${encodeURIComponent(targetId)}`);
+      await deleteFoodItemServer({ data: { id: targetId } });
       toast.success("Food item deleted successfully");
     } catch (err: unknown) {
       console.error("Delete food item error:", err);

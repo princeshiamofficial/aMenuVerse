@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { savePushSubscriptionServer, deletePushSubscriptionServer } from "@/lib/web-push.server";
+import { verifySession } from "@/lib/auth.server";
+import { checkRateLimitAsync } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    await checkRateLimitAsync("push_subscribe", ip, {
+      maxRequests: 30,
+      windowMs: 60 * 1000,
+    });
+
     const body = await req.json();
-    const { restaurantId, branchId, userId, role, endpoint, p256dh, auth, userAgent } = body;
+    const { branchId, endpoint, p256dh, auth, userAgent } = body;
 
     if (!endpoint || !p256dh || !auth) {
       return NextResponse.json(
@@ -13,15 +21,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Bind session context if authenticated
+    const session = await verifySession().catch(() => null);
+
+    const effectiveRestaurantId = session?.restaurant_id || body.restaurantId || 1;
+    const effectiveUserId = session?.id || body.userId;
+    const effectiveRole = session?.role || body.role;
+    const effectiveBranchId = session?.branch || branchId;
+
     await savePushSubscriptionServer({
-      restaurantId: restaurantId || 1,
-      branchId,
-      userId,
-      role,
+      restaurantId: effectiveRestaurantId,
+      branchId: effectiveBranchId,
+      userId: effectiveUserId,
+      role: effectiveRole,
       endpoint,
       p256dh,
       auth,
-      userAgent,
+      userAgent: userAgent || req.headers.get("user-agent") || undefined,
     });
 
     return NextResponse.json({ success: true });

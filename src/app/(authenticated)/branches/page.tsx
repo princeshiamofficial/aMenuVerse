@@ -66,7 +66,6 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiGet, apiPost } from "@/lib/api-client";
 
 import { cn, generateId, getEncryptedTableUrl } from "@/lib/utils";
 import { SkeletonBranchesPage } from "@/components/menuverse/skeletons";
@@ -363,9 +362,7 @@ export default function BranchesPage() {
     setBranches(next);
     setDialogOpen(false);
     try {
-      await apiPost("/api/branches", { branches: next }).catch(async () => {
-        await updateBranchesServer({ data: next });
-      });
+      await updateBranchesServer({ data: next });
       toast.success(exists ? "Branch updated" : "Branch created");
     } catch {
       toast.success(exists ? "Branch updated" : "Branch created");
@@ -382,9 +379,7 @@ export default function BranchesPage() {
     setBranches(next);
     setDeleteId(null);
     try {
-      await apiPost("/api/branches", { branches: next }).catch(async () => {
-        await updateBranchesServer({ data: next });
-      });
+      await updateBranchesServer({ data: next });
     } catch {
       /* ignore */
     }
@@ -395,9 +390,7 @@ export default function BranchesPage() {
     const next = branches.map((b) => ({ ...b, isDefault: b.id === id }));
     setBranches(next);
     try {
-      await apiPost("/api/branches", { branches: next }).catch(async () => {
-        await updateBranchesServer({ data: next });
-      });
+      await updateBranchesServer({ data: next });
     } catch {
       /* ignore */
     }
@@ -874,19 +867,12 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const currentBranchId = branch.id;
     async function loadTables() {
       try {
-        const [apiRes, tenantRes] = await Promise.all([
-          apiGet<TableItem[]>(
-            `/api/branch-tables?branchId=${encodeURIComponent(currentBranchId)}`,
-          ).catch(() => null),
+        const [dbTables, tenantRes] = await Promise.all([
+          getBranchTablesServer({ data: currentBranchId }).catch(() => []),
           getCurrentTenantSlugServer().catch(() => null),
         ]);
 
-        if (Array.isArray(apiRes) && apiRes.length > 0) {
-          setTables(apiRes);
-        } else {
-          const dbTables = await getBranchTablesServer({ data: currentBranchId }).catch(() => []);
-          setTables(Array.isArray(dbTables) ? dbTables : []);
-        }
+        setTables(Array.isArray(dbTables) ? dbTables : []);
 
         if (tenantRes && tenantRes.slug) {
           setRestaurantSlug(tenantRes.slug);
@@ -909,16 +895,11 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = [...tables, newTable];
     if (branch) {
       try {
-        await apiPost("/api/branch-tables", {
-          branchId: branch.id,
-          tables: nextTables,
-        }).catch(async () => {
-          await saveBranchTablesServer({
-            data: {
-              branchId: branch.id,
-              tables: nextTables,
-            },
-          });
+        await saveBranchTablesServer({
+          data: {
+            branchId: branch.id,
+            tables: nextTables,
+          },
         });
         setTables(nextTables);
         setNewTableNo("");
@@ -936,16 +917,11 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     setTables(nextTables);
     if (branch) {
       try {
-        await apiPost("/api/branch-tables", {
-          branchId: branch.id,
-          tables: nextTables,
-        }).catch(async () => {
-          await saveBranchTablesServer({
-            data: {
-              branchId: branch.id,
-              tables: nextTables,
-            },
-          });
+        await saveBranchTablesServer({
+          data: {
+            branchId: branch.id,
+            tables: nextTables,
+          },
         });
       } catch {
         /* ignore */

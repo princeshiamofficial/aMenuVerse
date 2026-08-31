@@ -6296,19 +6296,41 @@ export const getAdminUsersServer = createServerFn({ method: "GET" }).handler(asy
         COALESCE(u.full_name, u.name, 'User') AS name,
         u.email,
         COALESCE(u.phone, '') AS phone,
-        COALESCE(ur.role, u.role, 'owner') AS role,
+        COALESCE(u.role, ur.role, 'owner') AS role,
         COALESCE(r.name, u.branch, 'Main Location') AS restaurant_name,
         COALESCE(u.branch, 'Main Branch') AS branch_name,
         COALESCE(u.status, 'active') AS status,
         COALESCE(DATE_FORMAT(u.created_at, '%b %Y'), 'Recent') AS joined_date
        FROM users u
-       LEFT JOIN user_roles ur ON ur.user_id = u.id
-       LEFT JOIN restaurants r ON r.id = COALESCE(ur.restaurant_id, u.restaurant_id)
+       LEFT JOIN (
+         SELECT user_id, MAX(role) AS role, MAX(restaurant_id) AS restaurant_id
+         FROM user_roles
+         GROUP BY user_id
+       ) ur ON ur.user_id = u.id
+       LEFT JOIN restaurants r ON r.id = COALESCE(u.restaurant_id, ur.restaurant_id)
        ORDER BY u.created_at DESC`,
     );
 
     if (rows && rows.length > 0) {
-      return rows.map((u) => {
+      const seen = new Set<string>();
+      const result: Array<{
+        id: string;
+        name: string;
+        email: string;
+        phone: string;
+        role: "Super Admin" | "Owner" | "Manager" | "Cashier" | "Chef" | "Waiter" | "Host";
+        restaurantName: string;
+        branchName: string;
+        status: "active" | "invited" | "suspended";
+        lastActive: string;
+        joinedDate: string;
+      }> = [];
+
+      for (const u of rows) {
+        const uid = String(u.id);
+        if (seen.has(uid)) continue;
+        seen.add(uid);
+
         const rawRole = String(u.role || "")
           .toLowerCase()
           .replace(/_/g, " ")
@@ -6330,8 +6352,8 @@ export const getAdminUsersServer = createServerFn({ method: "GET" }).handler(asy
                         ? "Host"
                         : "Owner";
 
-        return {
-          id: String(u.id),
+        result.push({
+          id: uid,
           name: String(u.name || "User"),
           email: String(u.email || ""),
           phone: String(u.phone || ""),
@@ -6343,8 +6365,9 @@ export const getAdminUsersServer = createServerFn({ method: "GET" }).handler(asy
             "active" | "invited" | "suspended",
           lastActive: "Just now",
           joinedDate: String(u.joined_date || "Recent"),
-        };
-      });
+        });
+      }
+      return result;
     }
   } catch (err) {
     console.error("[getAdminUsersServer Error]", err);

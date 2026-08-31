@@ -10,7 +10,6 @@ import {
   getTenantSubscriptionServer,
   getCurrentUser,
 } from "@/lib/db-queries.server";
-import { apiGet, apiPost, apiDelete } from "@/lib/api-client";
 import { SkeletonCategoriesPage } from "@/components/menuverse/skeletons";
 import {
   DndContext,
@@ -400,15 +399,12 @@ export default function CategoriesPage() {
   useEffect(() => {
     async function loadFromDb() {
       try {
-        const [apiCategories, subData] = await Promise.all([
-          apiGet<Category[]>("/api/categories").catch(async () => {
-            const res = await getCategoriesServer({ data: {} });
-            return (res || []) as unknown as Category[];
-          }),
+        const [resCategories, subData] = await Promise.all([
+          getCategoriesServer({ data: {} }),
           getTenantSubscriptionServer(),
         ]);
-        if (apiCategories && Array.isArray(apiCategories)) {
-          setItems(apiCategories);
+        if (resCategories && Array.isArray(resCategories)) {
+          setItems(resCategories as unknown as Category[]);
         }
         if (subData) {
           setSubInfo({
@@ -430,17 +426,13 @@ export default function CategoriesPage() {
     const timer = setTimeout(async () => {
       try {
         const q = query.trim();
-        const url = q ? `/api/categories?search=${encodeURIComponent(q)}` : "/api/categories";
-        const dbCategories = await apiGet<Category[]>(url).catch(async () => {
-          const res = await getCategoriesServer({
-            data: {
-              search: q || undefined,
-            },
-          });
-          return (res || []) as unknown as Category[];
+        const res = await getCategoriesServer({
+          data: {
+            search: q || undefined,
+          },
         });
-        if (dbCategories && Array.isArray(dbCategories)) {
-          setItems(dbCategories);
+        if (res && Array.isArray(res)) {
+          setItems(res as unknown as Category[]);
         }
       } catch (err) {
         console.warn("[Categories] Server fetch error:", err);
@@ -494,12 +486,7 @@ export default function CategoriesPage() {
     setItems(updatedList);
 
     try {
-      await apiPost("/api/categories", {
-        id: editingCat.id,
-        name: editingCat.name,
-        icon: editingCat.icon,
-        isActive: editingCat.visible !== false,
-      });
+      await saveCategoriesServer({ data: updatedList });
       toast.success(isEdit ? "Category updated successfully" : "Category created successfully");
     } catch (err: unknown) {
       console.error("Database sync error:", err);
@@ -516,7 +503,7 @@ export default function CategoriesPage() {
     setDeleteId(null);
 
     try {
-      await apiDelete(`/api/categories?id=${encodeURIComponent(targetId)}`);
+      await deleteCategoryServer({ data: { id: targetId } });
       toast.success("Category deleted successfully");
     } catch (err: unknown) {
       console.error("Delete category sync error:", err);

@@ -259,6 +259,7 @@ export default function UsersComponent() {
   // System Users: strictly Super Admins / Global Platform Admins (NO restaurant users)
   const systemUsers = useMemo(() => {
     const search = q.toLowerCase().trim();
+    const seen = new Set<string>();
     return users.filter((u) => {
       const isSystemAdmin = u.role === "Super Admin";
       if (!isSystemAdmin) return false;
@@ -267,13 +268,19 @@ export default function UsersComponent() {
         !search || u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search);
       const matchStatus =
         statusFilter === "all" ? true : u.status.toLowerCase() === statusFilter.toLowerCase();
-      return matchQuery && matchStatus;
+      if (!matchQuery || !matchStatus) return false;
+
+      const key = u.id || u.email;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
   }, [users, q, statusFilter]);
 
   // Restaurant Users: strictly tenant Owners & Managers (Owners shown on top)
   const workspaceUsers = useMemo(() => {
     const search = wsQuery.toLowerCase().trim();
+    const seen = new Set<string>();
     return users
       .filter((u) => {
         const isOwnerOrManager = u.role === "Owner" || u.role === "Manager";
@@ -287,7 +294,12 @@ export default function UsersComponent() {
           (u.branchName && u.branchName.toLowerCase().includes(search));
         const matchRestaurant =
           wsRestaurantFilter === "all" ? true : u.restaurantName === wsRestaurantFilter;
-        return matchQuery && matchRestaurant;
+        if (!matchQuery || !matchRestaurant) return false;
+
+        const key = `${u.id}-${u.restaurantName || ""}-${u.role || ""}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       })
       .sort((a, b) => {
         // Priority 1: Owners at the top
@@ -445,8 +457,8 @@ export default function UsersComponent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {systemUsers.map((u) => (
-                    <TableRow key={u.id}>
+                  {systemUsers.map((u, idx) => (
+                    <TableRow key={u.id ? `${u.id}-${idx}` : `sys-${idx}`}>
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-semibold text-foreground">{u.name}</span>
@@ -585,7 +597,7 @@ export default function UsersComponent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {workspaceUsers.map((u) => {
+                  {workspaceUsers.map((u, idx) => {
                     const restMatch = restaurantsList.find(
                       (r) =>
                         r.name.toLowerCase() === (u.restaurantName || "").toLowerCase() ||
@@ -606,7 +618,7 @@ export default function UsersComponent() {
                     const logoLetter = (u.restaurantName || "R").charAt(0).toUpperCase();
 
                     return (
-                      <TableRow key={u.id}>
+                      <TableRow key={u.id ? `${u.id}-${idx}` : `ws-${idx}`}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             {logoUrl ? (
