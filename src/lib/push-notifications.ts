@@ -36,9 +36,6 @@ function getAudioContext(): AudioContext | null {
     if (!globalAudioCtx || globalAudioCtx.state === "closed") {
       globalAudioCtx = new AudioContextClass();
     }
-    if (globalAudioCtx.state === "suspended") {
-      globalAudioCtx.resume().catch(() => {});
-    }
     return globalAudioCtx;
   } catch {
     return null;

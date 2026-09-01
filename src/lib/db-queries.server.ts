@@ -3835,12 +3835,6 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
     await requireAuth();
     const branchId = String(rawBranchId || "").trim();
     const tenant = await resolvePrivateTenantContext();
-    const assignedInfo = await getUserAssignedBranches(tenant);
-
-    if (!assignedInfo.isAll && assignedInfo.branches.length === 0) {
-      return [];
-    }
-
     try {
       let rows: Record<string, unknown>[] | null = null;
       if (branchId && branchId !== "all") {
@@ -3850,15 +3844,8 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
         );
         const placeholders = searchIdents.map(() => "?").join(", ");
         rows = await query<Record<string, unknown>[]>(
-          `SELECT id, table_no, zone FROM branch_tables WHERE branch_id IN (${placeholders}) ORDER BY sort_order ASC, created_at ASC`,
-          searchIdents,
-        );
-      } else if (!assignedInfo.isAll) {
-        const branchIds = assignedInfo.branches.flatMap((b) => [b.id, b.name].filter(Boolean));
-        const placeholders = branchIds.map(() => "?").join(",");
-        rows = await query<Record<string, unknown>[]>(
-          `SELECT id, table_no, zone FROM branch_tables WHERE branch_id IN (${placeholders}) ORDER BY sort_order ASC, created_at ASC`,
-          branchIds,
+          `SELECT id, table_no, zone FROM branch_tables WHERE branch_id IN (${placeholders}) OR branch_id = ? ORDER BY sort_order ASC, created_at ASC`,
+          [...searchIdents, branchId],
         );
       } else {
         rows = await query<Record<string, unknown>[]>(

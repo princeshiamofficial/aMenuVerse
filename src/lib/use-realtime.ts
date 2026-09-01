@@ -8,15 +8,16 @@ let soundWavBuffer: AudioBuffer | null = null;
 function getSharedAudioContext(): AudioContext | null {
   if (typeof window === "undefined") return null;
   if (!sharedAudioCtx) {
-    const AudioCtx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof window.AudioContext }).webkitAudioContext;
-    if (AudioCtx) {
-      sharedAudioCtx = new AudioCtx();
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof window.AudioContext }).webkitAudioContext;
+      if (AudioCtx) {
+        sharedAudioCtx = new AudioCtx();
+      }
+    } catch {
+      return null;
     }
-  }
-  if (sharedAudioCtx && sharedAudioCtx.state === "suspended") {
-    sharedAudioCtx.resume().catch(() => {});
   }
   return sharedAudioCtx;
 }
@@ -36,11 +37,18 @@ async function loadSoundWavBuffer() {
   }
 }
 
-// Eagerly pre-load sound.wav buffer on module import
+// Lazily pre-load sound.wav buffer on first user gesture to comply with browser autoplay policy
 if (typeof window !== "undefined") {
-  setTimeout(() => {
+  const unlockAudio = () => {
+    const ctx = getSharedAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
     loadSoundWavBuffer();
-  }, 100);
+  };
+  window.addEventListener("click", unlockAudio, { passive: true, once: true });
+  window.addEventListener("keydown", unlockAudio, { passive: true, once: true });
+  window.addEventListener("touchstart", unlockAudio, { passive: true, once: true });
 }
 
 export function requestNotificationPermission() {
