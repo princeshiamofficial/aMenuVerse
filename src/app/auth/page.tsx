@@ -39,6 +39,10 @@ export default function AuthPage() {
     setLoading(true);
     try {
       const res = await signInAction({ data: { email, password } });
+      if (!res || !res.success) {
+        setLoading(false);
+        return toast.error(res?.error || "Invalid email or password");
+      }
       if (res?.token && typeof window !== "undefined") {
         document.cookie = `menuverse_session=${res.token}; path=/; max-age=604800; SameSite=Lax`;
         localStorage.setItem("menuverse_session", res.token);

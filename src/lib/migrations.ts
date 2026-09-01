@@ -817,6 +817,16 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
         restId: "2",
         branch: "Gulshan Branch",
       },
+      {
+        id: "demo-owner-bellapizza-com",
+        email: "owner@bellapizza.com",
+        pwd: "password123",
+        name: "Bella Pizza Owner",
+        phone: "+880 1711-223344",
+        role: "owner",
+        restId: "1",
+        branch: "Main Branch",
+      },
     ];
 
     for (const u of demoUsersToSeed) {

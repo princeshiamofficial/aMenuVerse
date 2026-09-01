@@ -160,10 +160,11 @@ export const signInAction = createServerFn({ method: "POST" })
     ]);
 
     if (!users || users.length === 0) {
-      // Auto-provision demo super admin if missing on fresh database
-      if (email.toLowerCase() === "admin@menuverse.app" && password === "admin123") {
+      // Auto-provision demo accounts if matching demo logins on fresh DB
+      const lowerEmail = email.toLowerCase().trim();
+      if (lowerEmail === "admin@menuverse.app" && (password === "admin123" || password === "password123")) {
         const userId = "demo-admin-menuverse-app";
-        const passwordHash = await hashPassword("admin123");
+        const passwordHash = await hashPassword(password);
         try {
           await query(
             `INSERT INTO users (id, restaurant_id, name, full_name, email, password_hash, role, status)
@@ -183,17 +184,45 @@ export const signInAction = createServerFn({ method: "POST" })
         } catch (seedErr) {
           console.error("[Auth] Auto-provisioning admin error:", seedErr);
         }
+      } else if (lowerEmail === "owner@bellapizza.com" && (password === "owner123" || password === "password123" || password === "admin123")) {
+        const userId = "demo-owner-bellapizza-com";
+        const passwordHash = await hashPassword(password);
+        try {
+          await query(
+            `INSERT INTO users (id, restaurant_id, name, full_name, email, password_hash, role, status)
+             VALUES (?, 1, 'Bella Pizza Owner', 'Bella Pizza Owner', 'owner@bellapizza.com', ?, 'owner', 'Active')
+             ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash)`,
+            [userId, passwordHash],
+          );
+          await query(
+            `INSERT INTO user_roles (user_id, role, restaurant_id)
+             VALUES (?, 'owner', 1)
+             ON DUPLICATE KEY UPDATE role = VALUES(role)`,
+            [userId],
+          );
+          users = await query<Record<string, string>[]>("SELECT * FROM users WHERE email = ?", [
+            email,
+          ]);
+        } catch (seedErr) {
+          console.error("[Auth] Auto-provisioning owner error:", seedErr);
+        }
       }
     }
 
     if (!users || users.length === 0) {
-      throw new Error("Invalid email or password");
+      return {
+        success: false,
+        error: "Invalid email or password",
+      };
     }
 
     const user = users[0];
     const isPasswordValid = await verifyPassword(password, user.password_hash);
     if (!isPasswordValid) {
-      throw new Error("Invalid email or password");
+      return {
+        success: false,
+        error: "Invalid email or password",
+      };
     }
 
     // Transparently upgrade legacy hashes to v2 PBKDF2 on login
@@ -213,6 +242,7 @@ export const signInAction = createServerFn({ method: "POST" })
 
     const token = await createSession(user.id);
     return {
+      success: true,
       user: {
         id: user.id,
         email: user.email,
