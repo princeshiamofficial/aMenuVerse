@@ -42,14 +42,31 @@ function extractSubdomain(host: string): string | null {
 }
 
 export function middleware(req: NextRequest) {
-  const host = req.headers.get("host") || req.nextUrl.host || "";
-  const subdomain = extractSubdomain(host);
+  // Sanitize comma-separated proxy headers (e.g. from LiteSpeed / Cloudflare reverse proxy chains)
+  const requestHeaders = new Headers(req.headers);
+  let headersModified = false;
 
-  console.log("[Middleware]", req.method, req.nextUrl.pathname, "host:", host, "subdomain:", subdomain);
-
-  if (!subdomain) {
-    return NextResponse.next();
+  const origin = req.headers.get("origin");
+  if (origin && origin.includes(",")) {
+    const singleOrigin = origin.split(",")[0].trim();
+    requestHeaders.set("origin", singleOrigin);
+    headersModified = true;
   }
+
+  const rawHost = req.headers.get("host") || req.nextUrl.host || "";
+  const host = rawHost.includes(",") ? rawHost.split(",")[0].trim() : rawHost;
+  if (rawHost.includes(",")) {
+    requestHeaders.set("host", host);
+    headersModified = true;
+  }
+
+  const xForwardedHost = req.headers.get("x-forwarded-host");
+  if (xForwardedHost && xForwardedHost.includes(",")) {
+    requestHeaders.set("x-forwarded-host", xForwardedHost.split(",")[0].trim());
+    headersModified = true;
+  }
+
+  const subdomain = extractSubdomain(host);
 
   const { pathname } = req.nextUrl;
 
@@ -60,7 +77,15 @@ export function middleware(req: NextRequest) {
     pathname === "/favicon.ico" ||
     pathname.includes(".")
   ) {
-    return NextResponse.next();
+    return headersModified
+      ? NextResponse.next({ request: { headers: requestHeaders } })
+      : NextResponse.next();
+  }
+
+  if (!subdomain) {
+    return headersModified
+      ? NextResponse.next({ request: { headers: requestHeaders } })
+      : NextResponse.next();
   }
 
   // Preserve global auth, admin, and panel routes
@@ -91,18 +116,24 @@ export function middleware(req: NextRequest) {
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
     )
   ) {
-    return NextResponse.next();
+    return headersModified
+      ? NextResponse.next({ request: { headers: requestHeaders } })
+      : NextResponse.next();
   }
 
   // If already prefixed with the subdomain, do nothing
   if (pathname === `/${subdomain}` || pathname.startsWith(`/${subdomain}/`)) {
-    return NextResponse.next();
+    return headersModified
+      ? NextResponse.next({ request: { headers: requestHeaders } })
+      : NextResponse.next();
   }
 
   // Rewrite to `/${subdomain}${pathname}`
   const url = req.nextUrl.clone();
   url.pathname = `/${subdomain}${pathname === "/" ? "" : pathname}`;
-  return NextResponse.rewrite(url);
+  return NextResponse.rewrite(url, {
+    request: { headers: requestHeaders },
+  });
 }
 
 export const config = {
