@@ -3821,9 +3821,18 @@ function saveTablesToFile(_branchId: string, _data: TableRecord[]) {
 }
 
 export const getBranchTablesServer = createServerFn({ method: "POST" })
-  .validator((branchId: string) => z.string().parse(branchId))
-  .handler(async ({ data: branchId }) => {
+  .validator((input: unknown) => {
+    if (typeof input === "string") return input;
+    if (input && typeof input === "object") {
+      const anyInput = input as Record<string, unknown>;
+      if (typeof anyInput.data === "string") return anyInput.data;
+      if (typeof anyInput.branchId === "string") return anyInput.branchId;
+    }
+    return String(input || "");
+  })
+  .handler(async ({ data: rawBranchId }) => {
     await requireAuth();
+    const branchId = String(rawBranchId || "").trim();
     const tenant = await resolvePrivateTenantContext();
     const assignedInfo = await getUserAssignedBranches(tenant);
 
@@ -3832,23 +3841,6 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
     }
 
     try {
-      await query(`
-        CREATE TABLE IF NOT EXISTS branch_tables (
-          id VARCHAR(100) PRIMARY KEY,
-          restaurant_id INT DEFAULT 1,
-          branch_id VARCHAR(100) NOT NULL,
-          table_no VARCHAR(50) NOT NULL,
-          zone VARCHAR(100) DEFAULT 'MAIN ROOM',
-          sort_order INT DEFAULT 0,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-      `);
-      try {
-        await query("ALTER TABLE branch_tables ADD COLUMN restaurant_id INT DEFAULT 1");
-      } catch {
-        /* column exists */
-      }
-
       let rows: Record<string, unknown>[] | null = null;
       if (branchId && branchId !== "all") {
         const target = branchId.toLowerCase().trim();
@@ -3865,21 +3857,22 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
           }
         }
         const idents = await resolveBranchIdentifiers(tenant.restaurantId, branchId);
-        const branchClauses = idents.map(() => "branch_id = ?").join(" OR ");
+        const searchIdents = Array.from(new Set([branchId, ...idents].filter(Boolean)));
+        const placeholders = searchIdents.map(() => "?").join(", ");
         rows = await query<Record<string, unknown>[]>(
-          `SELECT id, table_no, zone FROM branch_tables WHERE (${branchClauses || "branch_id = ?"}) AND restaurant_id = ? ORDER BY sort_order ASC, created_at ASC`,
-          idents.length > 0 ? [...idents, tenant.restaurantId] : [branchId, tenant.restaurantId],
+          `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders}) OR branch_id = ?) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) ORDER BY sort_order ASC, created_at ASC`,
+          [...searchIdents, branchId, tenant.restaurantId],
         );
       } else if (!assignedInfo.isAll) {
         const branchIds = assignedInfo.branches.flatMap((b) => [b.id, b.name].filter(Boolean));
         const placeholders = branchIds.map(() => "?").join(",");
         rows = await query<Record<string, unknown>[]>(
-          `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders})) AND restaurant_id = ? ORDER BY sort_order ASC, created_at ASC`,
+          `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders})) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) ORDER BY sort_order ASC, created_at ASC`,
           [...branchIds, tenant.restaurantId],
         );
       } else {
         rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone FROM branch_tables WHERE restaurant_id = ? ORDER BY sort_order ASC, created_at ASC",
+          "SELECT id, table_no, zone FROM branch_tables WHERE (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) ORDER BY sort_order ASC, created_at ASC",
           [tenant.restaurantId],
         );
       }
@@ -3909,20 +3902,9 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
   });
 
 export const saveBranchTablesServer = createServerFn({ method: "POST" })
-  .validator((data: { branchId: string; tables: TableRecord[] }) =>
-    z
-      .object({
-        branchId: z.string(),
-        tables: z.array(
-          z.object({
-            id: z.string(),
-            tableNo: z.string(),
-            zone: z.string(),
-          }),
-        ),
-      })
-      .parse(data),
-  )
+  .validator((data: { branchId: string; tables: TableRecord[] }) => {
+    return data;
+  })
   .handler(async ({ data }) => {
     await requirePermission("branch_tables:manage");
     const { branchId, tables } = data;

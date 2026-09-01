@@ -900,12 +900,16 @@ function BranchQrDialog({ branch, onClose }: { branch: Branch | null; onClose: (
     const nextTables = [...tables, newTable];
     if (branch) {
       try {
-        await saveBranchTablesServer({
+        const res = await saveBranchTablesServer({
           data: {
             branchId: branch.id,
             tables: nextTables,
           },
         });
+        if (res && typeof res === "object" && "success" in res && !(res as any).success) {
+          toast.error((res as any).error || "Failed to save table QR code");
+          return;
+        }
         setTables(nextTables);
         setNewTableNo("");
         setAddDialogOpen(false);

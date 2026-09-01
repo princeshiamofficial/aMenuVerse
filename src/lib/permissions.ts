@@ -65,6 +65,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, PermissionKey[]> = {
     "analytics:view",
   ],
   manager: [
+    "branch_tables:manage",
     "staff:manage",
     "promotions:manage",
     "reservations:manage",
