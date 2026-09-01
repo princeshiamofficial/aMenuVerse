@@ -45,7 +45,6 @@ import {
 } from "@/lib/db-queries.server";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRealtime, playChime } from "@/lib/use-realtime";
-import { apiGet, apiPost } from "@/lib/api-client";
 
 type FoodItem = {
   id: string;
@@ -274,36 +273,8 @@ export default function POSPage() {
     async function loadTables() {
       try {
         const targetBId = selectedBranchId || "all";
-        let dbTables: Array<{
-          id: string;
-          tableNo: string;
-          name?: string;
-          zone?: string;
-          capacity?: number;
-          status?: string;
-        }> = [];
-        try {
-          const apiRes = await apiGet<
-            Array<{
-              id: string;
-              tableNo: string;
-              name?: string;
-              zone?: string;
-              capacity?: number;
-              status?: string;
-            }>
-          >(`/api/branch-tables?branchId=${encodeURIComponent(targetBId)}`);
-          if (Array.isArray(apiRes) && apiRes.length > 0) {
-            dbTables = apiRes;
-          }
-        } catch {
-          /* fallback */
-        }
-
-        if (dbTables.length === 0) {
-          const serverRes = await getBranchTablesServer({ data: targetBId }).catch(() => []);
-          dbTables = Array.isArray(serverRes) ? serverRes : [];
-        }
+        const serverRes = await getBranchTablesServer({ data: targetBId }).catch(() => []);
+        const dbTables = Array.isArray(serverRes) ? serverRes : [];
 
         if (dbTables && Array.isArray(dbTables) && dbTables.length > 0) {
           const seen = new Set<string>();

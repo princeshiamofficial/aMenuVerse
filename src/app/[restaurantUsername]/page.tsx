@@ -14,6 +14,7 @@ import {
   getRestaurantProfile,
   recordAnalyticsEventServer,
   getPublicActivePromotionsServer,
+  getPublicOrderStatusesServer,
 } from "@/lib/db-queries.server";
 import { RESTAURANTS, Restaurant, MenuItem, Branch } from "@/lib/restaurants-data";
 import { fetchPublicMenu, fetchPublicMenuSync } from "@/lib/public-menu";
@@ -839,10 +840,12 @@ export function PublicRestaurantView({
     recordAnalyticsEventServer({
       data: {
         eventType: tableNumber ? "qr_scan" : "menu_view",
+        restaurantId: String(restaurant?.id || restaurantUsername),
+        branchId: branchId ? String(branchId) : undefined,
         tableNo: tableNumber ? String(tableNumber) : undefined,
       },
     }).catch(() => null);
-  }, [restaurantUsername, tableNumber]);
+  }, [restaurantUsername, restaurant?.id, branchId, tableNumber]);
 
   const allBranches = useMemo(() => {
     const list: Branch[] = [...localBranches];
@@ -1230,29 +1233,22 @@ export function PublicRestaurantView({
   // Sync initial placed order statuses from database on mount
   useEffect(() => {
     if (orders.length === 0) return;
-    const orderIds = orders.map((o) => o.id).join(",");
-    fetch(`/api/orders?orderIds=${encodeURIComponent(orderIds)}`)
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+    const orderIds = orders.map((o) => o.id).filter(Boolean);
+    if (orderIds.length === 0) return;
+
+    getPublicOrderStatusesServer({ data: { orderIds } })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
           const map = new Map<
             string,
             {
               status: string;
-              estimatedPrepMinutes?: number;
               prepStartedAt?: string;
             }
           >();
-          json.data.forEach(
-            (d: {
-              id: string;
-              status: string;
-              estimatedPrepMinutes?: number;
-              prepStartedAt?: string;
-            }) => {
-              map.set(d.id, d);
-            },
-          );
+          data.forEach((d) => {
+            map.set(d.id, d);
+          });
           setOrders((prev) => {
             const updated = prev.map((o) => {
               const matched = map.get(o.id);
@@ -1260,25 +1256,11 @@ export function PublicRestaurantView({
                 return {
                   ...o,
                   status: matched.status || o.status,
-                  estimatedPrepMinutes:
-                    matched.estimatedPrepMinutes !== undefined
-                      ? matched.estimatedPrepMinutes
-                      : o.estimatedPrepMinutes,
                   prepStartedAt: matched.prepStartedAt || o.prepStartedAt,
                 };
               }
               return o;
             });
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem(
-                  `menuverse:placed-orders:${restaurantUsername}`,
-                  JSON.stringify(updated),
-                );
-              } catch {
-                /* ignore */
-              }
-            }
             return updated;
           });
         }

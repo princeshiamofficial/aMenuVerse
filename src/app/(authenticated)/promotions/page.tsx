@@ -55,7 +55,6 @@ import {
   getCurrentUser,
   getBranchesServer,
 } from "@/lib/db-queries.server";
-import { apiGet, apiPost, apiDelete } from "@/lib/api-client";
 
 // ================================================================
 // Types & storage
@@ -227,10 +226,7 @@ export default function PromotionsPage() {
       }
 
       try {
-        const dbPromos = await apiGet<unknown[]>("/api/promotions").catch(async () => {
-          const res = await getPromotionsServer({ data: {} });
-          return (res || []) as unknown[];
-        });
+        const dbPromos = (await getPromotionsServer({ data: {} })) as unknown[];
         if (dbPromos && Array.isArray(dbPromos)) {
           const normalized: Promotion[] = dbPromos.map((p: any) => ({
             id: String(p.id),

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { fetchPublicMenu, fetchPublicMenuSync } from "@/lib/public-menu";
-import { apiGet } from "@/lib/api-client";
 import { validateTableQrServer } from "@/lib/db-queries.server";
 import { PublicRestaurantView } from "@/app/[restaurantUsername]/page";
 import type { Restaurant } from "@/lib/restaurants-data";
@@ -37,19 +36,6 @@ export default function RestaurantBranchTableRoute() {
         } | null = null;
 
         try {
-          const apiRes = await apiGet<Record<string, unknown>>(
-            `/api/branch-tables?validate=true&restaurantSlug=${encodeURIComponent(restaurantUsername)}&branchId=${encodeURIComponent(branchId)}&tableId=${encodeURIComponent(tableId)}`,
-          );
-          if (apiRes) {
-            const nestedData = (apiRes.data as Record<string, unknown>) || apiRes;
-            valRes = {
-              valid: apiRes.valid !== false && nestedData.valid !== false,
-              reason: String(apiRes.reason || nestedData.reason || ""),
-              branchId: String(nestedData.branchId || apiRes.branchId || ""),
-              tableNo: String(nestedData.tableNo || apiRes.tableNo || ""),
-            };
-          }
-        } catch {
           valRes = await validateTableQrServer({
             data: {
               restaurantSlug: restaurantUsername,
@@ -57,6 +43,8 @@ export default function RestaurantBranchTableRoute() {
               tableId,
             },
           });
+        } catch (valErr) {
+          console.warn("[TableQr Validation Error]", valErr);
         }
 
         if (valRes && valRes.valid === false) {

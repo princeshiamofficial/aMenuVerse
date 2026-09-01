@@ -1051,40 +1051,49 @@ export const placeOrderAction = createServerFn({ method: "POST" })
     let resolvedBranchName = "";
 
     try {
-      if (tableNumber || resolvedBranchId) {
-        const tRows = await query<Record<string, unknown>[]>(
-          "SELECT branch_id FROM branch_tables WHERE restaurant_id = ? AND (qr_token = ? OR id = ? OR (table_no = ? AND branch_id IS NOT NULL)) LIMIT 1",
-          [tenant.restaurantId, resolvedBranchId || "", resolvedBranchId || "", tableNumber || ""],
-        );
-        if (tRows && tRows.length > 0 && tRows[0].branch_id) {
-          resolvedBranchId = String(tRows[0].branch_id);
-        }
-      }
-
       const bRows = await query<Record<string, unknown>[]>(
         "SELECT id, name, is_default FROM branches WHERE restaurant_id = ? ORDER BY is_default DESC, created_at ASC",
         [tenant.restaurantId],
       );
+
       if (bRows && bRows.length > 0) {
         let match: Record<string, unknown> | undefined;
+
         if (resolvedBranchId && resolvedBranchId !== "null" && resolvedBranchId !== "undefined") {
           const target = resolvedBranchId.toLowerCase().trim();
+          const targetRaw = target.replace(/^branch-/, "");
           match = bRows.find((b) => {
-            const bId = String(b.id || "")
-              .toLowerCase()
-              .trim();
-            const bName = String(b.name || "")
-              .toLowerCase()
-              .trim();
+            const bId = String(b.id || "").toLowerCase().trim();
+            const bIdRaw = bId.replace(/^branch-/, "");
+            const bName = String(b.name || "").toLowerCase().trim();
             const bSlug = bName.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-            return bId === target || bName === target || bSlug === target;
+            return bId === target || bIdRaw === targetRaw || bName === target || bSlug === target;
           });
         }
+
+        // If branch wasn't provided, attempt to resolve from tableNumber in branch_tables
+        if (!match && tableNumber) {
+          const tRows = await query<Record<string, unknown>[]>(
+            "SELECT branch_id FROM branch_tables WHERE restaurant_id = ? AND (table_no = ? OR qr_token = ? OR id = ?) AND branch_id IS NOT NULL LIMIT 1",
+            [tenant.restaurantId, tableNumber, tableNumber, tableNumber],
+          );
+          if (tRows && tRows.length > 0 && tRows[0].branch_id) {
+            const foundBId = String(tRows[0].branch_id).toLowerCase().trim();
+            match = bRows.find((b) => {
+              const bId = String(b.id || "").toLowerCase().trim();
+              return bId === foundBId || bId.replace(/^branch-/, "") === foundBId.replace(/^branch-/, "");
+            });
+          }
+        }
+
         if (!match) {
           match = bRows.find((b) => Number(b.is_default || 0) === 1) || bRows[0];
         }
-        resolvedBranchId = String(match.id);
-        resolvedBranchName = String(match.name || "");
+
+        if (match) {
+          resolvedBranchId = String(match.id);
+          resolvedBranchName = String(match.name || "");
+        }
       }
     } catch {
       /* fallback to raw branchId */
@@ -2430,16 +2439,38 @@ export async function resolveBranchIdentifiers(
 ): Promise<string[]> {
   const clean = (target || "").trim();
   if (!clean || clean.toLowerCase() === "all") return [];
-  const list = [clean, clean.replace("branch-", "")];
+  const list = [clean];
+  if (clean.startsWith("branch-")) {
+    list.push(clean.replace(/^branch-/, ""));
+  }
   try {
     const bRows = await query<Record<string, unknown>[]>(
-      "SELECT id, name FROM branches WHERE restaurant_id = ? AND (id = ? OR name = ? OR ? LIKE CONCAT('%', name, '%') OR name LIKE ?)",
-      [restaurantId, clean, clean, clean, `%${clean}%`],
+      "SELECT id, name FROM branches WHERE restaurant_id = ?",
+      [restaurantId],
     );
     if (bRows && bRows.length > 0) {
-      for (const r of bRows) {
-        if (r.id) list.push(String(r.id), String(r.id).replace("branch-", ""));
-        if (r.name) list.push(String(r.name));
+      const cleanLower = clean.toLowerCase();
+      const cleanRaw = cleanLower.replace(/^branch-/, "");
+      const matched = bRows.find((r) => {
+        const rId = String(r.id || "").toLowerCase().trim();
+        const rIdRaw = rId.replace(/^branch-/, "");
+        const rName = String(r.name || "").toLowerCase().trim();
+        const rSlug = rName.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        return (
+          rId === cleanLower ||
+          rIdRaw === cleanRaw ||
+          rName === cleanLower ||
+          rSlug === cleanLower
+        );
+      });
+      if (matched) {
+        if (matched.id) {
+          list.push(String(matched.id));
+          list.push(String(matched.id).replace(/^branch-/, ""));
+        }
+        if (matched.name) {
+          list.push(String(matched.name));
+        }
       }
     }
   } catch {
@@ -3772,12 +3803,14 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
             return [];
           }
         }
+        const idents = await resolveBranchIdentifiers(tenant.restaurantId, branchId);
+        const branchClauses = idents.map(() => "branch_id = ?").join(" OR ");
         rows = await query<Record<string, unknown>[]>(
-          "SELECT id, table_no, zone FROM branch_tables WHERE (branch_id = ? OR branch_id = ?) AND restaurant_id = ? ORDER BY sort_order ASC, created_at ASC",
-          [branchId, branchId.replace("branch-", ""), tenant.restaurantId],
+          `SELECT id, table_no, zone FROM branch_tables WHERE (${branchClauses || "branch_id = ?"}) AND restaurant_id = ? ORDER BY sort_order ASC, created_at ASC`,
+          idents.length > 0 ? [...idents, tenant.restaurantId] : [branchId, tenant.restaurantId],
         );
       } else if (!assignedInfo.isAll) {
-        const branchIds = assignedInfo.branches.flatMap((b) => [b.id, b.name]);
+        const branchIds = assignedInfo.branches.flatMap((b) => [b.id, b.name].filter(Boolean));
         const placeholders = branchIds.map(() => "?").join(",");
         rows = await query<Record<string, unknown>[]>(
           `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders})) AND restaurant_id = ? ORDER BY sort_order ASC, created_at ASC`,
@@ -4475,6 +4508,34 @@ export const getOrderStatusCountsServer = createServerFn({ method: "GET" })
       console.warn("[MySQL] getOrderStatusCountsServer error:", err);
     }
     return counts;
+  });
+
+export const getPublicOrderStatusesServer = createServerFn({ method: "POST" })
+  .validator(
+    (data: { orderIds: string[] }) =>
+      z.object({ orderIds: z.array(z.string()) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    if (!data.orderIds || data.orderIds.length === 0) {
+      return [];
+    }
+    try {
+      const placeholders = data.orderIds.map(() => "?").join(",");
+      const rows = await query<Record<string, unknown>[]>(
+        `SELECT id, status, COALESCE(prep_started_at, '') as prepStartedAt FROM pos_orders WHERE id IN (${placeholders})`,
+        data.orderIds,
+      );
+      if (rows && rows.length > 0) {
+        return rows.map((r) => ({
+          id: String(r.id),
+          status: String(r.status || "pending"),
+          prepStartedAt: r.prepStartedAt ? String(r.prepStartedAt) : undefined,
+        }));
+      }
+    } catch {
+      /* ignore */
+    }
+    return [];
   });
 
 const ZOrderLineSchema = z
@@ -5335,13 +5396,8 @@ export const getReservationsServer = createServerFn({ method: "GET" })
         const idents = await resolveBranchIdentifiers(tenant.restaurantId, filter.branchId);
         const branchClauses: string[] = [];
         for (const ident of idents) {
-          branchClauses.push(
-            "branch_id = ?",
-            "branch_name = ?",
-            "branch_id LIKE ?",
-            "branch_name LIKE ?",
-          );
-          params.push(ident, ident, `%${ident}%`, `%${ident}%`);
+          branchClauses.push("branch_id = ?", "branch_name = ?");
+          params.push(ident, ident);
         }
         if (branchClauses.length > 0) {
           sql += ` AND (${branchClauses.join(" OR ")})`;
@@ -5351,13 +5407,8 @@ export const getReservationsServer = createServerFn({ method: "GET" })
         for (const b of assignedInfo.branches) {
           const idents = await resolveBranchIdentifiers(tenant.restaurantId, b.id || b.name);
           for (const ident of idents) {
-            branchClauses.push(
-              "branch_id = ?",
-              "branch_name = ?",
-              "branch_id LIKE ?",
-              "branch_name LIKE ?",
-            );
-            params.push(ident, ident, `%${ident}%`, `%${ident}%`);
+            branchClauses.push("branch_id = ?", "branch_name = ?");
+            params.push(ident, ident);
           }
         }
         if (branchClauses.length > 0) {
@@ -5742,13 +5793,18 @@ export const getStaffServer = createServerFn({ method: "GET" })
             return [];
           }
         }
-        sql += " AND (u.branch = ? OR u.branch = ? OR u.branch LIKE ?)";
-        params.push(filter.branch, filter.branch.replace("branch-", ""), `%${filter.branch}%`);
+        const idents = await resolveBranchIdentifiers(tenant.restaurantId, filter.branch);
+        const branchClauses = idents.map(() => "u.branch = ?").join(" OR ");
+        sql += ` AND (${branchClauses || "u.branch = ?"})`;
+        params.push(...(idents.length > 0 ? idents : [filter.branch]));
       } else if (!assignedInfo.isAll) {
         const branchClauses: string[] = [];
         for (const b of assignedInfo.branches) {
-          branchClauses.push("u.branch = ?", "u.branch = ?", "u.branch LIKE ?");
-          params.push(b.id, b.name, `%${b.name}%`);
+          const idents = await resolveBranchIdentifiers(tenant.restaurantId, b.id || b.name);
+          for (const ident of idents) {
+            branchClauses.push("u.branch = ?");
+            params.push(ident);
+          }
         }
         if (branchClauses.length > 0) {
           sql += ` AND (${branchClauses.join(" OR ")})`;
@@ -6429,8 +6485,12 @@ export const recordAnalyticsEventServer = createServerFn({ method: "POST" })
 
       let rId = data.restaurantId ? String(data.restaurantId) : "";
       if (!rId) {
-        const tenant = await resolveTenantContext();
-        rId = String(tenant.restaurantId || "1");
+        try {
+          const tenant = await resolveTenantContext();
+          rId = String(tenant.restaurantId || "1");
+        } catch {
+          rId = "1";
+        }
       }
 
       await query(
@@ -6789,7 +6849,7 @@ export const getWaiterRequestsServer = createServerFn({ method: "GET" })
         const branchIds = await resolveBranchIdentifiers(tenant.restaurantId, targetBranch);
         if (branchIds.length > 0) {
           const placeholders = branchIds.map(() => "?").join(", ");
-          sql += ` AND (branch_id IN (${placeholders}) OR branch_id IS NULL OR branch_id = '')`;
+          sql += ` AND branch_id IN (${placeholders})`;
           params.push(...branchIds);
         }
       }
@@ -6887,7 +6947,7 @@ export const getWaiterRequestHistoryServer = createServerFn({ method: "GET" })
         const branchIds = await resolveBranchIdentifiers(tenant.restaurantId, targetBranch);
         if (branchIds.length > 0) {
           const placeholders = branchIds.map(() => "?").join(", ");
-          sql += ` AND (branch_id IN (${placeholders}) OR branch_id IS NULL OR branch_id = '')`;
+          sql += ` AND branch_id IN (${placeholders})`;
           params.push(...branchIds);
         }
       }
@@ -6947,7 +7007,7 @@ export const getWaiterActiveOrdersServer = createServerFn({ method: "GET" })
         const branchIds = await resolveBranchIdentifiers(tenant.restaurantId, targetBranch);
         if (branchIds.length > 0) {
           const placeholders = branchIds.map(() => "?").join(", ");
-          sql += ` AND (branch_id IN (${placeholders}) OR branch_id IS NULL OR branch_id = '')`;
+          sql += ` AND branch_id IN (${placeholders})`;
           params.push(...branchIds);
         }
       }

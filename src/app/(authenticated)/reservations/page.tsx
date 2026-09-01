@@ -71,7 +71,6 @@ import {
   getReservationsServer,
   saveReservationsServer,
 } from "@/lib/db-queries.server";
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api-client";
 import { SkeletonReservations } from "@/components/menuverse/skeletons";
 import { useRealtime } from "@/lib/use-realtime";
 
@@ -443,10 +442,7 @@ export default function ReservationsPage() {
       }
 
       try {
-        const dbRes = await apiGet<Reservation[]>("/api/reservations").catch(async () => {
-          const res = await getReservationsServer({ data: {} });
-          return (res || []) as unknown as Reservation[];
-        });
+        const dbRes = (await getReservationsServer({ data: {} })) as unknown as Reservation[];
         if (dbRes && Array.isArray(dbRes)) {
           setReservations(dbRes as unknown as Reservation[]);
         } else {
@@ -471,23 +467,14 @@ export default function ReservationsPage() {
               ? branchFilter
               : undefined;
 
-        const params = new URLSearchParams();
-        if (effectiveBranch) params.set("branchId", effectiveBranch);
-        if (statusFilter !== "all") params.set("status", statusFilter);
-        if (search.trim()) params.set("search", search.trim());
-
-        const url = `/api/reservations${params.toString() ? `?${params.toString()}` : ""}`;
-        const dbRes = await apiGet<Reservation[]>(url).catch(async () => {
-          const res = await getReservationsServer({
-            data: {
-              branchId: effectiveBranch,
-              status: statusFilter !== "all" ? statusFilter : undefined,
-              seatingArea: areaFilter !== "all" ? areaFilter : undefined,
-              search: search.trim() || undefined,
-            },
-          });
-          return (res || []) as unknown as Reservation[];
-        });
+        const dbRes = (await getReservationsServer({
+          data: {
+            branchId: effectiveBranch,
+            status: statusFilter !== "all" ? statusFilter : undefined,
+            seatingArea: areaFilter !== "all" ? areaFilter : undefined,
+            search: search.trim() || undefined,
+          },
+        })) as unknown as Reservation[];
 
         if (dbRes && Array.isArray(dbRes)) {
           setReservations(dbRes as unknown as Reservation[]);
@@ -650,42 +637,15 @@ export default function ReservationsPage() {
 
     setReservations(updated);
     setSheetOpen(false);
-
-    try {
-      await apiPost("/api/reservations", {
-        id: toSave.id,
-        guestName: toSave.guestName,
-        phone: toSave.phone,
-        email: toSave.email,
-        guests: toSave.partySize,
-        date: toSave.date,
-        time: toSave.time,
-        status: toSave.status,
-        branchId: toSave.branchId,
-        tableNumber: toSave.tableNumber,
-        specialRequests: toSave.specialNotes,
-      }).catch(async () => {
-        await saveReservationsList(updated);
-      });
-      toast.success(isNew ? "Reservation created" : "Reservation updated");
-    } catch {
-      await saveReservationsList(updated);
-      toast.success(isNew ? "Reservation created" : "Reservation updated");
-    }
+    await saveReservationsList(updated);
+    toast.success(isNew ? "Reservation created" : "Reservation updated");
   };
 
   const updateStatus = async (id: string, status: ReservationStatus) => {
     const updated = reservations.map((r) => (r.id === id ? { ...r, status } : r));
     setReservations(updated);
-    try {
-      await apiPut("/api/reservations", { id, status }).catch(async () => {
-        await saveReservationsList(updated);
-      });
-      toast.success(`Booking status updated to ${status}`);
-    } catch {
-      await saveReservationsList(updated);
-      toast.success(`Booking status updated to ${status}`);
-    }
+    await saveReservationsList(updated);
+    toast.success(`Booking status updated to ${status}`);
   };
 
   const handleDelete = async () => {
@@ -694,15 +654,8 @@ export default function ReservationsPage() {
     const updated = reservations.filter((r) => r.id !== targetId);
     setReservations(updated);
     setDeleteId(null);
-    try {
-      await apiDelete(`/api/reservations?id=${encodeURIComponent(targetId)}`).catch(async () => {
-        await saveReservationsList(updated);
-      });
-      toast.success("Reservation deleted");
-    } catch {
-      await saveReservationsList(updated);
-      toast.success("Reservation deleted");
-    }
+    await saveReservationsList(updated);
+    toast.success("Reservation deleted");
   };
 
   if (!hydrated) {

@@ -52,8 +52,10 @@ function GlobalRealtimeNotifier({
         const payload = event.payload as Record<string, unknown>;
         const orderNum = payload?.number ? `#${payload.number}` : "New Order";
         const customerName = (payload?.customerName as string) || "Guest";
+        const orderId = String(payload?.id || payload?.number || "");
 
         toast.success(`🔔 New Order Received! ${orderNum}`, {
+          id: orderId ? `realtime-order-${orderId}` : undefined,
           description: `Customer: ${customerName}`,
           duration: 7000,
         });
@@ -83,8 +85,10 @@ function GlobalRealtimeNotifier({
         playChime("waiter");
         const payload = event.payload as Record<string, unknown>;
         const tableNum = payload?.tableNumber ? `Table ${payload.tableNumber}` : "A table";
+        const callId = String(payload?.id || payload?.tableNumber || "");
 
         toast.warning(`🚨 Waiter Call! ${tableNum}`, {
+          id: callId ? `realtime-waiter-${callId}` : undefined,
           description: "Guest needs assistance",
           duration: 7000,
         });
@@ -113,11 +117,13 @@ function GlobalRealtimeNotifier({
       } else if (event.type === "announcement:created") {
         const payload = event.payload as Record<string, unknown>;
         const sound = (payload?.sound as string) || "chime";
+        const annId = String(payload?.id || "");
         import("@/lib/push-notifications").then((m) => {
           m.playNotificationSound(sound as any);
         });
 
         toast.info(`📢 ${(payload?.title as string) || "Announcement"}`, {
+          id: annId ? `realtime-ann-${annId}` : undefined,
           description: (payload?.body as string) || "New system announcement published",
           duration: 9000,
         });

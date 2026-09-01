@@ -11,7 +11,6 @@ import {
   deleteStaffServer,
   updateStaffAvatarServer,
 } from "@/lib/db-queries.server";
-import { apiGet, apiPost, apiDelete } from "@/lib/api-client";
 import { SkeletonStaff } from "@/components/menuverse/skeletons";
 import { BlobImg } from "@/components/ui/blob-img";
 import { uploadToImgBB } from "@/lib/imgbb";
@@ -257,9 +256,11 @@ const AVATAR_GRADIENTS = [
   "from-amber-500 to-orange-500",
 ];
 
-export default function getInitials(name: string) {
+function getInitials(name?: string | null) {
+  if (!name || typeof name !== "string") return "";
   return name
-    .split(" ")
+    .trim()
+    .split(/\s+/)
     .map((n) => n[0])
     .join("")
     .slice(0, 2)
@@ -449,7 +450,7 @@ function StaffForm({
   );
 }
 
-function StaffPage() {
+export default function StaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>(INITIAL_STAFF);
   const [currentUser, setCurrentUser] = useState<{
     role: string | null;
@@ -474,6 +475,7 @@ function StaffPage() {
   const [changePasswordTarget, setChangePasswordTarget] = useState<StaffMember | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   const [changeRoleTarget, setChangeRoleTarget] = useState<StaffMember | null>(null);
   const [newRole, setNewRole] = useState<StaffRole>("Waiter");
@@ -692,10 +694,7 @@ function StaffPage() {
       }
 
       try {
-        const dbStaff = await apiGet<StaffMember[]>("/api/staff").catch(async () => {
-          const res = await getStaffServer({ data: {} });
-          return (res || []) as StaffMember[];
-        });
+        const dbStaff = (await getStaffServer({ data: {} })) as StaffMember[];
         if (dbStaff && Array.isArray(dbStaff) && dbStaff.length > 0) {
           const map = new Map<string, StaffMember>();
           dbStaff.forEach((s) => {
@@ -724,24 +723,14 @@ function StaffPage() {
               ? filterBranch
               : undefined;
 
-        const params = new URLSearchParams();
-        if (effectiveBranch) params.set("branchId", effectiveBranch);
-        if (filterRole !== "all") params.set("role", filterRole);
-        if (filterStatus !== "all") params.set("status", filterStatus);
-        if (search.trim()) params.set("search", search.trim());
-
-        const url = `/api/staff${params.toString() ? `?${params.toString()}` : ""}`;
-        const dbStaff = await apiGet<StaffMember[]>(url).catch(async () => {
-          const res = await getStaffServer({
-            data: {
-              branch: effectiveBranch,
-              role: filterRole !== "all" ? filterRole : undefined,
-              status: filterStatus !== "all" ? filterStatus : undefined,
-              search: search.trim() || undefined,
-            },
-          });
-          return (res || []) as StaffMember[];
-        });
+        const dbStaff = (await getStaffServer({
+          data: {
+            branch: effectiveBranch,
+            role: filterRole !== "all" ? filterRole : undefined,
+            status: filterStatus !== "all" ? filterStatus : undefined,
+            search: search.trim() || undefined,
+          },
+        })) as StaffMember[];
 
         if (dbStaff && Array.isArray(dbStaff)) {
           const map = new Map<string, StaffMember>();
@@ -782,19 +771,8 @@ function StaffPage() {
     }
 
     try {
-      await apiPost("/api/staff", {
-        id: editTarget ? editTarget.id : undefined,
-        name: memberToSave.name,
-        email: memberToSave.email,
-        phone: memberToSave.phone,
-        role: memberToSave.role,
-        branch: memberToSave.branch,
-        status: memberToSave.status,
-        password: currentPass || undefined,
-      }).catch(async () => {
-        await saveStaffServer({
-          data: memberToSave as unknown as Parameters<typeof saveStaffServer>[0]["data"],
-        });
+      await saveStaffServer({
+        data: memberToSave as unknown as Parameters<typeof saveStaffServer>[0]["data"],
       });
 
       if (editTarget) {
@@ -826,9 +804,7 @@ function StaffPage() {
       return;
     }
     try {
-      await apiDelete(`/api/staff?id=${encodeURIComponent(deleteTarget.id)}`).catch(async () => {
-        await deleteStaffServer({ data: deleteTarget.id });
-      });
+      await deleteStaffServer({ data: deleteTarget.id });
     } catch {
       /* ignore */
     }
@@ -1298,23 +1274,51 @@ function StaffPage() {
             </Button>
             <Button
               size="sm"
-              onClick={() => {
+              disabled={isUpdatingPassword}
+              onClick={async () => {
                 if (!changePasswordTarget) return;
-                if (!newPassword.trim() || newPassword.length < 6) {
+                const trimmed = newPassword.trim();
+                if (!trimmed || trimmed.length < 6) {
                   toast.error("Password must be at least 6 characters.");
                   return;
                 }
-                setStaff((prev) =>
-                  prev.map((s) =>
-                    s.id === changePasswordTarget.id ? { ...s, password: newPassword } : s,
-                  ),
-                );
-                toast.success(`Password updated for ${changePasswordTarget.name}!`);
-                setChangePasswordTarget(null);
+                setIsUpdatingPassword(true);
+                const updatedMember: StaffMember = {
+                  ...changePasswordTarget,
+                  password: trimmed,
+                };
+                try {
+                  await saveStaffServer({
+                    data: updatedMember as unknown as Parameters<typeof saveStaffServer>[0]["data"],
+                  });
+                  setStaff((prev) =>
+                    prev.map((s) =>
+                      s.id === changePasswordTarget.id ? { ...s, password: trimmed } : s,
+                    ),
+                  );
+                  toast.success(`Password updated for ${changePasswordTarget.name}!`);
+                  setChangePasswordTarget(null);
+                  setNewPassword("");
+                } catch (err: unknown) {
+                  console.error("Failed to update staff password:", err);
+                  const msg =
+                    err instanceof Error
+                      ? err.message
+                      : "Failed to update password in database. Please try again.";
+                  toast.error(msg);
+                } finally {
+                  setIsUpdatingPassword(false);
+                }
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
             >
-              Update Password
+              {isUpdatingPassword ? (
+                <>
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Updating...
+                </>
+              ) : (
+                "Update Password"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -292,40 +292,70 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
   }
 }
 
+const PROCESSED_NOTIFICATION_KEYS = new Set<string>();
+let isGlobalServiceWorkerListenerAttached = false;
+let globalListenerSubscribersCount = 0;
+
+function globalServiceWorkerMessageHandler(event: MessageEvent) {
+  if (event.data?.type === "PLAY_NOTIFICATION_SOUND") {
+    const p = event.data.payload;
+    const dedupeKey = p?.orderId
+      ? `order-${p.orderId}`
+      : p?.id
+        ? `msg-${p.id}`
+        : p?.tag
+          ? `tag-${p.tag}`
+          : `${p?.title || ""}-${p?.body || ""}`;
+
+    if (dedupeKey && PROCESSED_NOTIFICATION_KEYS.has(dedupeKey)) {
+      return;
+    }
+
+    if (dedupeKey) {
+      PROCESSED_NOTIFICATION_KEYS.add(dedupeKey);
+      setTimeout(() => PROCESSED_NOTIFICATION_KEYS.delete(dedupeKey), 8000);
+    }
+
+    playNotificationSound(event.data.sound || "chime");
+
+    if (p) {
+      toast(p.title || "🔔 New Notification", {
+        id: dedupeKey || undefined,
+        description: p.body,
+        duration: 6000,
+        action: p.url
+          ? {
+              label: "View",
+              onClick: () => {
+                if (typeof window !== "undefined") {
+                  window.location.href = p.url;
+                }
+              },
+            }
+          : undefined,
+      });
+    }
+  }
+}
+
 /**
  * Attaches the message listener to play custom chimes & handle badge synchronization
  */
 export function setupPushNotificationListener() {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return () => {};
 
-  const handler = (event: MessageEvent) => {
-    if (event.data?.type === "PLAY_NOTIFICATION_SOUND") {
-      playNotificationSound(event.data.sound || "chime");
-
-      if (event.data.payload) {
-        const p = event.data.payload;
-        toast(p.title || "🔔 New Notification", {
-          description: p.body,
-          duration: 6000,
-          action: p.url
-            ? {
-                label: "View",
-                onClick: () => {
-                  if (typeof window !== "undefined") {
-                    window.location.href = p.url;
-                  }
-                },
-              }
-            : undefined,
-        });
-      }
-    }
-  };
-
-  navigator.serviceWorker.addEventListener("message", handler);
+  globalListenerSubscribersCount++;
+  if (!isGlobalServiceWorkerListenerAttached) {
+    navigator.serviceWorker.addEventListener("message", globalServiceWorkerMessageHandler);
+    isGlobalServiceWorkerListenerAttached = true;
+  }
 
   return () => {
-    navigator.serviceWorker.removeEventListener("message", handler);
+    globalListenerSubscribersCount = Math.max(0, globalListenerSubscribersCount - 1);
+    if (globalListenerSubscribersCount === 0 && isGlobalServiceWorkerListenerAttached) {
+      navigator.serviceWorker.removeEventListener("message", globalServiceWorkerMessageHandler);
+      isGlobalServiceWorkerListenerAttached = false;
+    }
   };
 }
 

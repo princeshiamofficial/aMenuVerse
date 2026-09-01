@@ -161,18 +161,17 @@ class RealtimeHub {
       // 2. Branch isolation check
       if (client.branchId && client.branchId !== "all" && client.branchId !== "undefined") {
         const clientBranch = client.branchId.toLowerCase().trim();
+        const clientBranchRaw = clientBranch.replace(/^branch-/, "");
 
         if (targetBranch) {
+          const targetBranchRaw = targetBranch.replace(/^branch-/, "");
+          const targetNameRaw = targetBranchName ? targetBranchName.replace(/^branch-/, "") : null;
+
           const branchMatches =
             clientBranch === targetBranch ||
-            clientBranch.includes(targetBranch) ||
-            targetBranch.includes(clientBranch) ||
+            clientBranchRaw === targetBranchRaw ||
             (targetBranchName !== null &&
-              (clientBranch === targetBranchName ||
-                clientBranch.includes(targetBranchName) ||
-                targetBranchName.includes(clientBranch))) ||
-            clientBranch === "main branch" ||
-            targetBranch === "main branch";
+              (clientBranch === targetBranchName || clientBranchRaw === targetNameRaw));
 
           if (!branchMatches) {
             continue;

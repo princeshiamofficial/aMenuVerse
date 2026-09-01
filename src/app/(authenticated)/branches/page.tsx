@@ -116,9 +116,11 @@ const PLAN_BRANCH_LIMITS: Record<string, number | "unlimited"> = {
   enterprise: "unlimited",
 };
 
-const STATUS_META: Record<BranchStatus, { label: string; className: string }> = {
+const STATUS_META: Record<string, { label: string; className: string }> = {
   open: { label: "Open", className: "bg-primary/15 text-primary border-primary/20" },
+  active: { label: "Open", className: "bg-primary/15 text-primary border-primary/20" },
   closed: { label: "Closed", className: "bg-muted text-muted-foreground border-border" },
+  disabled: { label: "Closed", className: "bg-muted text-muted-foreground border-border" },
   "temporarily-closed": {
     label: "Temporarily closed",
     className: "bg-amber-500/15 text-amber-700 border-amber-500/20 dark:text-amber-400",
@@ -316,7 +318,7 @@ export default function BranchesPage() {
     const q = query.trim().toLowerCase();
     if (!q) return visibleBranches;
     return visibleBranches.filter((b) =>
-      [b.name, b.address, b.manager, b.phone].some((v) => v.toLowerCase().includes(q)),
+      [b.name, b.address, b.manager, b.phone].some((v) => (v || "").toLowerCase().includes(q)),
     );
   }, [visibleBranches, query]);
 
@@ -489,7 +491,10 @@ export default function BranchesPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((b) => {
-            const status = STATUS_META[b.status];
+            const status =
+              STATUS_META[(b.status || "").toLowerCase()] ||
+              STATUS_META[b.status] ||
+              STATUS_META.open;
             const originalIdx = branches.findIndex((item) => item.id === b.id);
             const isDisabledByLimit = subInfo.limit !== "unlimited" && originalIdx >= subInfo.limit;
 

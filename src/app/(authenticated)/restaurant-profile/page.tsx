@@ -37,7 +37,6 @@ import {
   updateRestaurantProfile,
   getCurrentUser,
 } from "@/lib/db-queries.server";
-import { apiGet, apiPost } from "@/lib/api-client";
 import { uploadToImgBB } from "@/lib/imgbb";
 import { BlobImg } from "@/components/ui/blob-img";
 import { toast } from "sonner";
@@ -268,11 +267,7 @@ export default function RestaurantProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const dbData = await apiGet<Record<string, unknown>>("/api/restaurant-profile").catch(
-          async () => {
-            return await getRestaurantProfile();
-          },
-        );
+        const dbData = await getRestaurantProfile();
         if (dbData) {
           setBranding((prev) => {
             const updated = { ...prev, ...dbData };
@@ -365,9 +360,7 @@ export default function RestaurantProfilePage() {
     setBranding(updated);
     setIsEditingInfo(false);
     try {
-      await apiPost("/api/restaurant-profile", editForm).catch(async () => {
-        await updateRestaurantProfile({ data: editForm });
-      });
+      await updateRestaurantProfile({ data: editForm });
       if (typeof window !== "undefined" && updated.name) {
         window.dispatchEvent(
           new CustomEvent("menuverse:profile-updated", { detail: { name: updated.name } }),
@@ -389,9 +382,7 @@ export default function RestaurantProfilePage() {
     setBranding(updated);
     setIsEditingIntro(false);
     try {
-      await apiPost("/api/restaurant-profile", editIntroForm).catch(async () => {
-        await updateRestaurantProfile({ data: editIntroForm });
-      });
+      await updateRestaurantProfile({ data: editIntroForm });
       toast.success("Intro details updated silently!");
     } catch (err) {
       console.warn("[MySQL] Save intro error:", err);

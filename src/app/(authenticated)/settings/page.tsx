@@ -45,7 +45,6 @@ import {
 import { toast } from "sonner";
 import { generateId } from "@/lib/utils";
 
-import { apiGet, apiPost } from "@/lib/api-client";
 import { getSettingsServer, saveSettingsServer } from "@/lib/db-queries.server";
 import { PushNotificationManager } from "@/components/push-notification-manager";
 
@@ -149,7 +148,7 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const res = await apiGet<Record<string, unknown>>("/api/settings");
+        const res = await getSettingsServer({ data: {} });
         const dbSettings = (res?.data || res) as Record<string, unknown>;
         if (dbSettings && typeof dbSettings === "object") {
           let appObj: Record<string, unknown> | null = null;
@@ -185,11 +184,11 @@ export default function SettingsPage() {
   const persist = async (next: Settings) => {
     setS(next);
     try {
-      await apiPost("/api/settings", {
-        ...next,
-        currency: next.currency,
-        taxRate: next.taxRate,
-        serviceFee: next.serviceCharge,
+      await saveSettingsServer({
+        data: {
+          app_settings: next,
+          api_keys: keys,
+        },
       });
     } catch {
       /* ignore */
@@ -198,11 +197,11 @@ export default function SettingsPage() {
   const update = <K extends keyof Settings>(k: K, v: Settings[K]) => persist({ ...s, [k]: v });
   const save = async () => {
     try {
-      await apiPost("/api/settings", {
-        ...s,
-        currency: s.currency,
-        taxRate: s.taxRate,
-        serviceFee: s.serviceCharge,
+      await saveSettingsServer({
+        data: {
+          app_settings: s,
+          api_keys: keys,
+        },
       });
       toast.success("Settings saved successfully!");
     } catch {
