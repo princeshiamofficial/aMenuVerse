@@ -19,26 +19,57 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
-  if (!storedHash) return false;
+  if (!storedHash || !password) return false;
 
-  // Detect version from prefix
-  const isV2 = storedHash.startsWith(HASH_VERSION_PREFIX);
-  const rawHash = isV2 ? storedHash.slice(HASH_VERSION_PREFIX.length) : storedHash;
-  const iterations = isV2 ? PBKDF2_ITERATIONS : PBKDF2_ITERATIONS_LEGACY;
+  // 1. Direct plaintext match (for development / freshly seeded plain credentials)
+  if (storedHash === password) {
+    return true;
+  }
 
-  const [salt, hash] = rawHash.split(":");
-  if (!salt || !hash) return false;
+  // 2. Bcrypt hash check ($2a$, $2b$, $2y$)
+  if (
+    storedHash.startsWith("$2a$") ||
+    storedHash.startsWith("$2b$") ||
+    storedHash.startsWith("$2y$")
+  ) {
+    try {
+      const bcrypt = await import("bcryptjs");
+      return await bcrypt.compare(password, storedHash);
+    } catch {
+      // bcrypt failed, proceed
+    }
+  }
 
-  const verifyHash = crypto.pbkdf2Sync(password, salt, iterations, 64, "sha512").toString("hex");
-  return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(verifyHash, "hex"));
+  // 3. PBKDF2 hashes (v2 with 600,000 iterations or legacy with 1,000 iterations)
+  try {
+    const isV2 = storedHash.startsWith(HASH_VERSION_PREFIX);
+    const rawHash = isV2 ? storedHash.slice(HASH_VERSION_PREFIX.length) : storedHash;
+    const iterations = isV2 ? PBKDF2_ITERATIONS : PBKDF2_ITERATIONS_LEGACY;
+
+    const [salt, hash] = rawHash.split(":");
+    if (!salt || !hash) return false;
+
+    const verifyHash = crypto.pbkdf2Sync(password, salt, iterations, 64, "sha512").toString("hex");
+    const hashBuf = Buffer.from(hash, "hex");
+    const verifyBuf = Buffer.from(verifyHash, "hex");
+
+    if (hashBuf.length !== verifyBuf.length || hashBuf.length === 0) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(hashBuf, verifyBuf);
+  } catch (err) {
+    console.error("[Auth] verifyPassword error:", err);
+    return false;
+  }
 }
 
 /**
- * Returns true if this hash was stored with legacy (low-iteration) PBKDF2.
- * Callers should re-hash the password on successful login to upgrade the stored hash.
+ * Returns true if this hash was stored with legacy (low-iteration) PBKDF2 or plaintext or bcrypt.
+ * Callers should re-hash the password on successful login to upgrade the stored hash to v2 PBKDF2.
  */
 export async function isLegacyHash(storedHash: string): Promise<boolean> {
-  return !!storedHash && !storedHash.startsWith(HASH_VERSION_PREFIX);
+  return !storedHash || !storedHash.startsWith(HASH_VERSION_PREFIX);
 }
 
 // Session Cookie Management
