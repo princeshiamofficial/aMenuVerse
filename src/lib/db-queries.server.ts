@@ -6526,9 +6526,19 @@ export const recordAnalyticsEventServer = createServerFn({ method: "POST" })
         }
       }
 
+      let numericRestId = parseInt(rId, 10);
+      if (isNaN(numericRestId)) {
+        try {
+          const tenant = await resolvePublicRestaurant(rId);
+          numericRestId = tenant.restaurantId || 1;
+        } catch {
+          numericRestId = 1;
+        }
+      }
+
       await query(
         `INSERT INTO analytics_events (restaurant_id, event_type, branch_id, table_no) VALUES (?, ?, ?, ?)`,
-        [rId || "1", data.eventType, data.branchId || null, data.tableNo || null],
+        [numericRestId, data.eventType, data.branchId || null, data.tableNo || null],
       );
       return { success: true };
     } catch (err) {

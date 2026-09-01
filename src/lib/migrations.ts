@@ -829,6 +829,12 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       },
     ];
 
+    try {
+      await pool.query("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) DEFAULT 'customer'");
+    } catch {
+      /* ignore */
+    }
+
     for (const u of demoUsersToSeed) {
       const [existing] = (await pool.execute("SELECT id FROM users WHERE email = ?", [
         u.email,
@@ -836,11 +842,11 @@ export async function runDatabaseMigrations(pool: Pool): Promise<void> {
       if (!Array.isArray(existing) || existing.length === 0) {
         const pHash = hashPwd(u.pwd);
         await pool.execute(
-          "INSERT INTO users (id, email, password_hash, name, full_name, phone, branch) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          [u.id, u.email, pHash, u.name, u.name, u.phone, u.branch],
+          "INSERT INTO users (id, email, password_hash, name, full_name, phone, branch, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          [u.id, u.email, pHash, u.name, u.name, u.phone, u.branch, u.role],
         );
         await pool.execute(
-          "INSERT INTO user_roles (user_id, role, restaurant_id) VALUES (?, ?, ?)",
+          "INSERT INTO user_roles (user_id, role, restaurant_id) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role = VALUES(role)",
           [u.id, u.role, u.restId],
         );
       }
