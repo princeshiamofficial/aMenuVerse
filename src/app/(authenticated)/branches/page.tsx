@@ -364,10 +364,15 @@ export default function BranchesPage() {
     setBranches(next);
     setDialogOpen(false);
     try {
-      await updateBranchesServer({ data: next });
+      const res = await updateBranchesServer({ data: next });
+      if (res && typeof res === "object" && "success" in res && !(res as any).success) {
+        toast.error((res as any).error || "Failed to save branch");
+        return;
+      }
       toast.success(exists ? "Branch updated" : "Branch created");
-    } catch {
-      toast.success(exists ? "Branch updated" : "Branch created");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save branch";
+      toast.error(msg);
     }
   };
 

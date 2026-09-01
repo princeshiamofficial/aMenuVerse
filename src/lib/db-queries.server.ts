@@ -2637,19 +2637,20 @@ const ZBranchSchema = z
   .object({
     id: z.string().optional(),
     name: z.string().min(1).max(100),
-    address: z.string().max(255).optional(),
-    phone: z.string().max(50).optional(),
-    manager: z.string().max(100).optional(),
-    status: z.enum(["open", "closed", "busy"]).optional(),
+    address: z.string().max(255).optional().nullable(),
+    phone: z.string().max(50).optional().nullable(),
+    manager: z.string().max(100).optional().nullable(),
+    status: z.string().optional().nullable(),
     isDefault: z.boolean().optional(),
-    menuId: z.string().max(100).optional(),
+    menuId: z.string().max(100).optional().nullable(),
   })
-  .strict();
+  .passthrough();
 
 export const updateBranchesServer = createServerFn({ method: "POST" })
-  .validator(
-    (branches: DbBranchRecord[]) => z.array(ZBranchSchema).parse(branches) as DbBranchRecord[],
-  )
+  .validator((branches: DbBranchRecord[]) => {
+    if (!Array.isArray(branches)) return [];
+    return branches;
+  })
   .handler(async ({ data: branches }) => {
     await requirePermission("branches:manage");
     const tenant = await resolvePrivateTenantContext();
@@ -3843,32 +3844,21 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
     try {
       let rows: Record<string, unknown>[] | null = null;
       if (branchId && branchId !== "all") {
-        const target = branchId.toLowerCase().trim();
-        if (!assignedInfo.isAll) {
-          const isAssigned = assignedInfo.branches.some(
-            (b) =>
-              b.id.toLowerCase() === target ||
-              b.name.toLowerCase() === target ||
-              b.name.toLowerCase().includes(target) ||
-              target.includes(b.name.toLowerCase()),
-          );
-          if (!isAssigned) {
-            return [];
-          }
-        }
         const idents = await resolveBranchIdentifiers(tenant.restaurantId, branchId);
-        const searchIdents = Array.from(new Set([branchId, ...idents].filter(Boolean)));
+        const searchIdents = Array.from(
+          new Set([branchId, branchId.replace(/^branch-/, ""), ...idents].filter(Boolean)),
+        );
         const placeholders = searchIdents.map(() => "?").join(", ");
         rows = await query<Record<string, unknown>[]>(
-          `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders}) OR branch_id = ?) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) ORDER BY sort_order ASC, created_at ASC`,
-          [...searchIdents, branchId, tenant.restaurantId],
+          `SELECT id, table_no, zone FROM branch_tables WHERE branch_id IN (${placeholders}) ORDER BY sort_order ASC, created_at ASC`,
+          searchIdents,
         );
       } else if (!assignedInfo.isAll) {
         const branchIds = assignedInfo.branches.flatMap((b) => [b.id, b.name].filter(Boolean));
         const placeholders = branchIds.map(() => "?").join(",");
         rows = await query<Record<string, unknown>[]>(
-          `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders})) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) ORDER BY sort_order ASC, created_at ASC`,
-          [...branchIds, tenant.restaurantId],
+          `SELECT id, table_no, zone FROM branch_tables WHERE branch_id IN (${placeholders}) ORDER BY sort_order ASC, created_at ASC`,
+          branchIds,
         );
       } else {
         rows = await query<Record<string, unknown>[]>(
