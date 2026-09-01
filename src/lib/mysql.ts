@@ -112,7 +112,57 @@ export type QueryParams =
   | Record<string, unknown>;
 
 /**
- * Helper to run a parameterized query with automatic table creation & retry fallback.
+ * Helper to dynamically create a missing column when MySQL returns ER_BAD_FIELD_ERROR (1054).
+ */
+async function autoAddMissingColumn(errorMessage: string, sql: string): Promise<boolean> {
+  try {
+    const pool = getPool();
+    // Match: Unknown column 'col_name' in 'field list' or 'where clause'
+    const colMatch = errorMessage.match(/Unknown column '([^']+)'/i);
+    if (!colMatch) return false;
+    const missingCol = colMatch[1];
+
+    // Detect target table from SQL query
+    let targetTable: string | null = null;
+    const tableMatch =
+      sql.match(/FROM\s+[`]?([a-zA-Z0-9_]+)[`]?/i) ||
+      sql.match(/UPDATE\s+[`]?([a-zA-Z0-9_]+)[`]?/i) ||
+      sql.match(/INTO\s+[`]?([a-zA-Z0-9_]+)[`]?/i);
+    if (tableMatch) {
+      targetTable = tableMatch[1];
+    }
+
+    if (!targetTable) return false;
+
+    console.log(`[MySQL] Auto-detected missing column '${missingCol}' in table '${targetTable}'. Dynamically creating...`);
+
+    // Infer column type
+    let colType = "VARCHAR(255) NULL";
+    if (missingCol.endsWith("_id") || missingCol === "id") {
+      colType = "VARCHAR(255) NULL";
+    } else if (missingCol.endsWith("_json") || missingCol === "variations" || missingCol === "addons") {
+      colType = "JSON NULL";
+    } else if (missingCol.startsWith("is_") || missingCol === "active" || missingCol === "is_active") {
+      colType = "TINYINT(1) DEFAULT 1";
+    } else if (missingCol.includes("price") || missingCol.includes("total") || missingCol.includes("amount") || missingCol.includes("tax")) {
+      colType = "DECIMAL(10,2) DEFAULT 0";
+    } else if (missingCol.includes("description") || missingCol.includes("about") || missingCol.includes("notes")) {
+      colType = "TEXT NULL";
+    } else if (missingCol.includes("date") || missingCol.includes("time") || missingCol.includes("at")) {
+      colType = "VARCHAR(100) NULL";
+    }
+
+    await pool.query(`ALTER TABLE \`${targetTable}\` ADD COLUMN \`${missingCol}\` ${colType}`);
+    console.log(`[MySQL] Successfully added column '${missingCol}' to table '${targetTable}'.`);
+    return true;
+  } catch (err) {
+    console.warn("[MySQL] Dynamic column creation notice:", (err as Error).message);
+    return false;
+  }
+}
+
+/**
+ * Helper to run a parameterized query with automatic table & column creation and retry fallback.
  */
 export async function query<T = unknown>(sql: string, params?: QueryParams): Promise<T> {
   if (!globalForMysql.__mysql_tables_initialized__) {
@@ -127,16 +177,17 @@ export async function query<T = unknown>(sql: string, params?: QueryParams): Pro
       : await connectionPool.execute(sql, params as mysql.ExecuteValues);
     return rows as T;
   } catch (err: unknown) {
-    const mysqlErr = err as { errno?: number; code?: string };
-    // If table or column doesn't exist (1146 / 1054), auto-create database schema & retry seamlessly
+    const mysqlErr = err as { errno?: number; code?: string; message?: string };
+    const errMessage = mysqlErr?.message || "";
+
+    // 1. If table doesn't exist (1146 / ER_NO_SUCH_TABLE), run full migrations to create all tables
     if (
       mysqlErr?.errno === 1146 ||
       mysqlErr?.code === "ER_NO_SUCH_TABLE" ||
-      mysqlErr?.errno === 1054 ||
-      mysqlErr?.code === "ER_BAD_FIELD_ERROR"
+      errMessage.includes("Table") && errMessage.includes("doesn't exist")
     ) {
       console.log(
-        "[MySQL] Table or column missing. Auto-creating database schema & retrying query...",
+        "[MySQL] Table missing. Auto-creating database tables and schema...",
       );
       globalForMysql.__mysql_tables_initialized__ = false;
       await ensureAllTablesExist();
@@ -145,6 +196,29 @@ export async function query<T = unknown>(sql: string, params?: QueryParams): Pro
         : await connectionPool.execute(sql, params as mysql.ExecuteValues);
       return retryRows as T;
     }
+
+    // 2. If column doesn't exist (1054 / ER_BAD_FIELD_ERROR), auto-add the column and retry
+    if (
+      mysqlErr?.errno === 1054 ||
+      mysqlErr?.code === "ER_BAD_FIELD_ERROR" ||
+      errMessage.includes("Unknown column")
+    ) {
+      const added = await autoAddMissingColumn(errMessage, sql);
+      if (added) {
+        const [retryRows] = isDDL
+          ? await connectionPool.query(sql, params as mysql.ExecuteValues)
+          : await connectionPool.execute(sql, params as mysql.ExecuteValues);
+        return retryRows as T;
+      }
+      // Fallback: run global migrations if specific add wasn't parsed
+      globalForMysql.__mysql_tables_initialized__ = false;
+      await ensureAllTablesExist();
+      const [retryRows] = isDDL
+        ? await connectionPool.query(sql, params as mysql.ExecuteValues)
+        : await connectionPool.execute(sql, params as mysql.ExecuteValues);
+      return retryRows as T;
+    }
+
     throw err;
   }
 }
