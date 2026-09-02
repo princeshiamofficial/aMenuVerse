@@ -416,14 +416,19 @@ export default function PublicRestaurantPage() {
   const branchId = searchParams.get("branch") || "";
 
   useEffect(() => {
+    let isMounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 3500);
+
     async function load() {
       if (!restaurantUsername) {
-        setLoading(false);
+        if (isMounted) setLoading(false);
         return;
       }
       try {
         const fresh = await fetchPublicMenu(restaurantUsername);
-        if (fresh) {
+        if (fresh && isMounted) {
           setRestaurant(fresh);
           if (fresh.name) updateDynamicTitle(`${fresh.name} — Digital Menu`);
           const fav =
@@ -433,10 +438,18 @@ export default function PublicRestaurantPage() {
       } catch (err) {
         console.warn("[PublicMenu] load error:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          clearTimeout(safetyTimer);
+          setLoading(false);
+        }
       }
     }
     load();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
   }, [restaurantUsername]);
 
   if (loading && !restaurant) {

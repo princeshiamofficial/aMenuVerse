@@ -3269,29 +3269,6 @@ export const getCategoriesServer = createServerFn({ method: "GET" })
       : await resolvePrivateTenantContext();
 
     try {
-      try {
-        const pool = await getPool();
-        const alters = [
-          "ALTER TABLE categories ADD COLUMN restaurant_id INT NOT NULL DEFAULT 1",
-          "ALTER TABLE categories ADD COLUMN description TEXT NULL",
-          "ALTER TABLE categories ADD COLUMN icon VARCHAR(50) NULL",
-          "ALTER TABLE categories ADD COLUMN image TEXT NULL",
-          "ALTER TABLE categories ADD COLUMN sort_order INT DEFAULT 0",
-          "ALTER TABLE categories ADD COLUMN is_active TINYINT(1) DEFAULT 1",
-          "ALTER TABLE categories MODIFY COLUMN id VARCHAR(255) NOT NULL",
-          "ALTER TABLE categories MODIFY COLUMN name VARCHAR(255) NOT NULL",
-        ];
-        for (const alt of alters) {
-          try {
-            await pool.query(alt);
-          } catch {
-            /* ignore */
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-
       let sql = "SELECT * FROM categories WHERE restaurant_id = ?";
       const params: unknown[] = [tenant.restaurantId];
 
