@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { fetchPublicMenu, fetchPublicMenuSync } from "@/lib/public-menu";
 import { validateTableQrServer } from "@/lib/db-queries.server";
-import { PublicRestaurantView } from "@/app/[restaurantUsername]/page";
+import { PublicRestaurantView, PublicRestaurantSkeleton } from "@/app/[restaurantUsername]/page";
 import type { Restaurant } from "@/lib/restaurants-data";
 
 export default function RestaurantBranchTableRoute() {
@@ -79,12 +79,7 @@ export default function RestaurantBranchTableRoute() {
   }
 
   if (loading) {
-    return (
-      <div className="mx-auto max-w-2xl p-8 text-center min-h-[60vh] flex flex-col items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent mb-3" />
-        <p className="text-sm font-semibold text-gray-600">Loading dining table menu...</p>
-      </div>
-    );
+    return <PublicRestaurantSkeleton />;
   }
 
   if (!restaurantData) {

@@ -389,6 +389,83 @@ interface SearchParams {
   branch?: string;
 }
 
+export function PublicRestaurantSkeleton() {
+  return (
+    <div className="min-h-screen bg-neutral-50/60 pb-24 animate-pulse">
+      {/* 1. Cover Photo Banner Skeleton */}
+      <div className="w-full h-52 sm:h-72 md:h-80 bg-neutral-200/80 relative" />
+
+      {/* 2. Restaurant Profile Header Skeleton */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="relative -mt-12 sm:-mt-16 mb-6 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+          <div className="flex items-end gap-4">
+            {/* Logo Avatar Skeleton */}
+            <Skeleton className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-4 border-white shadow-md bg-neutral-300 shrink-0" />
+            <div className="flex flex-col gap-2 pb-1">
+              <Skeleton className="h-7 w-48 sm:w-64 rounded-lg bg-neutral-300" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-24 rounded-full bg-neutral-200" />
+                <Skeleton className="h-4 w-28 rounded-full bg-neutral-200" />
+                <Skeleton className="h-4 w-20 rounded-full bg-neutral-200" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <Skeleton className="h-10 w-28 rounded-xl bg-neutral-200 shrink-0" />
+            <Skeleton className="h-10 w-28 rounded-xl bg-neutral-200 shrink-0" />
+          </div>
+        </div>
+
+        {/* 3. Navigation Tabs Bar Skeleton */}
+        <div className="border-b border-neutral-200/80 mb-6 flex gap-6">
+          <Skeleton className="h-9 w-20 rounded-lg bg-neutral-300" />
+          <Skeleton className="h-9 w-20 rounded-lg bg-neutral-200" />
+          <Skeleton className="h-9 w-20 rounded-lg bg-neutral-200" />
+        </div>
+
+        {/* 4. Sticky Category Pills Skeleton */}
+        <div className="flex gap-2.5 overflow-x-auto py-2 mb-6 scrollbar-none">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton
+              key={i}
+              className={`h-9 rounded-full bg-neutral-200 shrink-0 ${
+                i === 0 ? "w-20 bg-neutral-300" : i % 2 === 0 ? "w-28" : "w-24"
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* 5. Search Bar & Food Grid Skeleton */}
+        <div className="mb-6 flex justify-between items-center gap-4">
+          <Skeleton className="h-10 w-full max-w-sm rounded-xl bg-neutral-200" />
+          <Skeleton className="h-8 w-24 rounded-lg bg-neutral-200 hidden sm:block" />
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+          {Array.from({ length: 8 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="bg-white border border-neutral-200/70 rounded-2xl p-3 sm:p-3.5 shadow-xs flex flex-col gap-3"
+            >
+              <Skeleton className="w-full aspect-4/3 rounded-xl bg-neutral-200" />
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-4.5 w-4/5 rounded-md bg-neutral-300" />
+                <Skeleton className="h-3.5 w-full rounded-md bg-neutral-200" />
+                <Skeleton className="h-3.5 w-2/3 rounded-md bg-neutral-200" />
+              </div>
+              <div className="flex justify-between items-center pt-1 mt-auto">
+                <Skeleton className="h-5 w-16 rounded-md bg-neutral-300" />
+                <Skeleton className="h-8 w-8 rounded-full bg-neutral-200" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // =========================================================
 // MAIN PAGE COMPONENT
 // =========================================================
@@ -453,12 +530,7 @@ export default function PublicRestaurantPage() {
   }, [restaurantUsername]);
 
   if (loading && !restaurant) {
-    return (
-      <div className="mx-auto max-w-2xl p-8 text-center min-h-[60vh] flex flex-col items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-amber-500 border-t-transparent mb-3" />
-        <p className="text-sm font-semibold text-muted-foreground">Loading digital menu...</p>
-      </div>
-    );
+    return <PublicRestaurantSkeleton />;
   }
 
   if (!restaurant) {
