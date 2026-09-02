@@ -411,10 +411,20 @@ export const getPublicMenu = createServerFn({ method: "GET" })
 export const getRestaurantStatusBySlug = createServerFn({ method: "GET" })
   .validator((slug: string) => z.string().parse(slug))
   .handler(async ({ data: slug }) => {
+    const clean = (slug || "").toLowerCase().trim();
+    const cleanNoHyphen = clean.replace(/-/g, "");
     try {
       const rows = await query<{ id: number; name: string; status: string; logo_url: string }[]>(
-        "SELECT id, name, status, logo_url FROM restaurants WHERE slug = ? LIMIT 1",
-        [slug],
+        `SELECT id, name, status, logo_url 
+         FROM restaurants 
+         WHERE slug = ? 
+            OR username = ? 
+            OR REPLACE(COALESCE(slug, ''), '-', '') = ? 
+            OR REPLACE(COALESCE(username, ''), '-', '') = ? 
+            OR LOWER(name) = ? 
+            OR id = ? 
+         LIMIT 1`,
+        [clean, clean, cleanNoHyphen, cleanNoHyphen, clean, clean],
       );
       if (!rows || rows.length === 0) return null;
       return rows[0];
@@ -2143,11 +2153,35 @@ async function resolvePublicRestaurant(
   const target = (customSlugOrEmail || "burgercraftlab").toLowerCase().trim();
   const slugWithoutLab = target.replace(/lab$/i, "");
   const slugWithLab = target.endsWith("lab") ? target : `${target}lab`;
+  const targetNoHyphens = target.replace(/-/g, "");
 
   try {
     const rows = await query<Record<string, unknown>[]>(
-      "SELECT id, slug FROM restaurants WHERE slug = ? OR slug = ? OR slug = ? OR id = ? LIMIT 1",
-      [target, slugWithoutLab, slugWithLab, target],
+      `SELECT id, COALESCE(slug, username) AS slug 
+       FROM restaurants 
+       WHERE slug = ? 
+          OR username = ? 
+          OR slug = ? 
+          OR username = ? 
+          OR slug = ? 
+          OR username = ? 
+          OR REPLACE(COALESCE(slug, ''), '-', '') = ?
+          OR REPLACE(COALESCE(username, ''), '-', '') = ?
+          OR LOWER(name) = ?
+          OR id = ? 
+       LIMIT 1`,
+      [
+        target,
+        target,
+        slugWithoutLab,
+        slugWithoutLab,
+        slugWithLab,
+        slugWithLab,
+        targetNoHyphens,
+        targetNoHyphens,
+        target,
+        target,
+      ],
     );
     if (rows && rows.length > 0) {
       return {
