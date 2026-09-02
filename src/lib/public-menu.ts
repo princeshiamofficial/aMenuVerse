@@ -27,7 +27,7 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
   const profSlug = String(dbProfile?.slug || "")
     .toLowerCase()
     .trim();
-  const hasDbMatch = !!dbData || (!!dbProfile && !!dbProfile.name && profSlug === cleanUsername);
+  const hasDbMatch = Boolean(dbData) || Boolean(dbProfile && dbProfile.name);
 
   // If restaurant is NOT in MySQL database, return null -> 404 Not Found
   if (!hasDbMatch) {
