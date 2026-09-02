@@ -441,11 +441,44 @@ export const getRestaurantData = createServerFn({ method: "GET" })
     const cleanUser = (username || "").toLowerCase().trim().split(".")[0];
     const slugWithoutLab = cleanUser.replace(/lab$/i, "");
     const slugWithLab = cleanUser.endsWith("lab") ? cleanUser : `${cleanUser}lab`;
+    const cleanNoHyphens = cleanUser.replace(/[-_]/g, "");
 
     try {
       restaurants = await query<DbRestaurantRecord[]>(
-        "SELECT id, name, COALESCE(slug, username) AS slug, description, logo_url, cover_url, cuisine, phone, status FROM restaurants WHERE (slug = ? OR username = ? OR slug = ? OR username = ? OR slug = ? OR username = ? OR id = ?) AND (status != 'suspended' OR status IS NULL) LIMIT 1",
-        [cleanUser, cleanUser, slugWithoutLab, slugWithoutLab, slugWithLab, slugWithLab, cleanUser],
+        `SELECT id, name, COALESCE(slug, username) AS slug, description, logo_url, cover_url, cuisine, phone, status 
+         FROM restaurants 
+         WHERE (
+              slug = ? 
+           OR username = ? 
+           OR slug = ? 
+           OR username = ? 
+           OR slug = ? 
+           OR username = ? 
+           OR REPLACE(COALESCE(slug, ''), '-', '') = ?
+           OR REPLACE(COALESCE(username, ''), '-', '') = ?
+           OR REPLACE(COALESCE(slug, ''), '_', '') = ?
+           OR REPLACE(COALESCE(username, ''), '_', '') = ?
+           OR LOWER(name) = ?
+           OR REPLACE(LOWER(name), ' ', '') = ?
+           OR REPLACE(LOWER(name), '-', '') = ?
+           OR id = ?
+         ) AND (status != 'suspended' OR status IS NULL) LIMIT 1`,
+        [
+          cleanUser,
+          cleanUser,
+          slugWithoutLab,
+          slugWithoutLab,
+          slugWithLab,
+          slugWithLab,
+          cleanNoHyphens,
+          cleanNoHyphens,
+          cleanNoHyphens,
+          cleanNoHyphens,
+          cleanUser,
+          cleanNoHyphens,
+          cleanNoHyphens,
+          cleanUser,
+        ],
       );
     } catch {
       restaurants = [];
@@ -1439,8 +1472,8 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
     let dynamicLocation = "Main Location";
     try {
       const restRows = await query<Record<string, unknown>[]>(
-        "SELECT name, location FROM restaurants WHERE id = ? OR slug = ? LIMIT 1",
-        [tenant.restaurantId, targetSlug],
+        "SELECT name, location FROM restaurants WHERE id = ? OR slug = ? OR username = ? LIMIT 1",
+        [tenant.restaurantId, targetSlug, targetSlug],
       );
       if (restRows && restRows.length > 0) {
         if (restRows[0].name) dynamicName = String(restRows[0].name);
