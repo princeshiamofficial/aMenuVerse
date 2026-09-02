@@ -3844,9 +3844,15 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
         );
         const placeholders = searchIdents.map(() => "?").join(", ");
         rows = await query<Record<string, unknown>[]>(
-          `SELECT id, table_no, zone FROM branch_tables WHERE branch_id IN (${placeholders}) OR branch_id = ? ORDER BY sort_order ASC, created_at ASC`,
-          [...searchIdents, branchId],
+          `SELECT id, table_no, zone FROM branch_tables WHERE (branch_id IN (${placeholders}) OR branch_id = ?) AND (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) ORDER BY sort_order ASC, created_at ASC`,
+          [...searchIdents, branchId, tenant.restaurantId],
         );
+        if (!rows || rows.length === 0) {
+          rows = await query<Record<string, unknown>[]>(
+            `SELECT id, table_no, zone FROM branch_tables WHERE branch_id IN (${placeholders}) OR branch_id = ? ORDER BY sort_order ASC, created_at ASC`,
+            [...searchIdents, branchId],
+          );
+        }
       } else {
         rows = await query<Record<string, unknown>[]>(
           "SELECT id, table_no, zone FROM branch_tables WHERE (restaurant_id = ? OR restaurant_id = 0 OR restaurant_id IS NULL) ORDER BY sort_order ASC, created_at ASC",
@@ -3858,7 +3864,7 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
         const seen = new Set<string>();
         const dbTables: TableRecord[] = [];
         for (const r of rows) {
-          const tNo = String(r.table_no || "").trim();
+          const tNo = String(r.table_no || (r as Record<string, unknown>).name || "").trim();
           const numKey = parseInt(tNo, 10);
           const key = !isNaN(numKey) ? `num-${numKey}` : tNo.toLowerCase();
           if (tNo && !seen.has(key)) {
@@ -3866,7 +3872,7 @@ export const getBranchTablesServer = createServerFn({ method: "POST" })
             dbTables.push({
               id: String(r.id),
               tableNo: tNo,
-              zone: String(r.zone || "MAIN ROOM"),
+              zone: String(r.zone || (r as Record<string, unknown>).location || "MAIN ROOM"),
             });
           }
         }
@@ -3933,14 +3939,23 @@ export const saveBranchTablesServer = createServerFn({ method: "POST" })
         }
       }
 
+      const idents = await resolveBranchIdentifiers(tenant.restaurantId, branchId);
+      const deleteIdents = Array.from(
+        new Set([branchId, branchId.replace(/^branch-/, ""), ...idents].filter(Boolean)),
+      );
+      const delPlaceholders = deleteIdents.map(() => "?").join(", ");
+
       await transaction(async (conn) => {
         try {
           await conn.execute(
-            "DELETE FROM branch_tables WHERE branch_id = ? AND restaurant_id = ?",
-            [branchId, tenant.restaurantId],
+            `DELETE FROM branch_tables WHERE restaurant_id = ? AND (branch_id IN (${delPlaceholders}) OR branch_id = ?)`,
+            [tenant.restaurantId, ...deleteIdents, branchId],
           );
         } catch {
-          await conn.execute("DELETE FROM branch_tables WHERE branch_id = ?", [branchId]);
+          await conn.execute(
+            `DELETE FROM branch_tables WHERE branch_id IN (${delPlaceholders}) OR branch_id = ?`,
+            [...deleteIdents, branchId],
+          );
         }
 
         let bSlug = branchId;

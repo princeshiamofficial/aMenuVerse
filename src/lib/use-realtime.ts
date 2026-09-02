@@ -23,17 +23,27 @@ function getSharedAudioContext(): AudioContext | null {
 }
 
 // Pre-load and decode sound.wav into Web Audio buffer for instant zero-latency background tab playback
+let isSoundLoading = false;
 async function loadSoundWavBuffer() {
-  if (typeof window === "undefined" || soundWavBuffer) return;
+  if (typeof window === "undefined" || soundWavBuffer || isSoundLoading) return;
+  isSoundLoading = true;
   try {
     const ctx = getSharedAudioContext();
-    if (!ctx) return;
+    if (!ctx) {
+      isSoundLoading = false;
+      return;
+    }
     const response = await fetch("/sound.wav");
-    if (!response.ok) return;
+    if (!response.ok) {
+      isSoundLoading = false;
+      return;
+    }
     const arrayBuffer = await response.arrayBuffer();
     soundWavBuffer = await ctx.decodeAudioData(arrayBuffer);
   } catch {
     /* ignore fetch/decode errors */
+  } finally {
+    isSoundLoading = false;
   }
 }
 
@@ -78,10 +88,8 @@ export function triggerDesktopNotification(title: string, body?: string) {
 export function unlockAudioEngine() {
   if (typeof window === "undefined") return;
   const ctx = getSharedAudioContext();
-  if (ctx) {
-    if (ctx.state === "suspended") {
-      ctx.resume().catch(() => {});
-    }
+  if (ctx && ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
   }
   loadSoundWavBuffer();
 }
@@ -90,11 +98,9 @@ let originalTabTitle = "";
 let tabTitleFlashInterval: NodeJS.Timeout | null = null;
 let flashTimeout: NodeJS.Timeout | null = null;
 
-// Attach auto-unlock listener on first user click/tap/keydown anywhere on window
+// Attach auto-unlock listener once on user interaction to clear flashed title
 if (typeof window !== "undefined") {
-  const unlockEvents = ["click", "pointerdown", "keydown", "touchstart", "mousemove"];
-  const handleUserGesture = () => {
-    unlockAudioEngine();
+  const resetFlashOnInteraction = () => {
     if (tabTitleFlashInterval && originalTabTitle) {
       clearInterval(tabTitleFlashInterval);
       tabTitleFlashInterval = null;
@@ -102,9 +108,9 @@ if (typeof window !== "undefined") {
       document.title = originalTabTitle;
     }
   };
-  unlockEvents.forEach((evt) =>
-    window.addEventListener(evt, handleUserGesture, { passive: true }),
-  );
+  window.addEventListener("click", resetFlashOnInteraction, { passive: true });
+  window.addEventListener("keydown", resetFlashOnInteraction, { passive: true });
+  window.addEventListener("touchstart", resetFlashOnInteraction, { passive: true });
 
   // Restore title when user returns to tab
   document.addEventListener("visibilitychange", () => {

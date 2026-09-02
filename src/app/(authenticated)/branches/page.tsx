@@ -256,34 +256,7 @@ export default function BranchesPage() {
     loadSubscription();
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    const timer = setTimeout(async () => {
-      try {
-        const dbBranches = await getBranchesServer({
-          data: {
-            search: query.trim() || undefined,
-          },
-        });
-        if (dbBranches && Array.isArray(dbBranches) && dbBranches.length > 0) {
-          let list = dbBranches as Branch[];
-          if (!list.some((b) => b.isDefault)) {
-            list = list.map((b, idx) => ({ ...b, isDefault: idx === 0 }));
-          }
-          setBranches(list);
-        }
-      } catch (err) {
-        console.warn("[Branches] Server fetch error:", err);
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [hydrated, query]);
 
-  useEffect(() => {
-    if (hydrated && !isManager) {
-      updateBranchesServer({ data: branches }).catch(() => {});
-    }
-  }, [branches, hydrated, isManager]);
 
   const visibleBranches = useMemo(() => {
     if (!isManager || !currentUser) return branches;
