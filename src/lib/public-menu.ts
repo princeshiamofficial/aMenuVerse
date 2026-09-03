@@ -1,7 +1,25 @@
 import { getRestaurantData, getRestaurantProfile } from "@/lib/db-queries.server";
 import { RESTAURANTS, Restaurant } from "@/lib/restaurants-data";
 
-export function fetchPublicMenuSync(_username: string): Restaurant | null {
+const CLIENT_MENU_CACHE: Record<string, { data: Restaurant; timestamp: number }> = {};
+
+export function fetchPublicMenuSync(username: string): Restaurant | null {
+  if (typeof window === "undefined" || !username) return null;
+  const clean = username.toLowerCase().trim().split(".")[0];
+  const mem = CLIENT_MENU_CACHE[clean];
+  if (mem && Date.now() - mem.timestamp < 300000) {
+    return mem.data;
+  }
+  try {
+    const stored = sessionStorage.getItem(`menuverse:cache:${clean}`);
+    if (stored) {
+      const parsed = JSON.parse(stored) as Restaurant;
+      CLIENT_MENU_CACHE[clean] = { data: parsed, timestamp: Date.now() };
+      return parsed;
+    }
+  } catch {
+    /* ignore */
+  }
   return null;
 }
 
@@ -49,12 +67,8 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
     location: (dbData?.location as string) || (dbProfile?.address as string) || "Main Location",
     logo: cleanUsername.charAt(0).toUpperCase(),
     logoBg: "from-amber-500 to-orange-600",
-    image:
-      (dbProfile?.cover as string) ||
-      "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&auto=format&fit=crop&q=80",
-    logoImage:
-      (dbProfile?.logo as string) ||
-      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=80&auto=format&fit=crop&q=80",
+    image: (dbProfile?.cover as string) || (dbData?.image as string) || "",
+    logoImage: (dbProfile?.logo as string) || (dbData?.logoImage as string) || "",
     menuItems: dbData?.menuItems || [],
     categories: dbData?.categories || [],
   };
@@ -183,6 +197,15 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
       (baseData as unknown as { currency?: string }).currency = (
         dbProfile as unknown as { currency?: string }
       ).currency;
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    CLIENT_MENU_CACHE[cleanUsername] = { data: baseData, timestamp: Date.now() };
+    try {
+      sessionStorage.setItem(`menuverse:cache:${cleanUsername}`, JSON.stringify(baseData));
+    } catch {
+      /* ignore */
     }
   }
 

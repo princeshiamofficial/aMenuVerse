@@ -642,7 +642,20 @@ export function PublicRestaurantView({
   tableNumber?: string;
   branchId?: string;
 }) {
-  const restaurant = initialRestaurant;
+  const [liveRestaurant, setLiveRestaurant] = useState<Restaurant>(() => initialRestaurant);
+
+  useEffect(() => {
+    if (initialRestaurant) {
+      setLiveRestaurant((prev) => ({
+        ...prev,
+        ...initialRestaurant,
+        image: initialRestaurant.image || prev.image,
+        logoImage: initialRestaurant.logoImage || prev.logoImage,
+      }));
+    }
+  }, [initialRestaurant]);
+
+  const restaurant = liveRestaurant;
   const [serverCurrency, setServerCurrency] = useState<string | null>(
     (restaurant as unknown as { currency?: string })?.currency || null,
   );
@@ -855,6 +868,27 @@ export function PublicRestaurantView({
 
         if (dynamicFavicon) {
           updateDynamicFavicon(String(dynamicFavicon));
+        }
+
+        const realCover =
+          (dbProfile as Record<string, unknown>)?.cover ||
+          (dbData as Record<string, unknown>)?.image ||
+          (dbData as Record<string, unknown>)?.cover;
+        const realLogo =
+          (dbProfile as Record<string, unknown>)?.logo ||
+          (dbData as Record<string, unknown>)?.logoImage ||
+          (dbData as Record<string, unknown>)?.logo_url;
+        const realName =
+          (dbProfile as Record<string, unknown>)?.name ||
+          (dbData as Record<string, unknown>)?.name;
+
+        if (realCover || realLogo || realName) {
+          setLiveRestaurant((prev) => ({
+            ...prev,
+            ...(realName ? { name: String(realName) } : {}),
+            ...(realCover ? { image: String(realCover) } : {}),
+            ...(realLogo ? { logoImage: String(realLogo) } : {}),
+          }));
         }
 
         if (
@@ -2073,9 +2107,7 @@ export function PublicRestaurantView({
         <div className="w-full bg-[#f0f2f5] shadow-sm">
           <div className="max-w-6xl mx-auto relative">
             <div className="relative w-full h-32 sm:h-64 md:h-76 overflow-hidden bg-neutral-900 md:rounded-b-xl group/cover">
-              {isMenuLoading ? (
-                <Skeleton className="absolute inset-0 w-full h-full bg-neutral-800 animate-pulse" />
-              ) : (
+              {slideshowImages.length > 0 ? (
                 slideshowImages.map((imgSrc: string, index: number) => {
                   const isActive = index === currentSlide;
                   const isPrev = index === prevSlide;
@@ -2106,6 +2138,14 @@ export function PublicRestaurantView({
                     </div>
                   );
                 })
+              ) : isMenuLoading ? (
+                <Skeleton className="absolute inset-0 w-full h-full bg-neutral-800 animate-pulse" />
+              ) : (
+                <div className="absolute inset-0 bg-linear-to-r from-neutral-900 via-neutral-800 to-neutral-900 flex items-center justify-center">
+                  <div className="text-white/15 text-3xl sm:text-5xl font-black uppercase tracking-widest select-none">
+                    {restaurant.name || ""}
+                  </div>
+                </div>
               )}
               <div className="absolute inset-0 bg-linear-to-t from-black/65 via-black/20 to-transparent z-10 pointer-events-none" />
 
@@ -2168,27 +2208,30 @@ export function PublicRestaurantView({
               {/* Profile Details Row */}
               <div className="px-3 sm:px-8 pb-3 flex items-center justify-between gap-4">
                 <div className="flex flex-row items-center gap-3 sm:gap-5 text-left min-w-0">
-                  {/* 2-in-1 Profile Avatar Badge Container */}
+                  {/* Profile Avatar Badge Container */}
                   <div className="w-28 h-28 sm:w-36 sm:h-36 relative shrink-0 -mt-12 sm:-mt-18 md:-mt-22">
-                    {isMenuLoading && !restaurant?.logoImage ? (
-                      <div className="w-full h-full rounded-full bg-white p-1 shadow-md">
-                        <Skeleton className="w-full h-full rounded-full bg-neutral-200/90" />
-                      </div>
-                    ) : (
-                      <div className="w-full h-full rounded-full bg-white p-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.15)] relative overflow-hidden flex items-center justify-center">
+                    <div className="w-full h-full rounded-full bg-white p-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.15)] relative overflow-hidden flex items-center justify-center">
+                      {restaurant.logoImage ? (
                         <BlobImg
                           src={restaurant.logoImage}
                           alt={restaurant.name}
                           priority={true}
                           className="w-full h-full rounded-full object-cover"
                         />
-                      </div>
-                    )}
+                      ) : (
+                        <div
+                          className="w-full h-full rounded-full flex items-center justify-center font-bold text-3xl sm:text-4xl text-white shadow-inner"
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          {restaurant.name?.charAt(0)?.toUpperCase() || "M"}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Brand details */}
                   <div className="flex flex-col justify-center min-w-0 gap-0.5 text-left py-1">
-                    {isMenuLoading ? (
+                    {isMenuLoading && !restaurant?.name ? (
                       <div className="flex flex-col gap-2 py-0.5">
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-6 sm:h-8 w-44 sm:w-60 rounded-lg bg-neutral-200/90" />

@@ -36,10 +36,8 @@ export default function RestaurantBranchTableRoute() {
         location: "Main Location",
         logo: restaurantUsername.charAt(0).toUpperCase(),
         logoBg: "from-amber-500 to-orange-600",
-        image:
-          "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&auto=format&fit=crop&q=80",
-        logoImage:
-          "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=80&auto=format&fit=crop&q=80",
+        image: "",
+        logoImage: "",
         menuItems: [],
         categories: [],
       }
