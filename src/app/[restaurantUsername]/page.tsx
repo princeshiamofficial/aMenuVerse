@@ -2107,7 +2107,9 @@ export function PublicRestaurantView({
         <div className="w-full bg-[#f0f2f5] shadow-sm">
           <div className="max-w-6xl mx-auto relative">
             <div className="relative w-full h-32 sm:h-64 md:h-76 overflow-hidden bg-neutral-900 md:rounded-b-xl group/cover">
-              {slideshowImages.length > 0 ? (
+              {isMenuLoading ? (
+                <Skeleton className="absolute inset-0 w-full h-full bg-neutral-800 animate-pulse" />
+              ) : slideshowImages.length > 0 ? (
                 slideshowImages.map((imgSrc: string, index: number) => {
                   const isActive = index === currentSlide;
                   const isPrev = index === prevSlide;
@@ -2138,8 +2140,6 @@ export function PublicRestaurantView({
                     </div>
                   );
                 })
-              ) : isMenuLoading ? (
-                <Skeleton className="absolute inset-0 w-full h-full bg-neutral-800 animate-pulse" />
               ) : (
                 <div className="absolute inset-0 bg-linear-to-r from-neutral-900 via-neutral-800 to-neutral-900 flex items-center justify-center">
                   <div className="text-white/15 text-3xl sm:text-5xl font-black uppercase tracking-widest select-none">
@@ -2211,7 +2211,9 @@ export function PublicRestaurantView({
                   {/* Profile Avatar Badge Container */}
                   <div className="w-28 h-28 sm:w-36 sm:h-36 relative shrink-0 -mt-12 sm:-mt-18 md:-mt-22">
                     <div className="w-full h-full rounded-full bg-white p-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.15)] relative overflow-hidden flex items-center justify-center">
-                      {restaurant.logoImage ? (
+                      {isMenuLoading ? (
+                        <Skeleton className="w-full h-full rounded-full bg-neutral-200/90 animate-pulse" />
+                      ) : restaurant.logoImage ? (
                         <BlobImg
                           src={restaurant.logoImage}
                           alt={restaurant.name}
@@ -2231,7 +2233,7 @@ export function PublicRestaurantView({
 
                   {/* Brand details */}
                   <div className="flex flex-col justify-center min-w-0 gap-0.5 text-left py-1">
-                    {isMenuLoading && !restaurant?.name ? (
+                    {isMenuLoading ? (
                       <div className="flex flex-col gap-2 py-0.5">
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-6 sm:h-8 w-44 sm:w-60 rounded-lg bg-neutral-200/90" />
