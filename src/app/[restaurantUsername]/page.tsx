@@ -882,12 +882,13 @@ export function PublicRestaurantView({
           (dbProfile as Record<string, unknown>)?.name ||
           (dbData as Record<string, unknown>)?.name;
 
-        if (realCover || realLogo || realName) {
+        if (realCover || realLogo || realName || dynamicFavicon) {
           setLiveRestaurant((prev) => ({
             ...prev,
             ...(realName ? { name: String(realName) } : {}),
             ...(realCover ? { image: String(realCover) } : {}),
             ...(realLogo ? { logoImage: String(realLogo) } : {}),
+            ...(dynamicFavicon ? { favicon: String(dynamicFavicon) } : {}),
           }));
         }
 

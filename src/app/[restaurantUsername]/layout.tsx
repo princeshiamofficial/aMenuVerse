@@ -44,7 +44,32 @@ export async function generateMetadata({
     metadataBase: new URL(appBaseUrl),
     title,
     description,
-    icons: restaurant.favicon || restaurant.logoImage ? [{ url: restaurant.favicon || (restaurant.logoImage as string) }] : undefined,
+    icons: {
+      icon: [
+        {
+          url:
+            restaurant.favicon ||
+            (restaurant.logoImage as string) ||
+            "/favicon.ico",
+        },
+      ],
+      shortcut: [
+        {
+          url:
+            restaurant.favicon ||
+            (restaurant.logoImage as string) ||
+            "/favicon.ico",
+        },
+      ],
+      apple: [
+        {
+          url:
+            restaurant.favicon ||
+            (restaurant.logoImage as string) ||
+            "/default-logo.png",
+        },
+      ],
+    },
     openGraph: {
       title,
       description,

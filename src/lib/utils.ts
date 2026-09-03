@@ -172,7 +172,8 @@ export function updateDynamicTitle(rawTitle?: string | null): void {
 }
 
 /**
- * Updates favicon safely without recursive MutationObserver loops.
+ * Updates favicon safely and robustly across all modern browsers.
+ * Purges conflicting icon links and creates fresh elements with proper MIME types.
  */
 export function updateDynamicFavicon(rawUrl?: string | null): void {
   if (typeof document === "undefined" || !rawUrl) return;
@@ -180,19 +181,45 @@ export function updateDynamicFavicon(rawUrl?: string | null): void {
   if (!url) return;
 
   try {
-    let mainIcon = document.getElementById("menuverse-dynamic-favicon") as HTMLLinkElement | null;
-    if (!mainIcon) {
-      mainIcon = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
+    const active = document.getElementById("menuverse-dynamic-favicon") as HTMLLinkElement | null;
+    if (active && active.getAttribute("href") === url) {
+      return; // Already set to this exact URL
     }
-    if (!mainIcon) {
-      mainIcon = document.createElement("link");
-      mainIcon.id = "menuverse-dynamic-favicon";
-      mainIcon.rel = "icon";
-      document.head.appendChild(mainIcon);
-    }
-    if (mainIcon.getAttribute("href") !== url) {
-      mainIcon.href = url;
-    }
+
+    // 1. Remove all old icon links (including Next.js default /favicon.ico and /default-logo.png)
+    const existingIcons = document.querySelectorAll<HTMLLinkElement>(
+      "link[rel*='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']",
+    );
+    existingIcons.forEach((el) => {
+      el.remove();
+    });
+
+    // 2. Detect proper MIME type
+    let mimeType = "image/x-icon";
+    if (url.includes(".png") || url.startsWith("data:image/png")) mimeType = "image/png";
+    else if (url.includes(".svg") || url.startsWith("data:image/svg")) mimeType = "image/svg+xml";
+    else if (url.includes(".webp") || url.startsWith("data:image/webp")) mimeType = "image/webp";
+    else if (url.includes(".jpg") || url.includes(".jpeg") || url.startsWith("data:image/jpeg"))
+      mimeType = "image/jpeg";
+
+    // 3. Create fresh link tags with clean attributes
+    const newIcon = document.createElement("link");
+    newIcon.id = "menuverse-dynamic-favicon";
+    newIcon.rel = "icon";
+    newIcon.type = mimeType;
+    newIcon.href = url;
+    document.head.appendChild(newIcon);
+
+    const shortcutIcon = document.createElement("link");
+    shortcutIcon.rel = "shortcut icon";
+    shortcutIcon.type = mimeType;
+    shortcutIcon.href = url;
+    document.head.appendChild(shortcutIcon);
+
+    const appleIcon = document.createElement("link");
+    appleIcon.rel = "apple-touch-icon";
+    appleIcon.href = url;
+    document.head.appendChild(appleIcon);
   } catch {
     /* ignore */
   }

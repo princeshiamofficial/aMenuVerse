@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, usePathname } from "next/navigation";
 import { fetchPublicMenu, fetchPublicMenuSync } from "@/lib/public-menu";
 import { validateTableQrServer } from "@/lib/db-queries.server";
+import { updateDynamicFavicon } from "@/lib/utils";
 import { PublicRestaurantView, PublicRestaurantSkeleton } from "@/app/[restaurantUsername]/page";
 import type { Restaurant } from "@/lib/restaurants-data";
 
@@ -77,6 +78,8 @@ export default function RestaurantBranchTableRoute() {
 
         if (fresh.status === "fulfilled" && fresh.value) {
           setRestaurantData(fresh.value);
+          const fav = (fresh.value as { favicon?: string }).favicon || fresh.value.logoImage;
+          if (fav) updateDynamicFavicon(fav);
         }
 
         if (valRes.status === "fulfilled" && valRes.value) {

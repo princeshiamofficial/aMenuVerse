@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { decodeTableToken } from "@/lib/utils";
+import { decodeTableToken, updateDynamicFavicon } from "@/lib/utils";
 import { fetchPublicMenu, fetchPublicMenuSync } from "@/lib/public-menu";
 import { validateTableQrServer } from "@/lib/db-queries.server";
 import { PublicRestaurantView, PublicRestaurantSkeleton } from "@/app/[restaurantUsername]/page";
@@ -79,6 +79,8 @@ export default function RestaurantScopedTableRoute() {
 
         if (fresh.status === "fulfilled" && fresh.value) {
           setRestaurantData(fresh.value);
+          const fav = (fresh.value as { favicon?: string }).favicon || fresh.value.logoImage;
+          if (fav) updateDynamicFavicon(fav);
         }
 
         if (valRes.status === "fulfilled" && valRes.value) {
