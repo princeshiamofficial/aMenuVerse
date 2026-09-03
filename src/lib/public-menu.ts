@@ -73,6 +73,12 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
     logo: cleanUsername.charAt(0).toUpperCase(),
     logoBg: "from-amber-500 to-orange-600",
     image: (dbProfile?.cover as string) || (dbData?.image as string) || "",
+    coverPosition:
+      (dbProfile as unknown as Record<string, unknown>)?.coverPosition !== undefined
+        ? Number((dbProfile as unknown as Record<string, unknown>).coverPosition)
+        : (dbData as unknown as Record<string, unknown>)?.coverPosition !== undefined
+          ? Number((dbData as unknown as Record<string, unknown>).coverPosition)
+          : 50,
     logoImage: (dbProfile?.logo as string) || (dbData?.logoImage as string) || "",
     menuItems: dbData?.menuItems || [],
     categories: dbData?.categories || [],
@@ -132,6 +138,13 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
     }
     if (dbProfile.logo) baseData.logoImage = String(dbProfile.logo);
     if (dbProfile.cover) baseData.image = String(dbProfile.cover);
+    if (
+      (dbProfile as unknown as Record<string, unknown>)?.coverPosition !== undefined
+    ) {
+      baseData.coverPosition = Number(
+        (dbProfile as unknown as Record<string, unknown>).coverPosition,
+      );
+    }
     if (dbProfile.address && typeof dbProfile.address === "string" && dbProfile.address.trim())
       baseData.location = dbProfile.address;
     if (dbProfile.intro && typeof dbProfile.intro === "string" && dbProfile.intro.trim())

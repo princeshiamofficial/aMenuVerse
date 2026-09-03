@@ -57,10 +57,12 @@ export interface Restaurant {
   facebookUrl?: string;
   instagramUrl?: string;
   whatsappNumber?: string;
+  coverPosition?: number;
   appearance?: {
     menuLayout?: string;
     fontFamily?: string;
     themeColor?: string;
+    coverPosition?: number;
   };
   isPushEnabled?: boolean;
 }

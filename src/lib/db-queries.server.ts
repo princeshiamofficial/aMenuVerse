@@ -319,6 +319,7 @@ export type DbRestaurantRecord = {
   description?: string | null;
   logo_url?: string | null;
   cover_url?: string | null;
+  cover_position?: number | null;
   cuisine?: string | null;
   phone?: string | null;
   status?: string | null;
@@ -445,7 +446,7 @@ export const getRestaurantData = createServerFn({ method: "GET" })
 
     try {
       restaurants = await query<DbRestaurantRecord[]>(
-        `SELECT id, name, COALESCE(slug, username) AS slug, description, logo_url, cover_url, cuisine, phone, status 
+        `SELECT id, name, COALESCE(slug, username) AS slug, description, logo_url, cover_url, COALESCE(cover_position, 50) AS cover_position, cuisine, phone, status 
          FROM restaurants 
          WHERE (
               slug = ? 
@@ -606,6 +607,11 @@ export const getRestaurantData = createServerFn({ method: "GET" })
       logo: restaurant.name ? restaurant.name.charAt(0) : "R",
       logoBg: "from-blue-500 to-indigo-600",
       image: String(profile.cover || restaurant.cover_url || ""),
+      coverPosition: Number(
+        (profile as unknown as Record<string, unknown>).coverPosition ??
+          restaurant.cover_position ??
+          50,
+      ),
       logoImage: String(profile.logo || restaurant.logo_url || ""),
       favicon: String(profile.favicon || profile.logo || restaurant.logo_url || ""),
       socialPreview: String(profile.socialPreview || ""),
@@ -1382,6 +1388,7 @@ type ProfileAppearance = {
   themeColor?: string;
   menuLayout?: string;
   fontFamily?: string;
+  coverPosition?: number;
 };
 
 type ProfileCache = Record<string, string | number | boolean | ProfileAppearance | undefined>;
@@ -1408,6 +1415,7 @@ async function ensureRestaurantAppearanceColumns() {
       "ALTER TABLE restaurants ADD COLUMN prep_time VARCHAR(100)",
       "ALTER TABLE restaurants ADD COLUMN rating VARCHAR(100)",
       "ALTER TABLE restaurants ADD COLUMN cover_url TEXT",
+      "ALTER TABLE restaurants ADD COLUMN cover_position INT DEFAULT 50",
       "ALTER TABLE restaurants ADD COLUMN logo_url TEXT",
     ];
 
@@ -1438,6 +1446,10 @@ function coerceProfileAppearance(value: unknown): ProfileAppearance {
     fontFamily:
       appearance.fontFamily && String(appearance.fontFamily).trim()
         ? String(appearance.fontFamily).trim()
+        : undefined,
+    coverPosition:
+      appearance.coverPosition !== undefined && !isNaN(Number(appearance.coverPosition))
+        ? Number(appearance.coverPosition)
         : undefined,
   };
 }
@@ -1534,7 +1546,7 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
     try {
       await ensureRestaurantAppearanceColumns();
       const restaurants = await query<Record<string, unknown>[]>(
-        "SELECT id, name, slug, intro, description, about, logo_url, cover_url, favicon_url, og_image_url, cuisine, phone, location, operating_hours, facilities, prep_time, rating, theme_color, menu_layout, font_family, facebook_url, instagram_url, whatsapp_number, COALESCE(is_verified, 0) AS is_verified FROM restaurants WHERE id = ? OR slug = ? LIMIT 1",
+        "SELECT id, name, slug, intro, description, about, logo_url, cover_url, favicon_url, og_image_url, cuisine, phone, location, operating_hours, facilities, prep_time, rating, theme_color, menu_layout, font_family, facebook_url, instagram_url, whatsapp_number, COALESCE(cover_position, 50) AS cover_position, COALESCE(is_verified, 0) AS is_verified FROM restaurants WHERE id = ? OR slug = ? LIMIT 1",
         [tenant.restaurantId, targetSlug],
       );
 
@@ -1565,6 +1577,7 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
               ? defaultProfile.cover ||
                 "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=80"
               : String(r.cover_url || ""),
+          coverPosition: Number(r.cover_position ?? 50),
           favicon: String(r.favicon_url || r.logo_url || ""),
           socialPreview: String(r.og_image_url || ""),
           facebookUrl: String(r.facebook_url || ""),
@@ -1575,6 +1588,7 @@ export const getRestaurantProfile = createServerFn({ method: "GET" })
             themeColor: String(r.theme_color || ""),
             menuLayout: String(r.menu_layout || ""),
             fontFamily: String(r.font_family || ""),
+            coverPosition: Number(r.cover_position ?? 50),
           },
         };
       } else if (tenant.restaurantId === 0) {
@@ -2021,6 +2035,7 @@ export const updateRestaurantProfile = createServerFn({ method: "POST" })
       facebookUrl?: string;
       instagramUrl?: string;
       whatsappNumber?: string;
+      coverPosition?: number;
       appearance?: ProfileAppearance;
     }) => data,
   )
@@ -2051,6 +2066,17 @@ export const updateRestaurantProfile = createServerFn({ method: "POST" })
       if (data.cover && !data.cover.startsWith("blob:")) {
         updates.push("cover_url = ?");
         values.push(data.cover);
+      }
+      if (
+        data.coverPosition !== undefined ||
+        (data.appearance as any)?.coverPosition !== undefined
+      ) {
+        const rawPos = Number(
+          data.coverPosition ?? (data.appearance as any)?.coverPosition ?? 50,
+        );
+        const validPos = Math.max(0, Math.min(100, Math.round(rawPos)));
+        updates.push("cover_position = ?");
+        values.push(validPos);
       }
       if (data.favicon && !data.favicon.startsWith("blob:")) {
         updates.push("favicon_url = ?");

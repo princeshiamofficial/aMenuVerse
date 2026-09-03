@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams, useParams } from "next/navigation";
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useState, useRef, type ChangeEvent } from "react";
 import {
   Upload,
   Building2,
@@ -22,6 +22,7 @@ import {
   ListFilter,
   Check,
   Eye,
+  MoveVertical,
   Search,
   Bell,
   MoreVertical,
@@ -212,6 +213,7 @@ export type ProfileBranding = {
   facebookUrl?: string;
   instagramUrl?: string;
   whatsappNumber?: string;
+  coverPosition?: number;
 };
 
 const DEFAULT_BRANDING: ProfileBranding = {
@@ -231,6 +233,7 @@ const DEFAULT_BRANDING: ProfileBranding = {
   logo: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=80&auto=format&fit=crop&q=80",
   cover:
     "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=80",
+  coverPosition: 50,
   favicon: "",
   socialPreview: "",
   googleMapsUrl: GOOGLE_MAPS_URL,
@@ -264,13 +267,97 @@ export default function RestaurantProfilePage() {
   const [isSocialPreviewModalOpen, setIsSocialPreviewModalOpen] = useState(false);
   const [appearance, setAppearance] = useState<AppearanceSettings>(DEFAULT_APPEARANCE);
 
+  // Facebook-style Cover Reposition States
+  const [isRepositioning, setIsRepositioning] = useState(false);
+  const [tempPosition, setTempPosition] = useState<number>(50);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSavingPosition, setIsSavingPosition] = useState(false);
+  const coverContainerRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef<number>(0);
+  const startPos = useRef<number>(50);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isRepositioning) return;
+    e.preventDefault();
+    setIsDragging(true);
+    dragStartY.current = e.clientY;
+    startPos.current = tempPosition;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !isRepositioning) return;
+    const container = coverContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const deltaY = e.clientY - dragStartY.current;
+    // Dragging down reveals top of image (lower percentage)
+    const percentDelta = (deltaY / rect.height) * 100;
+    const newPos = Math.max(0, Math.min(100, Math.round(startPos.current - percentDelta)));
+    setTempPosition(newPos);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isRepositioning) return;
+    setIsDragging(true);
+    dragStartY.current = e.touches[0].clientY;
+    startPos.current = tempPosition;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isDragging || !isRepositioning) return;
+    const container = coverContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const deltaY = e.touches[0].clientY - dragStartY.current;
+    const percentDelta = (deltaY / rect.height) * 100;
+    const newPos = Math.max(0, Math.min(100, Math.round(startPos.current - percentDelta)));
+    setTempPosition(newPos);
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleSavePosition = async () => {
+    setIsSavingPosition(true);
+    try {
+      setBranding((prev) => ({ ...prev, coverPosition: tempPosition }));
+      await updateRestaurantProfile({
+        data: {
+          coverPosition: tempPosition,
+        },
+      });
+      setIsRepositioning(false);
+      toast.success("Cover position saved successfully!");
+    } catch {
+      toast.error("Failed to save cover position");
+    } finally {
+      setIsSavingPosition(false);
+    }
+  };
+
+  const handleCancelPosition = () => {
+    setTempPosition(branding.coverPosition ?? 50);
+    setIsRepositioning(false);
+  };
+
   useEffect(() => {
     async function loadData() {
       try {
         const dbData = await getRestaurantProfile();
         if (dbData) {
+          const rawCoverPos =
+            (dbData as unknown as Record<string, unknown>).coverPosition !== undefined
+              ? Number((dbData as unknown as Record<string, unknown>).coverPosition)
+              : ((dbData.appearance as Record<string, unknown>)?.coverPosition !== undefined
+                ? Number((dbData.appearance as Record<string, unknown>).coverPosition)
+                : 50);
           setBranding((prev) => {
-            const updated = { ...prev, ...dbData };
+            const updated = { ...prev, ...dbData, coverPosition: rawCoverPos };
             setEditForm(updated);
             setEditIntroForm(updated);
             return updated;
@@ -439,6 +526,12 @@ export default function RestaurantProfilePage() {
       toast.success(
         `${labelStr.charAt(0).toUpperCase() + labelStr.slice(1)} updated successfully!`,
       );
+
+      if (key === "cover") {
+        setTempPosition(50);
+        setIsRepositioning(true);
+        toast.info("Drag image vertically to adjust position, then click Save Position.");
+      }
     } catch (err) {
       console.warn("[ImgBB Upload Warning]", err);
       toast.dismiss(toastId);
@@ -495,33 +588,129 @@ export default function RestaurantProfilePage() {
       {/* Cover & Logo Banner Card */}
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm border border-gray-100">
         {/* Cover Area */}
-        <div className="relative w-full h-32 sm:h-72 md:h-80 overflow-hidden bg-slate-900">
+        <div
+          ref={coverContainerRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          className={`relative w-full h-44 sm:h-72 md:h-80 overflow-hidden bg-slate-900 select-none ${
+            isRepositioning ? (isDragging ? "cursor-grabbing" : "cursor-grab") : ""
+          }`}
+        >
           <img
             src={
               branding.cover ||
               "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=80"
             }
             alt={branding.name || "Cover Photo"}
-            className="w-full h-full object-cover object-center transition-all"
+            className="w-full h-full object-cover pointer-events-none transition-none"
+            style={{
+              objectPosition: `center ${isRepositioning ? tempPosition : (branding.coverPosition ?? 50)}%`,
+            }}
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src =
                 "https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=80";
             }}
           />
-          <div className="absolute right-4 top-4 flex items-center gap-2 z-10">
-            <span className="hidden sm:inline-flex items-center rounded-full bg-black/40 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
-              Rec: 1600×450 px (3.5:1 ratio)
-            </span>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-semibold text-white shadow-md backdrop-blur hover:bg-black/80 transition-all">
-              <Upload className="h-3.5 w-3.5" /> {branding.cover ? "Change Cover" : "Upload Cover"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => onImage(e, "cover")}
-              />
-            </label>
-          </div>
+
+          {/* Facebook-style Reposition Controls Bar */}
+          {isRepositioning ? (
+            <div className="absolute inset-x-0 top-0 p-3 sm:p-4 bg-linear-to-b from-black/85 via-black/60 to-transparent z-20 flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2.5 text-white">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                  <MoveVertical className="h-4 w-4 animate-bounce" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-bold tracking-tight">Drag to Reposition Cover</p>
+                  <p className="text-[11px] text-white/75 hidden sm:block">Click & drag image up/down, or use slider</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-3 ml-auto">
+                {/* Range Slider */}
+                <div className="flex items-center gap-1.5 bg-black/60 px-2.5 py-1.5 rounded-full border border-white/20 backdrop-blur">
+                  <span className="text-[10px] text-white/70 font-mono">Top</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={tempPosition}
+                    onChange={(e) => setTempPosition(Number(e.target.value))}
+                    className="w-20 sm:w-28 h-1.5 bg-white/30 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  />
+                  <span className="text-[10px] text-white/70 font-mono">Bottom</span>
+                  <span className="text-xs font-bold text-amber-400 font-mono min-w-8 text-right">
+                    {tempPosition}%
+                  </span>
+                </div>
+
+                {/* Cancel Button */}
+                <button
+                  type="button"
+                  onClick={handleCancelPosition}
+                  disabled={isSavingPosition}
+                  className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold backdrop-blur transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                {/* Save Position Button */}
+                <button
+                  type="button"
+                  onClick={handleSavePosition}
+                  disabled={isSavingPosition}
+                  className="px-3.5 sm:px-4 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  {isSavingPosition ? "Saving..." : "Save Position"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="absolute right-4 top-4 flex items-center gap-2 z-10">
+              <span className="hidden sm:inline-flex items-center rounded-full bg-black/40 px-3 py-1 text-[11px] font-medium text-white/90 backdrop-blur">
+                Rec: 1600×450 px (3.5:1 ratio)
+              </span>
+
+              {branding.cover && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTempPosition(branding.coverPosition ?? 50);
+                    setIsRepositioning(true);
+                  }}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-black/60 px-3.5 py-2 text-xs font-semibold text-white shadow-md backdrop-blur hover:bg-black/80 active:scale-95 transition-all"
+                  title="Adjust cover photo vertical position like Facebook"
+                >
+                  <MoveVertical className="h-3.5 w-3.5" /> Reposition
+                </button>
+              )}
+
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-semibold text-white shadow-md backdrop-blur hover:bg-black/80 transition-all">
+                <Upload className="h-3.5 w-3.5" /> {branding.cover ? "Change Cover" : "Upload Cover"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => onImage(e, "cover")}
+                />
+              </label>
+            </div>
+          )}
+
+          {/* Center Hint Badge while repositioning */}
+          {isRepositioning && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="bg-black/60 backdrop-blur px-3.5 py-1.5 rounded-full text-white/90 text-xs font-medium border border-white/20 shadow-xl flex items-center gap-2">
+                <MoveVertical className="h-3.5 w-3.5 text-amber-400" />
+                <span>Drag image up/down to reposition</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Logo & Name Row */}

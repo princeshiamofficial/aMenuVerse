@@ -2087,7 +2087,10 @@ export function PublicRestaurantView({
                         src={imgSrc}
                         alt={`${restaurant.name} slide ${index + 1}`}
                         priority={index === 0}
-                        className="absolute inset-0 h-full w-full object-cover object-center"
+                        className="absolute inset-0 h-full w-full object-cover"
+                        style={{
+                          objectPosition: `center ${restaurant.coverPosition ?? 50}%`,
+                        }}
                       />
                     </div>
                   );
