@@ -642,7 +642,13 @@ export function PublicRestaurantView({
   tableNumber?: string;
   branchId?: string;
 }) {
-  const [liveRestaurant, setLiveRestaurant] = useState<Restaurant>(() => initialRestaurant);
+  const [liveRestaurant, setLiveRestaurant] = useState<Restaurant>(() => {
+    const fav =
+      (initialRestaurant as unknown as { favicon?: string })?.favicon ||
+      initialRestaurant?.logoImage;
+    if (fav) updateDynamicFavicon(fav);
+    return initialRestaurant;
+  });
 
   useEffect(() => {
     if (initialRestaurant) {
@@ -651,7 +657,14 @@ export function PublicRestaurantView({
         ...initialRestaurant,
         image: initialRestaurant.image || prev.image,
         logoImage: initialRestaurant.logoImage || prev.logoImage,
+        favicon:
+          (initialRestaurant as unknown as { favicon?: string }).favicon ||
+          (prev as unknown as { favicon?: string }).favicon,
       }));
+      const fav =
+        (initialRestaurant as unknown as { favicon?: string }).favicon ||
+        initialRestaurant.logoImage;
+      if (fav) updateDynamicFavicon(fav);
     }
   }, [initialRestaurant]);
 

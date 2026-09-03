@@ -52,6 +52,12 @@ export default function RestaurantScopedTableRoute() {
 
   useEffect(() => {
     let isMounted = true;
+    const initialFav =
+      (restaurantData as unknown as { favicon?: string })?.favicon ||
+      restaurantData?.logoImage;
+    if (initialFav) {
+      updateDynamicFavicon(initialFav);
+    }
     const safetyTimer = setTimeout(() => {
       if (isMounted) setLoading(false);
     }, 2000);

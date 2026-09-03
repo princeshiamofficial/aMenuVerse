@@ -1,5 +1,6 @@
 import { getRestaurantData, getRestaurantProfile } from "@/lib/db-queries.server";
 import { RESTAURANTS, Restaurant } from "@/lib/restaurants-data";
+import { updateDynamicFavicon } from "@/lib/utils";
 
 const CLIENT_MENU_CACHE: Record<string, { data: Restaurant; timestamp: number }> = {};
 
@@ -8,6 +9,8 @@ export function fetchPublicMenuSync(username: string): Restaurant | null {
   const clean = username.toLowerCase().trim().split(".")[0];
   const mem = CLIENT_MENU_CACHE[clean];
   if (mem && Date.now() - mem.timestamp < 300000) {
+    const fav = (mem.data as unknown as { favicon?: string }).favicon || mem.data.logoImage;
+    if (fav) updateDynamicFavicon(fav);
     return mem.data;
   }
   try {
@@ -15,6 +18,8 @@ export function fetchPublicMenuSync(username: string): Restaurant | null {
     if (stored) {
       const parsed = JSON.parse(stored) as Restaurant;
       CLIENT_MENU_CACHE[clean] = { data: parsed, timestamp: Date.now() };
+      const fav = (parsed as unknown as { favicon?: string }).favicon || parsed.logoImage;
+      if (fav) updateDynamicFavicon(fav);
       return parsed;
     }
   } catch {
@@ -173,31 +178,19 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
         baseData.rating = dbProfile.rating;
       }
     }
-    const resolvedFavicon =
-      (dbProfile.favicon as string) ||
-      (dbProfile.faviconUrl as string) ||
-      (dbProfile.logo as string) ||
-      (baseData.logoImage as string) ||
-      (baseData.image as string) ||
-      "";
-    if (resolvedFavicon) {
-      (baseData as unknown as { favicon?: string }).favicon = resolvedFavicon;
-    }
-    if (dbProfile.socialPreview)
-      (baseData as unknown as { socialPreview?: string }).socialPreview = String(
-        dbProfile.socialPreview,
-      );
-    if (dbProfile.facebookUrl !== undefined) baseData.facebookUrl = String(dbProfile.facebookUrl);
-    if (dbProfile.instagramUrl !== undefined)
-      baseData.instagramUrl = String(dbProfile.instagramUrl);
-    if (dbProfile.whatsappNumber !== undefined)
-      baseData.whatsappNumber = String(dbProfile.whatsappNumber);
-    if (dbProfile.isVerified !== undefined) baseData.isVerified = Boolean(dbProfile.isVerified);
-    if ((dbProfile as unknown as { currency?: string }).currency) {
-      (baseData as unknown as { currency?: string }).currency = (
-        dbProfile as unknown as { currency?: string }
-      ).currency;
-    }
+  }
+
+  const resolvedFavicon =
+    (dbProfile?.favicon as string) ||
+    (dbProfile?.faviconUrl as string) ||
+    (dbProfile?.logo as string) ||
+    (dbData as unknown as { favicon?: string })?.favicon ||
+    (dbData as unknown as { logoImage?: string })?.logoImage ||
+    (baseData.logoImage as string) ||
+    (baseData.image as string) ||
+    "";
+  if (resolvedFavicon) {
+    (baseData as unknown as { favicon?: string }).favicon = resolvedFavicon;
   }
 
   if (typeof window !== "undefined") {
@@ -206,6 +199,10 @@ export async function fetchPublicMenu(username: string): Promise<Restaurant | nu
       sessionStorage.setItem(`menuverse:cache:${cleanUsername}`, JSON.stringify(baseData));
     } catch {
       /* ignore */
+    }
+    const fav = (baseData as unknown as { favicon?: string }).favicon || baseData.logoImage;
+    if (fav) {
+      updateDynamicFavicon(fav);
     }
   }
 

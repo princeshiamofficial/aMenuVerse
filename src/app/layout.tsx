@@ -24,6 +24,10 @@ export const metadata: Metadata = {
   title: "MenuVerse - Multi-Tenant Restaurant OS & POS",
   description:
     "MenuVerse is the all-in-one AI platform for digital QR menus, multi-branch operations, real-time KDS, waiter calling, and POS billing.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
   openGraph: {
     title: "MenuVerse - Multi-Tenant Restaurant OS & POS",
     description:
