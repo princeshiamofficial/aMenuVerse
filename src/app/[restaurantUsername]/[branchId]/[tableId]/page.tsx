@@ -23,10 +23,15 @@ export default function RestaurantBranchTableRoute() {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 3500);
+
     async function loadAsync() {
       try {
         const fresh = await fetchPublicMenu(restaurantUsername);
-        if (fresh) setRestaurantData(fresh);
+        if (fresh && isMounted) setRestaurantData(fresh);
 
         let valRes: {
           valid?: boolean;
@@ -47,6 +52,8 @@ export default function RestaurantBranchTableRoute() {
           console.warn("[TableQr Validation Error]", valErr);
         }
 
+        if (!isMounted) return;
+
         if (valRes && valRes.valid === false) {
           setQrValid(false);
           setInvalidReason(valRes.reason || "Invalid Table QR Code");
@@ -57,10 +64,18 @@ export default function RestaurantBranchTableRoute() {
       } catch {
         /* ignore */
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          clearTimeout(safetyTimer);
+          setLoading(false);
+        }
       }
     }
     loadAsync();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
   }, [restaurantUsername, branchId, tableId]);
 
   if (!qrValid) {

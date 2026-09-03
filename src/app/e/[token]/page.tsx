@@ -29,6 +29,11 @@ export default function EncryptedTableRoute() {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 3500);
+
     async function loadAsync() {
       try {
         const resolved = await resolveTableRestaurantServer({
@@ -37,15 +42,19 @@ export default function EncryptedTableRoute() {
 
         const targetSlug = resolved?.slug || detectedSubdomain || "";
         if (!targetSlug) {
-          setQrValid(false);
-          setInvalidReason("No active restaurant corresponds to this table QR code.");
-          setLoading(false);
+          if (isMounted) {
+            setQrValid(false);
+            setInvalidReason("No active restaurant corresponds to this table QR code.");
+            setLoading(false);
+          }
           return;
         }
 
-        setActiveSlug(targetSlug);
+        if (isMounted) setActiveSlug(targetSlug);
 
         const fresh = await fetchPublicMenu(targetSlug);
+        if (!isMounted) return;
+
         if (fresh) {
           setRestaurantData(fresh);
         } else {
@@ -64,6 +73,8 @@ export default function EncryptedTableRoute() {
           },
         });
 
+        if (!isMounted) return;
+
         if (valRes && valRes.valid === false) {
           setQrValid(false);
           setInvalidReason(valRes.reason || "Invalid Table QR Code");
@@ -74,10 +85,18 @@ export default function EncryptedTableRoute() {
       } catch {
         /* ignore */
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          clearTimeout(safetyTimer);
+          setLoading(false);
+        }
       }
     }
     loadAsync();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
   }, [token, detectedSubdomain, branchSlug, tableNo]);
 
   if (!qrValid) {

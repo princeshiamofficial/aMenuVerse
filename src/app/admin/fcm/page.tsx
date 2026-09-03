@@ -291,7 +291,7 @@ export default function AdminFcmPage() {
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 rounded-3xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 p-6 border border-amber-500/20 backdrop-blur-xl">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 rounded-3xl bg-linear-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 p-6 border border-amber-500/20 backdrop-blur-xl">
         <div>
           <div className="flex items-center gap-2.5">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
@@ -617,7 +617,7 @@ export default function AdminFcmPage() {
                     <Button
                       onClick={handleSendBroadcast}
                       disabled={broadcasting}
-                      className="w-full h-11 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-sm shadow-lg shadow-amber-500/25 gap-2 cursor-pointer"
+                      className="w-full h-11 rounded-2xl bg-linear-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-sm shadow-lg shadow-amber-500/25 gap-2 cursor-pointer"
                     >
                       <Send className={`h-4 w-4 ${broadcasting ? "animate-spin" : ""}`} />
                       {broadcasting ? "Broadcasting to FCM Gateway..." : "Send Web Push Broadcast Now"}
@@ -666,7 +666,7 @@ export default function AdminFcmPage() {
                   </div>
                 </CardHeader>
 
-                <CardContent className="p-6 flex flex-col items-center justify-center min-h-[320px] bg-gradient-to-b from-neutral-950 to-neutral-900">
+                <CardContent className="p-6 flex flex-col items-center justify-center min-h-80 bg-linear-to-b from-neutral-950 to-neutral-900">
                   {/* Phone Mockup Screen */}
                   <div className="w-full max-w-xs space-y-3">
                     <div className="text-center text-[11px] text-neutral-500 font-mono">
@@ -834,7 +834,7 @@ export default function AdminFcmPage() {
                               </span>
                             </td>
 
-                            <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground max-w-[200px] truncate">
+                            <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground max-w-50 truncate">
                               {sub.endpoint.includes("fcm.googleapis.com")
                                 ? "Google FCM Gateway"
                                 : sub.endpoint.split("/")[2] || "WebPush"}

@@ -6,13 +6,13 @@ import { useState, useEffect } from "react";
 import { decodeTableToken } from "@/lib/utils";
 import { fetchPublicMenu, fetchPublicMenuSync } from "@/lib/public-menu";
 import { validateTableQrServer } from "@/lib/db-queries.server";
-import { PublicRestaurantView } from "@/app/[restaurantUsername]/page";
+import { PublicRestaurantView, PublicRestaurantSkeleton } from "@/app/[restaurantUsername]/page";
 import type { Restaurant } from "@/lib/restaurants-data";
 
-export default function RestaurantEncryptedTableRoute() {
+export default function RestaurantScopedTableRoute() {
   const params = useParams();
-  const restaurantUsername = String(params?.restaurantUsername || "");
-  const token = String(params?.token || "");
+  const restaurantUsername = (params?.restaurantUsername as string) || "";
+  const token = (params?.token as string) || "";
 
   const decoded = decodeTableToken(token);
   const branchSlug = decoded?.branchSlug || "";
@@ -25,12 +25,18 @@ export default function RestaurantEncryptedTableRoute() {
   const [resolvedTableNo, setResolvedTableNo] = useState<string>("");
   const [qrValid, setQrValid] = useState<boolean>(true);
   const [invalidReason, setInvalidReason] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 3500);
+
     async function loadAsync() {
       try {
         const fresh = await fetchPublicMenu(restaurantUsername);
-        if (fresh) setRestaurantData(fresh);
+        if (fresh && isMounted) setRestaurantData(fresh);
 
         const valRes = await validateTableQrServer({
           data: {
@@ -40,6 +46,9 @@ export default function RestaurantEncryptedTableRoute() {
             tableNo,
           },
         });
+
+        if (!isMounted) return;
+
         if (valRes && valRes.valid === false) {
           setQrValid(false);
           setInvalidReason(valRes.reason || "Invalid Table QR Code");
@@ -49,9 +58,19 @@ export default function RestaurantEncryptedTableRoute() {
         }
       } catch {
         /* ignore */
+      } finally {
+        if (isMounted) {
+          clearTimeout(safetyTimer);
+          setLoading(false);
+        }
       }
     }
     loadAsync();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+    };
   }, [restaurantUsername, token, branchSlug, tableNo]);
 
   if (!qrValid) {
@@ -67,6 +86,10 @@ export default function RestaurantEncryptedTableRoute() {
         </p>
       </div>
     );
+  }
+
+  if (loading) {
+    return <PublicRestaurantSkeleton />;
   }
 
   if (!restaurantData) {

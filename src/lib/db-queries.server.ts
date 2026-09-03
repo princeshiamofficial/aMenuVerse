@@ -4089,17 +4089,6 @@ export const validateTableQrServer = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      try {
-        await query("ALTER TABLE branch_tables ADD COLUMN status VARCHAR(50) DEFAULT 'available'");
-      } catch {
-        /* ignore */
-      }
-      try {
-        await query("ALTER TABLE branch_tables ADD COLUMN qr_token VARCHAR(255) NULL");
-      } catch {
-        /* ignore */
-      }
-
       const tenant = await resolvePublicRestaurant(data.restaurantSlug);
       if (!tenant || tenant.restaurantId === 0) {
         return { valid: false, reason: "Restaurant not found in database" };
