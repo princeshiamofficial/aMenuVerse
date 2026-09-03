@@ -159,125 +159,43 @@ export function getSubdomain(hostname?: string): string | null {
   return null;
 }
 
-let activeFaviconUrl: string = "";
-let activeDocumentTitle: string = "";
-let isHeadObserverInitialized = false;
-
-function applyActiveDocumentHead(): void {
-  if (typeof document === "undefined") return;
-
-  // 1. Enforce active document title
-  if (activeDocumentTitle && document.title !== activeDocumentTitle) {
-    document.title = activeDocumentTitle;
-  }
-
-  // 2. Enforce active favicon
-  if (activeFaviconUrl) {
-    let mimeType = "image/x-icon";
-    if (activeFaviconUrl.endsWith(".png") || activeFaviconUrl.includes(".png")) {
-      mimeType = "image/png";
-    } else if (activeFaviconUrl.endsWith(".svg") || activeFaviconUrl.includes(".svg")) {
-      mimeType = "image/svg+xml";
-    } else if (activeFaviconUrl.endsWith(".webp") || activeFaviconUrl.includes(".webp")) {
-      mimeType = "image/webp";
-    } else if (
-      activeFaviconUrl.endsWith(".jpg") ||
-      activeFaviconUrl.endsWith(".jpeg") ||
-      activeFaviconUrl.includes(".jpg") ||
-      activeFaviconUrl.includes(".jpeg")
-    ) {
-      mimeType = "image/jpeg";
-    }
-
-    let mainIcon = document.getElementById("menuverse-dynamic-favicon") as HTMLLinkElement | null;
-    if (!mainIcon) {
-      mainIcon = document.createElement("link");
-      mainIcon.id = "menuverse-dynamic-favicon";
-      mainIcon.rel = "icon";
-      document.head.appendChild(mainIcon);
-    }
-    if (mainIcon.href !== activeFaviconUrl) {
-      mainIcon.href = activeFaviconUrl;
-      mainIcon.type = mimeType;
-    }
-
-    const allIcons = document.querySelectorAll<HTMLLinkElement>(
-      "link[rel*='icon'], link[rel*='apple-touch-icon'], link[rel='shortcut icon']",
-    );
-    allIcons.forEach((el) => {
-      if (el !== mainIcon) {
-        if (el.href !== activeFaviconUrl) {
-          el.href = activeFaviconUrl;
-          el.type = mimeType;
-        }
-      }
-    });
-
-    let appleIcon = document.getElementById("menuverse-apple-icon") as HTMLLinkElement | null;
-    if (!appleIcon) {
-      appleIcon = document.createElement("link");
-      appleIcon.id = "menuverse-apple-icon";
-      appleIcon.rel = "apple-touch-icon";
-      document.head.appendChild(appleIcon);
-    }
-    if (appleIcon.href !== activeFaviconUrl) {
-      appleIcon.href = activeFaviconUrl;
-    }
-  }
-}
-
-function ensureHeadObserver(): void {
-  if (
-    isHeadObserverInitialized ||
-    typeof document === "undefined" ||
-    typeof MutationObserver === "undefined"
-  ) {
-    return;
-  }
-  isHeadObserverInitialized = true;
-  const observer = new MutationObserver(() => {
-    applyActiveDocumentHead();
-  });
-
-  try {
-    observer.observe(document.head, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: ["href", "rel"],
-    });
-  } catch {
-    /* ignore */
-  }
-}
-
 /**
- * Cross-browser dynamic title injector with persistent MutationObserver.
- * Ensures the restaurant document title stays permanently and is not reverted by Next.js hydration or DOM reconciliation.
+ * Updates document title safely without recursive MutationObserver loops.
  */
 export function updateDynamicTitle(rawTitle?: string | null): void {
   if (typeof document === "undefined" || !rawTitle) return;
   const title = String(rawTitle).trim();
   if (!title) return;
-
-  activeDocumentTitle = title;
-  document.title = title;
-  ensureHeadObserver();
+  if (document.title !== title) {
+    document.title = title;
+  }
 }
 
 /**
- * Cross-browser dynamic favicon injector with persistent MutationObserver.
- * Ensures the restaurant favicon stays permanently and is not reverted by Next.js hydration or DOM reconciliation.
+ * Updates favicon safely without recursive MutationObserver loops.
  */
 export function updateDynamicFavicon(rawUrl?: string | null): void {
   if (typeof document === "undefined" || !rawUrl) return;
   const url = String(rawUrl).trim();
   if (!url) return;
 
-  activeFaviconUrl = url;
-  applyActiveDocumentHead();
-  ensureHeadObserver();
+  try {
+    let mainIcon = document.getElementById("menuverse-dynamic-favicon") as HTMLLinkElement | null;
+    if (!mainIcon) {
+      mainIcon = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
+    }
+    if (!mainIcon) {
+      mainIcon = document.createElement("link");
+      mainIcon.id = "menuverse-dynamic-favicon";
+      mainIcon.rel = "icon";
+      document.head.appendChild(mainIcon);
+    }
+    if (mainIcon.getAttribute("href") !== url) {
+      mainIcon.href = url;
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
