@@ -2100,6 +2100,7 @@ export function PublicRestaurantView({
                       <BlobImg
                         src={imgSrc}
                         alt={`${restaurant.name} slide ${index + 1}`}
+                        priority={index === 0}
                         className="absolute inset-0 h-full w-full object-cover object-center"
                       />
                     </div>
@@ -2167,36 +2168,21 @@ export function PublicRestaurantView({
               {/* Profile Details Row */}
               <div className="px-3 sm:px-8 pb-3 flex items-center justify-between gap-4">
                 <div className="flex flex-row items-center gap-3 sm:gap-5 text-left min-w-0">
-                  {/* 2-in-1 SVG Profile Avatar Badge Container */}
+                  {/* 2-in-1 Profile Avatar Badge Container */}
                   <div className="w-28 h-28 sm:w-36 sm:h-36 relative shrink-0 -mt-12 sm:-mt-18 md:-mt-22">
-                    {isMenuLoading ? (
+                    {isMenuLoading && !restaurant?.logoImage ? (
                       <div className="w-full h-full rounded-full bg-white p-1 shadow-md">
                         <Skeleton className="w-full h-full rounded-full bg-neutral-200/90" />
                       </div>
                     ) : (
-                      <svg
-                        viewBox="0 0 144 144"
-                        className="w-full h-full overflow-visible drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
-                      >
-                        <defs>
-                          <clipPath id="svg-logo-avatar-clip">
-                            <circle cx="72" cy="72" r="66" />
-                          </clipPath>
-                        </defs>
-                        {/* Outer Vector White Ring Bonding Container */}
-                        <circle cx="72" cy="72" r="72" fill="#FFFFFF" />
-                        {/* Inner Vector Clipped Avatar Image */}
-                        <g clipPath="url(#svg-logo-avatar-clip)">
-                          <image
-                            href={restaurant.logoImage}
-                            x="6"
-                            y="6"
-                            width="132"
-                            height="132"
-                            preserveAspectRatio="xMidYMid slice"
-                          />
-                        </g>
-                      </svg>
+                      <div className="w-full h-full rounded-full bg-white p-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.15)] relative overflow-hidden flex items-center justify-center">
+                        <BlobImg
+                          src={restaurant.logoImage}
+                          alt={restaurant.name}
+                          priority={true}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      </div>
                     )}
                   </div>
 
@@ -2735,7 +2721,7 @@ export function PublicRestaurantView({
                               : "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
                     }`}
                   >
-                    {filteredItems.map((item: MenuItem) => {
+                    {filteredItems.map((item: MenuItem, idx: number) => {
                       const qtyInCart = cart[String(item.id)] || 0;
 
                       // 1. LIST LAYOUT
@@ -2749,6 +2735,7 @@ export function PublicRestaurantView({
                               <BlobImg
                                 src={item.image}
                                 alt={item.name}
+                                priority={idx < 8}
                                 className="absolute inset-0 h-full w-full object-cover"
                               />
                               {item.popular && (
@@ -2941,6 +2928,7 @@ export function PublicRestaurantView({
                             qtyInCart={qtyInCart}
                             primaryColor={primaryColor}
                             tags={item.popular ? ["Trending"] : []}
+                            priority={idx < 8}
                           />
                         );
                       }
@@ -2953,6 +2941,7 @@ export function PublicRestaurantView({
                               <BlobImg
                                 src={item.image}
                                 alt={item.name}
+                                priority={idx < 8}
                                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                               />
                               {item.popular && (

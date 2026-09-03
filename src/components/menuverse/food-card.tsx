@@ -21,6 +21,7 @@ export type FoodCardProps = {
   className?: string;
   primaryColor?: string;
   qtyInCart?: number;
+  priority?: boolean;
 };
 
 export function FoodCard({
@@ -41,6 +42,7 @@ export function FoodCard({
   className,
   primaryColor = "#10b981",
   qtyInCart = 0,
+  priority = false,
 }: FoodCardProps) {
   const activeSymbol = getCurrencySymbol(currency);
   const discountPct =
@@ -80,16 +82,16 @@ export function FoodCard({
       {/* Card Content Wrapper */}
       <div className="relative z-10 w-full h-full flex flex-col justify-between">
         {/* Image Panel */}
-        <div className="relative w-full h-38.75 sm:h-45 rounded-[14px] overflow-hidden bg-linear-to-b from-[#b8c2cc] via-[#7d8c9b] to-[#202938] flex items-center justify-center p-0">
+        <div className="relative w-full h-38.75 sm:h-45 rounded-[14px] overflow-hidden bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center p-0">
           {image ? (
             <BlobImg
               src={image}
               alt={name}
-              loading="lazy"
+              priority={priority}
               className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-xs text-white/60">
+            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground/60">
               No image
             </div>
           )}
