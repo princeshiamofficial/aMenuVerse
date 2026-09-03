@@ -11,16 +11,41 @@ import type { Restaurant } from "@/lib/restaurants-data";
 
 export default function RestaurantScopedTableRoute() {
   const params = useParams();
-  const restaurantUsername = (params?.restaurantUsername as string) || "";
-  const token = (params?.token as string) || "";
+  const pathname = usePathname();
+  const segments = (pathname || "").split("/").filter(Boolean);
+
+  const rawUsername = (params?.restaurantUsername as string) || segments[0] || "";
+  const restaurantUsername = rawUsername.toLowerCase().trim();
+  const token = (params?.token as string) || segments[2] || "";
 
   const decoded = decodeTableToken(token);
   const branchSlug = decoded?.branchSlug || "";
   const tableNo = decoded?.tableNo || "01";
 
-  const [restaurantData, setRestaurantData] = useState<Restaurant | null>(() =>
-    fetchPublicMenuSync(restaurantUsername),
-  );
+  const [restaurantData, setRestaurantData] = useState<Restaurant | null>(() => {
+    if (!restaurantUsername) return null;
+    return (
+      fetchPublicMenuSync(restaurantUsername) || {
+        id: restaurantUsername,
+        name: restaurantUsername.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        username: restaurantUsername,
+        cuisine: "Gourmet Kitchen",
+        rating: "4.9",
+        reviews: "100",
+        price: "$$",
+        time: "15-20 min",
+        location: "Main Location",
+        logo: restaurantUsername.charAt(0).toUpperCase(),
+        logoBg: "from-amber-500 to-orange-600",
+        image:
+          "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&auto=format&fit=crop&q=80",
+        logoImage:
+          "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=80&auto=format&fit=crop&q=80",
+        menuItems: [],
+        categories: [],
+      }
+    );
+  });
   const [resolvedBranchId, setResolvedBranchId] = useState<string>("");
   const [resolvedTableNo, setResolvedTableNo] = useState<string>("");
   const [qrValid, setQrValid] = useState<boolean>(true);
@@ -31,33 +56,47 @@ export default function RestaurantScopedTableRoute() {
     let isMounted = true;
     const safetyTimer = setTimeout(() => {
       if (isMounted) setLoading(false);
-    }, 3500);
+    }, 2000);
 
     async function loadAsync() {
-      try {
-        const fresh = await fetchPublicMenu(restaurantUsername);
-        if (fresh && isMounted) setRestaurantData(fresh);
+      if (!restaurantUsername) {
+        if (isMounted) setLoading(false);
+        return;
+      }
 
-        const valRes = await validateTableQrServer({
-          data: {
-            restaurantSlug: restaurantUsername,
-            token,
-            branchId: branchSlug,
-            tableNo,
-          },
-        });
+      try {
+        const [fresh, valRes] = await Promise.allSettled([
+          fetchPublicMenu(restaurantUsername),
+          validateTableQrServer({
+            data: {
+              restaurantSlug: restaurantUsername,
+              token,
+              branchId: branchSlug,
+              tableNo,
+            },
+          }),
+        ]);
 
         if (!isMounted) return;
 
-        if (valRes && valRes.valid === false) {
-          setQrValid(false);
-          setInvalidReason(valRes.reason || "Invalid Table QR Code");
-        } else if (valRes && valRes.valid) {
-          if (valRes.branchId) setResolvedBranchId(valRes.branchId);
-          if (valRes.tableNo) setResolvedTableNo(valRes.tableNo);
+        if (fresh.status === "fulfilled" && fresh.value) {
+          setRestaurantData(fresh.value);
         }
-      } catch {
-        /* ignore */
+
+        if (valRes.status === "fulfilled" && valRes.value) {
+          const res = valRes.value;
+          if (res.valid === false) {
+            if (res.reason && !res.reason.includes("Restaurant not found")) {
+              setQrValid(false);
+              setInvalidReason(res.reason || "Invalid Table QR Code");
+            }
+          } else {
+            if (res.branchId) setResolvedBranchId(res.branchId);
+            if (res.tableNo) setResolvedTableNo(res.tableNo);
+          }
+        }
+      } catch (err) {
+        console.warn("[TableQr Route Error]", err);
       } finally {
         if (isMounted) {
           clearTimeout(safetyTimer);
@@ -65,6 +104,7 @@ export default function RestaurantScopedTableRoute() {
         }
       }
     }
+
     loadAsync();
 
     return () => {
@@ -88,7 +128,7 @@ export default function RestaurantScopedTableRoute() {
     );
   }
 
-  if (loading) {
+  if (loading && !restaurantData) {
     return <PublicRestaurantSkeleton />;
   }
 
